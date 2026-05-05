@@ -60,7 +60,7 @@ function App() {
   window.toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
 
-  // Comprueba si el usuario está “logueado”.
+  // Comprueba si el usuario está logueado.
   const isLoggedIn = Boolean(localStorage.getItem('token'));
   // Define las rutas donde NO queremos el chat:
   const hiddenPaths = ['/', '/login', '/sign-up', '/forgot-password', '/reset-password'];
