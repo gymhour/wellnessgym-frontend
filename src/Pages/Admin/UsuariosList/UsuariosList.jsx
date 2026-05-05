@@ -223,7 +223,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                 <col style={{ width: '10%' }} />
                 <col style={{ width: '10%' }} />
                 <col style={{ width: '8%' }} />
-                {fromAdmin && <col style={{ width: '25%' }} />}
+                <col style={{ width: '25%' }} />
               </colgroup>
               <thead>
                 <tr>
@@ -234,7 +234,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                   <th>Plan</th>
                   <th>Registro</th>
                   <th>Estado</th>
-                  {fromAdmin && <th>Acciones</th>}
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,20 +270,19 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
 
                     <td data-label="Estado">{u.estado ? 'Activo' : 'Inactivo'}</td>
 
-                    {fromAdmin && (
                       <td data-label="Acciones" className="usuarios-table-actions">
                         <PrimaryButton
                           text="Editar"
-                          linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
+                          linkTo={fromAdmin ? `/admin/editar-usuario/${u.ID_Usuario}` : `/entrenador/editar-usuario/${u.ID_Usuario}`}
                         />
-                        {u.tipo !== 'admin' && (
+
                           <SecondaryButton
                             text="Cambiar estado"
                             onClick={() => openEstadoPopup(u.ID_Usuario)}
                           />
-                        )}
+                        
                       </td>
-                    )}
+                    
                   </tr>
                 ))}
               </tbody>
@@ -313,7 +312,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           </button>
         </div>
 
-        {fromAdmin && (
+        {(fromAdmin || fromEntrenador) && (
           <ConfirmationPopup
             isOpen={isPopupOpen}
             onClose={closePopup}

@@ -16,7 +16,7 @@ import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
 
-const CuotasUsuarios = () => {
+const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   // — Estados de datos y carga —
   const [cuotas, setCuotas] = useState([]);
   const [users, setUsers] = useState([]);
@@ -342,7 +342,7 @@ const CuotasUsuarios = () => {
   return (
     <div className="page-layout">
       {loading && <LoaderFullScreen />}
-      <SidebarMenu isAdmin={true} />
+      <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
 
       <div className="content-layout">
         <div className="header-actions cuotas-usuarios" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

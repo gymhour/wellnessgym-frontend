@@ -10,7 +10,7 @@ import SecondaryButton from '../../../Components/utils/SecondaryButton/Secondary
 import { ArrowLeft } from 'lucide-react';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 
-const EditarUsuario = () => {
+const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
   const { id } = useParams();
 
   const initialFormData = {
@@ -154,7 +154,12 @@ const EditarUsuario = () => {
       await apiService.updateUserById(id, payload);
       setIsLoading(false)
       toast.success('Usuario actualizado correctamente');
-      navigate("/admin/usuarios");
+
+      if (fromAdmin) {
+        navigate("/admin/usuarios");
+      } else {
+        navigate("/entrenador/usuarios")
+      }
     } catch (error) {
       console.error(error);
       const msg = error.response?.data?.message || 'Error al actualizar usuario';
@@ -199,11 +204,11 @@ const EditarUsuario = () => {
 
       <div className="page-layout">
         {isLoading && <LoaderFullScreen />}
-        <SidebarMenu isAdmin={true} />
+        <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
         <div className="content-layout">
           <SecondaryButton
             text="Volver atrás"
-            linkTo="/admin/usuarios"
+            linkTo={fromAdmin ? "/admin/usuarios" : "/entrenador/usuarios"}
             icon={ArrowLeft}
             reversed={true}
           />

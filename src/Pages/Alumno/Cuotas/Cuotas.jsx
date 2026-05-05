@@ -12,8 +12,8 @@ const Cuotas = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const alias = 'augusto.grenon.ag';
-  const cbu = '00700238-30004046522411';
+  const alias = 'zeus.training.club';
+  const cbu = '0000003100051208535818';
 
   const handleCopy = async (text) => {
     try {
@@ -81,7 +81,7 @@ const Cuotas = () => {
           <h2>Datos de cuenta</h2>
           <div className="cuotas-datos-pagos-info">
             <span style={{ fontWeight: '600' }} className="alias-and-bank">
-              AUGUSTO GRENON
+              ALEJANDRO DANIEL CARRERA
               {/* <GaliciaIcon width="120" /> */}
             </span>
             {/* <span>
@@ -99,10 +99,10 @@ const Cuotas = () => {
                 <Copy width={16} height={16} />
               </button>
             </span> */}
-            <span><b>CUIL:</b> 20-35752545-5</span>
+            <span><b>CUIL:</b> 24-35125076-4</span>
           </div>
           <a
-            href="https://wa.me/5493406423587?text=Hola%20AG%20Entrenamientos%21%20Les%20comparto%20el%20comprobante%20de%20pago%20de%20este%20mes%3A"
+            href="https://wa.me/5492302510715?text=Hola%20Zeus%20Training%21%20Les%20comparto%20el%20comprobante%20de%20pago%20de%20este%20mes%3A"
             target="_blank"
             rel="noopener noreferrer"
           >

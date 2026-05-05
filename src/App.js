@@ -143,14 +143,14 @@ function App() {
         <Route path="/admin/crear-usuario"
           element={
             <ProtectedRoute>
-              <CrearUsuario />
+              <CrearUsuario fromAdmin={true}/>
             </ProtectedRoute>
           }
         />
         <Route path="/admin/editar-usuario/:id"
           element={
             <ProtectedRoute>
-              <EditarUsuario />
+              <EditarUsuario fromAdmin={true} />
             </ProtectedRoute>
           }
         />
@@ -236,7 +236,7 @@ function App() {
           path="/admin/cuotas"
           element={
             <ProtectedRoute>
-              <CuotasUsuarios />
+              <CuotasUsuarios fromAdmin={true}/>
             </ProtectedRoute>
           }
         />
@@ -317,6 +317,20 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/entrenador/crear-usuario"
+          element={
+            <ProtectedRoute>
+              <CrearUsuario fromEntrenador={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/entrenador/editar-usuario/:id"
+          element={
+            <ProtectedRoute>
+              <EditarUsuario fromEntrenador={true} />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/entrenador/usuarios"
           element={
             <ProtectedRoute>
@@ -352,6 +366,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ChangePassword fromAdmin={false} fromEntrenador={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/entrenador/cuotas"
+          element={
+            <ProtectedRoute>
+              <CuotasUsuarios fromEntrenador={true}/>
             </ProtectedRoute>
           }
         />

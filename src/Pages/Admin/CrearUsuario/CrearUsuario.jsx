@@ -9,7 +9,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import { useNavigate } from 'react-router-dom';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 
-const CrearUsuario = () => {
+const CrearUsuario = ({fromAdmin, fromEntrenador}) => {
   const initialFormData = {
     email: '',
     password: '',
@@ -126,7 +126,7 @@ const CrearUsuario = () => {
   return (
     <div className="page-layout">
       {isLoading && <LoaderFullScreen />}
-      <SidebarMenu isAdmin={true} />
+      <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       <div className="content-layout">
         <h2>Crear usuario</h2>
 
