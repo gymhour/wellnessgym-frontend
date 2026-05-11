@@ -81,28 +81,28 @@ const Cuotas = () => {
           <h2>Datos de cuenta</h2>
           <div className="cuotas-datos-pagos-info">
             <span style={{ fontWeight: '600' }} className="alias-and-bank">
-              ALEJANDRO DANIEL CARRERA
+              WELLNESS GYM
               {/* <GaliciaIcon width="120" /> */}
             </span>
             {/* <span>
               GIMNASIO GYMHOUR
             </span> */}
-            <span>
+            {/* <span>
               <b>ALIAS:</b> {alias}{' '}
               <button className="copy-button" onClick={() => handleCopy(alias)}>
                 <Copy size={16} />
               </button>
-            </span>
+            </span> */}
             {/* <span>
               <b>CBU:</b> {cbu}{' '}
               <button className="copy-button" onClick={() => handleCopy(cbu)}>
                 <Copy width={16} height={16} />
               </button>
             </span> */}
-            <span><b>CUIL:</b> 24-35125076-4</span>
+            {/* <span><b>CUIL:</b> 24-35125076-4</span> */}
           </div>
           <a
-            href="https://wa.me/5492302510715?text=Hola%20Zeus%20Training%21%20Les%20comparto%20el%20comprobante%20de%20pago%20de%20este%20mes%3A"
+            href="https://wa.me/5492216783402?text=Hola%20Wellness%20Gym%21%20Les%20comparto%20el%20comprobante%20de%20pago%20de%20este%20mes%3A"
             target="_blank"
             rel="noopener noreferrer"
           >
