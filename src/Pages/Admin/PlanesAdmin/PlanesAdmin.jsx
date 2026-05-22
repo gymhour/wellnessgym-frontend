@@ -17,6 +17,10 @@ const PlanesAdmin = () => {
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoPrecio, setNuevoPrecio] = useState('')
   const [nuevaDesc, setNuevaDesc] = useState('')
+  const [duracion, setDuracion] = useState('MENSUAL')
+  const [sesionesPorSemana, setSesionesPorSemana] = useState('')
+  const [sesionesGracia, setSesionesGracia] = useState('')
+  const [requiereTurno, setRequiereTurno] = useState(true)
   const [toDelete, setToDelete] = useState(null)
   const [editingPlan, setEditingPlan] = useState(null)
 
@@ -43,6 +47,10 @@ const PlanesAdmin = () => {
     setNuevoNombre('')
     setNuevoPrecio('')
     setNuevaDesc('')
+    setDuracion('MENSUAL')
+    setSesionesPorSemana('')
+    setSesionesGracia('')
+    setRequiereTurno(true)
     setShowModal(true)
   }
 
@@ -52,6 +60,10 @@ const PlanesAdmin = () => {
     setNuevoNombre(plan.nombre)
     setNuevoPrecio(plan.precio)
     setNuevaDesc(plan.desc || '')
+    setDuracion(plan.duracion || 'MENSUAL')
+    setSesionesPorSemana(plan.sesionesPorSemana ?? '')
+    setSesionesGracia(plan.sesionesGracia ?? '')
+    setRequiereTurno(plan.requiereTurno !== false)
     setShowModal(true)
   }
 
@@ -61,6 +73,10 @@ const PlanesAdmin = () => {
     setNuevoNombre('')
     setNuevoPrecio('')
     setNuevaDesc('')
+    setDuracion('MENSUAL')
+    setSesionesPorSemana('')
+    setSesionesGracia('')
+    setRequiereTurno(true)
     setShowModal(false)
   }
 
@@ -68,7 +84,15 @@ const PlanesAdmin = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const body = { nombre: nuevoNombre, precio: parseInt(nuevoPrecio, 10), desc: nuevaDesc }
+    const body = {
+      nombre: nuevoNombre,
+      precio: Number(nuevoPrecio),
+      desc: nuevaDesc,
+      duracion,
+      sesionesPorSemana: Number(sesionesPorSemana || 0),
+      sesionesGracia: Number(sesionesGracia || 0),
+      requiereTurno
+    }
     try {
       if (editingPlan) {
         await apiService.putPlanes(editingPlan.ID_Plan, body)
@@ -128,6 +152,9 @@ const PlanesAdmin = () => {
                 </div>
                 <p className="plan-desc">{plan.desc || 'Sin descripción'}</p>
                 <p className="plan-price">${plan.precio.toLocaleString()}</p>
+                <p className="plan-desc">
+                  {plan.duracion || 'MENSUAL'} · {plan.sesionesPorSemana || 0} ses./semana · {plan.sesionesGracia || 0} gracia
+                </p>
                 <div className="plan-actions">
                   <div onClick={() => handleEdit(plan)} style={{ cursor: 'pointer' }}>
                     <Edit width={20} height={20} />
@@ -173,6 +200,42 @@ const PlanesAdmin = () => {
                     onChange={(e) => setNuevaDesc(e.target.value)}
                   />
                 </div>
+                <div className="plan-form-input-container">
+                  <label>Duración</label>
+                  <select value={duracion} onChange={(e) => setDuracion(e.target.value)}>
+                    <option value="SEMANAL">Semanal</option>
+                    <option value="MENSUAL">Mensual</option>
+                    <option value="TRIMESTRAL">Trimestral</option>
+                    <option value="SEMESTRAL">Semestral</option>
+                    <option value="ANUAL">Anual</option>
+                  </select>
+                </div>
+                <div className="plan-form-input-container">
+                  <label>Sesiones por semana</label>
+                  <CustomInput
+                    type="number"
+                    min="0"
+                    value={sesionesPorSemana}
+                    onChange={(e) => setSesionesPorSemana(e.target.value)}
+                  />
+                </div>
+                <div className="plan-form-input-container">
+                  <label>Sesiones de gracia</label>
+                  <CustomInput
+                    type="number"
+                    min="0"
+                    value={sesionesGracia}
+                    onChange={(e) => setSesionesGracia(e.target.value)}
+                  />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={requiereTurno}
+                    onChange={(e) => setRequiereTurno(e.target.checked)}
+                  />
+                  Requiere turno para asistir
+                </label>
                 <div className="modal-actions">
                   <SecondaryButton text="Cancelar" onClick={handleClose} />
                   <PrimaryButton text={editingPlan ? 'Actualizar' : 'Crear'} onClick={handleSubmit} />

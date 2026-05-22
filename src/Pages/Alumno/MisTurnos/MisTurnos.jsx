@@ -40,7 +40,7 @@ const MisTurnos = () => {
     // Filtrar los turnos para obtener los próximos turnos
     const proximoTurnos = turnos.filter((turno) => {
         const turnoFecha = new Date(turno.fecha);
-        return turnoFecha > today;
+        return turnoFecha > today && turno.estado !== 'CANCELADO';
     });
 
     // Obtener el historial de turnos (todos menos los próximos)

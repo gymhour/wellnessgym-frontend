@@ -15,6 +15,7 @@ const EditarUsuario = () => {
 
   const initialFormData = {
     email: '',
+    dni: '',
     nombre: '',
     apellido: '',
     profesion: '',
@@ -24,11 +25,14 @@ const EditarUsuario = () => {
     fechaCumple: '',
     plan: '',
     estado: true,
+    usaTurnosFijos: false,
   };
 
   const [formData, setFormData] = useState(initialFormData);
   const [avatarFile, setAvatarFile] = useState(null);
   const [planOptions, setPlanOptions] = useState([]);
+  const [clases, setClases] = useState([]);
+  const [turnosFijos, setTurnosFijos] = useState([]);
 
   const tipos = ['Cliente', 'Entrenador', 'Admin'];
   const opcionesEstado = ['Si', 'No'];
@@ -47,7 +51,40 @@ const EditarUsuario = () => {
       }
     };
     fetchPlanes();
+    const fetchClases = async () => {
+      try {
+        const data = await apiService.getClases();
+        setClases(data || []);
+      } catch (error) {
+        console.error('Error al cargar clases:', error);
+      }
+    };
+    fetchClases();
   }, []);
+
+  const horariosOptions = clases.flatMap(clase =>
+    (clase.HorariosClase || [])
+      .filter(h => h.activo !== false)
+      .map(h => ({
+        value: h.ID_HorarioClase,
+        label: `${clase.nombre} · ${h.diaSemana} ${String(h.horaIni || '').slice(11, 16)}`
+      }))
+  );
+
+  const addTurnoFijo = () => {
+    const firstAvailable = horariosOptions.find(option => !turnosFijos.includes(option.value));
+    if (!firstAvailable) return;
+    setTurnosFijos(prev => [...prev, firstAvailable.value]);
+  };
+
+  const updateTurnoFijo = (index, value) => {
+    const idHorario = Number(value);
+    setTurnosFijos(prev => prev.map((item, idx) => idx === index ? idHorario : item));
+  };
+
+  const removeTurnoFijo = (index) => {
+    setTurnosFijos(prev => prev.filter((_, idx) => idx !== index));
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -71,6 +108,7 @@ const EditarUsuario = () => {
 
         setFormData({
           email: user?.email || '',
+          dni: user?.dni || '',
           nombre: user?.nombre || '',
           apellido: user?.apellido || '',
           profesion: user?.profesion || '',
@@ -79,9 +117,11 @@ const EditarUsuario = () => {
           tipo: tipoCapitalizado,
           fechaCumple: fechaISO,
           estado: !!user?.estado,
+          usaTurnosFijos: !!user?.usaTurnosFijos,
           // Solo precargar plan para clientes; en admin/entrenador lo dejamos vacío
           plan: tipoLower === 'cliente' ? planNombre : ''
         });
+        setTurnosFijos((user?.TurnosFijos || []).map(t => t.ID_HorarioClase).filter(Boolean));
 
       } catch (err) {
         console.error(err);
@@ -129,9 +169,15 @@ const EditarUsuario = () => {
         : '';
 
       const selectedPlan = planOptions.find(p => p.label === formData.plan);
+      if (formData.tipo === 'Cliente' && !formData.dni.trim()) {
+        toast.error('Ingresá el DNI del alumno');
+        setIsLoading(false);
+        return;
+      }
 
       const payload = new FormData();
       payload.append('email', formData.email);
+      payload.append('dni', formData.dni);
       payload.append('nombre', formData.nombre);
       payload.append('apellido', formData.apellido);
       payload.append('direc', formData.direc);
@@ -141,6 +187,17 @@ const EditarUsuario = () => {
 
       if (formData.tipo === 'Cliente' && selectedPlan) {
         payload.append('ID_Plan', selectedPlan.value);
+      }
+
+      payload.append('usaTurnosFijos', String(formData.usaTurnosFijos));
+      if (formData.tipo === 'Cliente') {
+        const uniqueTurnos = Array.from(new Set(turnosFijos.map(Number).filter(Boolean)));
+        if (formData.usaTurnosFijos && uniqueTurnos.length === 0) {
+          toast.error('Seleccioná al menos un turno fijo');
+          setIsLoading(false);
+          return;
+        }
+        payload.append('turnosFijos', JSON.stringify(formData.usaTurnosFijos ? uniqueTurnos : []));
       }
 
       if (formData.tipo === 'Entrenador' && formData.profesion) {
@@ -240,6 +297,19 @@ const EditarUsuario = () => {
             </div>
 
             <div className="form-field">
+              <label htmlFor="dni">DNI:</label>
+              <CustomInput
+                type="text"
+                id="dni"
+                name="dni"
+                value={formData.dni}
+                onChange={handleChange}
+                placeholder="Ingresa el DNI"
+                width="100%"
+              />
+            </div>
+
+            <div className="form-field">
               <label htmlFor="apellido">Apellido:</label>
               <CustomInput
                 type="text"
@@ -278,6 +348,37 @@ const EditarUsuario = () => {
                   name="plan"
                   id="plan"
                 />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                  <input
+                    type="checkbox"
+                    name="usaTurnosFijos"
+                    checked={formData.usaTurnosFijos}
+                    onChange={handleChange}
+                  />
+                  Usa turnos fijos
+                </label>
+
+                {formData.usaTurnosFijos && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                    {turnosFijos.map((turnoId, index) => (
+                      <div key={`${turnoId}-${index}`} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select
+                          value={turnoId}
+                          onChange={(e) => updateTurnoFijo(index, e.target.value)}
+                          style={{ flex: 1 }}
+                        >
+                          {horariosOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => removeTurnoFijo(index)}>Quitar</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addTurnoFijo} disabled={horariosOptions.length === 0}>
+                      Agregar turno fijo
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

@@ -267,6 +267,7 @@ const CuotasUsuarios = () => {
       setImporte('');
       setPage(1);
       setShowModal(false);
+      await fetchCuotas();
       toast.success('Cuota creada correctamente.');
     } catch (err) {
       console.error('Error al crear cuota:', err);

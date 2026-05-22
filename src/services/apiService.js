@@ -6,6 +6,8 @@ const attendanceReasonMap = {
     DENEGADO_INACTIVO: ATTENDANCE_REJECT_REASON.USER_INACTIVE,
     DENEGADO_CUOTA: ATTENDANCE_REJECT_REASON.MEMBERSHIP_EXPIRED,
     DENEGADO_DUPLICADO: ATTENDANCE_REJECT_REASON.DUPLICATE_ATTENDANCE,
+    DENEGADO_SIN_TURNO: ATTENDANCE_REJECT_REASON.NO_ACTIVE_PLAN,
+    DENEGADO_LIMITE_SEMANAL: ATTENDANCE_REJECT_REASON.WEEKLY_LIMIT_REACHED,
 };
 
 const normalizeAttendanceMethod = method => (
@@ -111,7 +113,8 @@ const deleteTurno = async (id) => {
         const response = await apiClient.delete(`/turnos/${id}`);
         return response.data
     } catch (error) {
-        throw new Error("Error en el service de deleteTurno")
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "Error en el service de deleteTurno")
     }
 }
 
