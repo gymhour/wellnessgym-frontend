@@ -25,7 +25,9 @@ import {
   UserCog,
   FileText,
   Dumbbell,
-  FilePenLine
+  FilePenLine,
+  ClipboardCheck,
+  ScanLine
 } from 'lucide-react';
 
 
@@ -275,6 +277,30 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       Cuotas
                     </li>
                   </Link>
+                  <Link
+                    to="/admin/ingreso"
+                    className={`menu-link ${location.pathname === "/admin/ingreso"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <ScanLine className="icon" />{" "}
+                      Ingreso
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/asistencias"
+                    className={`menu-link ${location.pathname === "/admin/asistencias"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <ClipboardCheck className="icon" />{" "}
+                      Asistencias
+                    </li>
+                  </Link>
                 </>
               )
                 // SIDEBAR ENTRENADOR 
@@ -472,6 +498,17 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       >
                         <li className="menu-item">
                           <DollarSign className="icon" /> Cuotas
+                        </li>
+                      </Link>
+                      <Link
+                        to="/alumno/mis-asistencias"
+                        className={`menu-link ${location.pathname === "/mis-asistencias" || location.pathname === "/alumno/mis-asistencias"
+                          ? "active"
+                          : ""
+                          }`}
+                      >
+                        <li className="menu-item">
+                          <ClipboardCheck className="icon" /> Mis asistencias
                         </li>
                       </Link>
                     </>

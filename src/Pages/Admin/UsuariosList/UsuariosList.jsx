@@ -217,18 +217,20 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             <table className='usuarios-table'>
               <colgroup>
                 <col style={{ width: '5%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '28%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '24%' }} />
                 <col style={{ width: '10%' }} />
                 <col style={{ width: '10%' }} />
                 <col style={{ width: '10%' }} />
                 <col style={{ width: '8%' }} />
-                {fromAdmin && <col style={{ width: '25%' }} />}
+                {fromAdmin && <col style={{ width: '22%' }} />}
               </colgroup>
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Nombre y apellido</th>
+                  <th>DNI</th>
                   <th>Email</th>
                   <th>Tipo</th>
                   <th>Plan</th>
@@ -245,6 +247,8 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                     <td data-label="Nombre y apellido" style={{ textTransform: 'capitalize' }}>
                       {u.nombre} {u.apellido}
                     </td>
+
+                    <td data-label="DNI">{u.dni || '—'}</td>
 
                     <td data-label="Email" className="usuarios-table-email">
                       <div

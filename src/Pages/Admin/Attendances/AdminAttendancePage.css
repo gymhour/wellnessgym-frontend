@@ -1,0 +1,21 @@
+.admin-attendance-page {
+  min-height: 100vh;
+}
+
+.attendance-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.attendance-page-header p {
+  margin-top: 6px;
+  color: var(--text-color-distinct);
+}
+
+@media screen and (max-width: 760px) {
+  .attendance-page-header {
+    flex-direction: column;
+  }
+}

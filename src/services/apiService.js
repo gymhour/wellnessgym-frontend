@@ -1,4 +1,61 @@
-import apiClient from '../axiosConfig';
+import apiClient, { authClient } from '../axiosConfig';
+import { ATTENDANCE_REJECT_REASON, ATTENDANCE_STATUS } from '../types/attendanceTypes';
+
+const attendanceReasonMap = {
+    DENEGADO_NO_EXISTE: ATTENDANCE_REJECT_REASON.STUDENT_NOT_FOUND,
+    DENEGADO_INACTIVO: ATTENDANCE_REJECT_REASON.USER_INACTIVE,
+    DENEGADO_CUOTA: ATTENDANCE_REJECT_REASON.MEMBERSHIP_EXPIRED,
+    DENEGADO_DUPLICADO: ATTENDANCE_REJECT_REASON.DUPLICATE_ATTENDANCE,
+};
+
+const normalizeAttendanceMethod = method => (
+    String(method || 'DNI').toLowerCase() === 'qr' ? 'qr' : 'dni'
+);
+
+const mapCheckInResponse = data => {
+    const allowed = Boolean(data?.permitido);
+    const fullName = [data?.alumno?.nombre, data?.alumno?.apellido].filter(Boolean).join(' ');
+
+    return {
+        allowed,
+        status: allowed ? ATTENDANCE_STATUS.ALLOWED : ATTENDANCE_STATUS.REJECTED,
+        message: data?.motivo || (allowed ? 'Ingreso permitido.' : 'Ingreso rechazado.'),
+        reason: attendanceReasonMap[data?.resultado],
+        student: data?.alumno ? {
+            id: data.alumno.id ? String(data.alumno.id) : '',
+            name: fullName || '-',
+            dni: data.alumno.dni || '',
+        } : undefined,
+        attendance: data?.asistencia ? {
+            id: String(data.asistencia.id),
+            date: data.asistencia.fechaIngreso,
+            method: normalizeAttendanceMethod(data.asistencia.metodo),
+        } : undefined,
+    };
+};
+
+const mapAttendanceHistoryItem = item => {
+    const fullName = [item?.User?.nombre, item?.User?.apellido].filter(Boolean).join(' ');
+
+    return {
+        id: String(item?.ID_Asistencia),
+        student: item?.User ? {
+            id: item?.ID_Usuario ? String(item.ID_Usuario) : '',
+            name: fullName || '-',
+            dni: item.User.dni || '',
+        } : undefined,
+        date: item?.fechaIngreso,
+        method: normalizeAttendanceMethod(item?.metodo),
+        status: item?.permitido ? ATTENDANCE_STATUS.ALLOWED : ATTENDANCE_STATUS.REJECTED,
+        reason: attendanceReasonMap[item?.resultado],
+        rejectionReason: item?.permitido ? '' : item?.motivo,
+    };
+};
+
+const getApiErrorData = error => {
+    if (error?.response?.data) return error.response.data;
+    return null;
+};
 
 // Clases
 const getClases = async () => {
@@ -374,6 +431,79 @@ const getCuotasReminder = async (idUsuario) => {
     }
 }
 
+// Asistencias
+const registerAttendance = async ({ dni, method = 'DNI' }) => {
+    try {
+        const response = await authClient.post('/usuarios/asistencias/registrar', {
+            dni,
+            metodo: method,
+        });
+        return mapCheckInResponse(response.data);
+    } catch (error) {
+        const apiData = getApiErrorData(error);
+        if (apiData) {
+            return mapCheckInResponse(apiData);
+        }
+        throw new Error(error.message || 'No se pudo registrar la asistencia');
+    }
+}
+
+const getAttendances = async (filters = {}) => {
+    try {
+        const params = {
+            page: 1,
+            limit: 500,
+        };
+
+        if (filters.dni?.trim()) {
+            params.dni = filters.dni.trim();
+        }
+        if (filters.fromDate) {
+            params.fechaInicio = filters.fromDate;
+        }
+        if (filters.toDate) {
+            params.fechaFin = `${filters.toDate}T23:59:59`;
+        }
+        if (filters.status === ATTENDANCE_STATUS.ALLOWED) {
+            params.permitido = true;
+        }
+        if (filters.status === ATTENDANCE_STATUS.REJECTED) {
+            params.permitido = false;
+        }
+
+        const response = await apiClient.get('/usuarios/asistencias/historial', { params });
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+        const normalizedStudent = filters.student?.trim().toLowerCase();
+        const normalizedMethod = filters.method?.trim();
+
+        return data
+            .map(mapAttendanceHistoryItem)
+            .filter(attendance => {
+                const matchesStudent = !normalizedStudent || attendance.student?.name?.toLowerCase().includes(normalizedStudent);
+                const matchesMethod = !normalizedMethod || attendance.method === normalizedMethod;
+                return matchesStudent && matchesMethod;
+            });
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar las asistencias.');
+    }
+}
+
+const getMyAttendances = async () => {
+    try {
+        const response = await apiClient.get('/usuarios/asistencias/mis-asistencias');
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+
+        return {
+            summary: response.data?.summary || null,
+            attendances: data.map(mapAttendanceHistoryItem),
+        };
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar tus asistencias.');
+    }
+}
+
 
 // Ejercicios
 const getEjercicios = async () => {
@@ -500,6 +630,10 @@ export default {
     getCuotasUsuario,
     postCuotasMasivas,
     getCuotasReminder,
+    // Asistencias
+    registerAttendance,
+    getAttendances,
+    getMyAttendances,
     // Ejercicios
     getEjercicios,
     getEjercicioById,
