@@ -362,6 +362,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const [clases, setClases] = useState([]);
   const [selectedClase, setSelectedClase] = useState("");
   const [selectedGrupoMuscular, setSelectedGrupoMuscular] = useState("");
+  const [tipoRutina, setTipoRutina] = useState("clasica"); // "clasica" | "simple"
+  const [urlPlanificacion, setUrlPlanificacion] = useState("");
   const gruposMusculares = [
     "Pecho", "Espalda", "Piernas", "Brazos", "Hombros",
     "Abdominales", "Glúteos", "Tren Superior", "Tren Inferior",
@@ -516,6 +518,13 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       });
       setSelectedClase(r.claseRutina || "");
       setSelectedGrupoMuscular(r.grupoMuscularRutina || "");
+      if (r.urlPlanificacion) {
+        setTipoRutina("simple");
+        setUrlPlanificacion(r.urlPlanificacion);
+      } else {
+        setTipoRutina("clasica");
+        setUrlPlanificacion("");
+      }
 
       if (canAssign) {
         const asignacionesUsuarios = Array.isArray(r?.asignacionesUsuarios) && r.asignacionesUsuarios.length
@@ -1390,13 +1399,48 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = buildPayload();
+      let payload;
+      if (tipoRutina === 'simple') {
+        if (!urlPlanificacion.trim()) {
+          toast.error("Ingresá la URL de Google Sheets");
+          setLoading(false);
+          return;
+        }
+
+        const usuariosAsignadosIds = canAssign
+          ? selectedUserOptions.map(option => Number(option.value)).filter(Boolean)
+          : [Number(localStorage.getItem("usuarioId"))].filter(Boolean);
+        const gruposAsignadosIds = canAssign
+          ? selectedGroupOptions.map(option => Number(option.value)).filter(Boolean)
+          : [];
+        const currentUserId = Number(localStorage.getItem("usuarioId"));
+        const userId = usuariosAsignadosIds[0] || currentUserId;
+        const entrenadorId = canAssign ? currentUserId : null;
+
+        payload = {
+          ID_Usuario: userId,
+          ID_Entrenador: entrenadorId,
+          usuariosAsignados: usuariosAsignadosIds,
+          gruposAsignados: gruposAsignadosIds,
+          nombre: formData.nombre,
+          desc: formData.descripcion,
+          claseRutina: selectedClase,
+          grupoMuscularRutina: selectedGrupoMuscular,
+          urlPlanificacion: urlPlanificacion.trim()
+        };
+      } else {
+        payload = buildPayload();
+      }
 
       if (isEditing) {
         await apiService.editRutina(rutinaId, payload);
         toast.success('Rutina actualizada correctamente');
       } else {
-        await apiService.createRutina(payload);
+        if (tipoRutina === 'simple') {
+          await apiService.createRutinaSimple(payload);
+        } else {
+          await apiService.createRutina(payload);
+        }
         toast.success('Rutina creada correctamente');
       }
 
@@ -1584,6 +1628,50 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                   }
                 />
 
+                {/* Selector de Tipo de Rutina */}
+                <div className="tipo-rutina-selector-container">
+                  <label className="tipo-rutina-label">Tipo de entrenamiento</label>
+                  <div className="tipo-rutina-selector">
+                    <button
+                      type="button"
+                      className={`tipo-rutina-btn ${tipoRutina === 'clasica' ? 'active' : ''}`}
+                      onClick={() => setTipoRutina('clasica')}
+                    >
+                      <span className="icon">🏋️</span>
+                      <div className="text-wrapper">
+                        <span className="title">Clásica</span>
+                        <span className="subtitle">Bloques estructurados</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tipo-rutina-btn ${tipoRutina === 'simple' ? 'active' : ''}`}
+                      onClick={() => setTipoRutina('simple')}
+                    >
+                      <span className="icon">📊</span>
+                      <div className="text-wrapper">
+                        <span className="title">Planilla Digital</span>
+                        <span className="subtitle">Google Sheets</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Campo URL Planificación si es simple */}
+                {tipoRutina === 'simple' && (
+                  <div className="url-planificacion-container premium-glow-border">
+                    <CustomInput
+                      placeholder="Pegá el enlace a la planilla de Google Sheets"
+                      value={urlPlanificacion}
+                      onChange={(e) => setUrlPlanificacion(e.target.value)}
+                    />
+                    <div className="url-planificacion-help">
+                      <span className="help-icon">💡</span>
+                      <p>Asegurate de que el enlace de Google Sheets tenga permisos de lectura para que el alumno pueda visualizarlo.</p>
+                    </div>
+                  </div>
+                )}
+
                 {canAssign && (
                   <>
                     <Select
@@ -1617,11 +1705,19 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 )}
 
                 <div className='crearRutina-s1-continuar-btn-ctn'>
-                  <PrimaryButton
-                    text="Continuar"
-                    linkTo="#"
-                    onClick={handleContinue}
-                  />
+                  {tipoRutina === 'simple' ? (
+                    <PrimaryButton
+                      text={isEditing ? "Guardar cambios" : "Crear rutina"}
+                      linkTo="#"
+                      onClick={handleSubmit}
+                    />
+                  ) : (
+                    <PrimaryButton
+                      text="Continuar"
+                      linkTo="#"
+                      onClick={handleContinue}
+                    />
+                  )}
                 </div>
               </div>
             </div>

@@ -664,19 +664,21 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         {!loading && !error && rutina && (
           <>
             {/* Acciones */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: 12,
-              }}
-            >
-              <PrimaryButton
-                text="Exportar como PDF"
-                type="button"
-                onClick={handleExportPDF}
-              />
-            </div>
+            {!rutina.urlPlanificacion && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginBottom: 12,
+                }}
+              >
+                <PrimaryButton
+                  text="Exportar como PDF"
+                  type="button"
+                  onClick={handleExportPDF}
+                />
+              </div>
+            )}
 
             {/* Header rutina */}
             <div
@@ -759,8 +761,59 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
               )}
             </div>
 
+            {/* Google Sheets Premium View */}
+            {rutina.urlPlanificacion && (
+              <div className="premium-sheets-wrapper" style={{ marginTop: '20px', display: 'grid', gap: '20px' }}>
+                <div className="rutina-card-premium" style={{ width: '100%', maxWidth: 'none', margin: '0' }}>
+                  <div className="premium-badge">
+                    <span className="sparkle-icon">✨</span>
+                    PLAN DE ENTRENAMIENTO PREMIUM
+                  </div>
+                  <div className="premium-action-zone" style={{ borderStyle: 'solid', background: 'var(--background-color-distinct)' }}>
+                    <div className="sheets-icon-container">
+                      <svg className="sheets-svg-icon" viewBox="0 0 24 24" width="48" height="48">
+                        <path fill="#0F9D58" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                        <path fill="#FFF" d="M13 9h5v2h-5V9zm0 4h5v2h-5v-2zm-9 3v2h5v-2H4zm9 1h5v2h-5v-2zM4 12v2h5v-2H4zm0-4v2h5V8H4z"/>
+                        <path fill="#E0E0E0" d="M14 2L20 8h-6V2z"/>
+                      </svg>
+                    </div>
+                    <div className="premium-action-text">
+                      <h4>Planilla de Google Sheets Asignada</h4>
+                      <p>Hacé click abajo para abrir e interactuar con la planilla completa en una nueva pestaña.</p>
+                    </div>
+                    <a 
+                      href={rutina.urlPlanificacion} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="premium-cta-btn"
+                      style={{ maxWidth: '380px' }}
+                    >
+                      <span>Abrir Planilla de Google Sheets</span>
+                      <span className="arrow-icon">→</span>
+                    </a>
+                  </div>
+                  
+                  <div className="iframe-collapsible-section">
+                    <details className="iframe-details" open>
+                      <summary className="iframe-summary" style={{ display: 'none' }}>
+                        <span>Visualizar Planilla Embebida</span>
+                      </summary>
+                      <div className="iframe-wrapper" style={{ aspectRatio: '16/9' }}>
+                        <iframe 
+                          src={rutina.urlPlanificacion.replace('/edit', '/preview').replace('?usp=sharing', '')} 
+                          title="Plan de Entrenamiento"
+                          className="premium-iframe"
+                          allowFullScreen
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Semanas TABS */}
-            {semanas.length > 0 && (
+            {!rutina.urlPlanificacion && semanas.length > 0 && (
               <div
                 className="tab-dias"
                 style={{ display: 'grid', gap: 12, marginBottom: '20px' }}
@@ -795,7 +848,7 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
             )}
 
             {/* Obtener dias de la semana activa o dias nativos */}
-            {(() => {
+            {!rutina.urlPlanificacion && (() => {
               let currentDias = dias;
               if (semanas.length > 0) {
                 const activeWeek = semanas.find(s => (s.id || s.numero) === activeSemanaId) || semanas[0];

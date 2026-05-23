@@ -182,10 +182,23 @@ const RutinasAdmin = () => {
     }));
   };
 
-  // duplicar rutina — actualizado para TABATA
+  // duplicar rutina — actualizado para TABATA y urlPlanificacion
   const buildDuplicatePayload = (rutina) => {
     const currentUserId = Number(localStorage.getItem('usuarioId')) || null;
     const alumnoId = rutina?.alumno?.ID_Usuario ?? currentUserId;
+
+    if (rutina?.urlPlanificacion) {
+      return {
+        ID_Usuario: alumnoId,
+        ID_Entrenador: null,
+        nombre: `${rutina?.nombre || 'Rutina'} (1)`,
+        desc: rutina?.desc || '',
+        claseRutina: rutina?.claseRutina || 'Combinada',
+        grupoMuscularRutina: rutina?.grupoMuscularRutina || 'Mixto',
+        urlPlanificacion: rutina.urlPlanificacion,
+      };
+    }
+
     const originalDias = rutina?.dias || {};
     const diasPayload = {};
 
@@ -241,7 +254,11 @@ const RutinasAdmin = () => {
     try {
       setLoading(true);
       const payload = buildDuplicatePayload(rutina);
-      await apiService.createRutina(payload);
+      if (rutina?.urlPlanificacion) {
+        await apiService.createRutinaSimple(payload);
+      } else {
+        await apiService.createRutina(payload);
+      }
       toast.success('Rutina duplicada correctamente.');
       await fetchRutinas();
     } catch (error) {
@@ -271,7 +288,14 @@ const RutinasAdmin = () => {
             return (
               <div key={rutina.ID_Rutina} className="rutina-card">
                 <div className='rutina-header'>
-                  <h3>{rutina.nombre}</h3>
+                  <h3>
+                    {rutina.nombre}
+                    {rutina.urlPlanificacion && (
+                      <span className="routine-badge sheet-badge">
+                        Planilla Digital
+                      </span>
+                    )}
+                  </h3>
                   <div className="rutina-header-acciones">
                     <button onClick={() => handleDuplicate(rutina)} title='Duplicar rutina'><Copy size={18} /></button>
                     <button onClick={() => openDeletePopup(rutina.ID_Rutina)} title='Eliminar rutina'><Trash2 width={20} height={20} /></button>
@@ -282,11 +306,27 @@ const RutinasAdmin = () => {
                 <div className="rutina-data">
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
-                  <p>Días totales: {dias.length}</p>
+                  {rutina.urlPlanificacion ? (
+                    <p>Modalidad: Planificación Digital</p>
+                  ) : (
+                    <p>Días totales: {dias.length}</p>
+                  )}
                 </div>
 
                 {/* ===== DÍAS ===== */}
-                {dias.length <= 1 ? (
+                {rutina.urlPlanificacion ? (
+                  <div className="sheet-quick-access">
+                    <p className="sheet-quick-title">Plan de entrenamiento con planilla digital asignada</p>
+                    <a
+                      href={rutina.urlPlanificacion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sheet-quick-btn"
+                    >
+                      <span>Abrir Google Sheets</span>
+                    </a>
+                  </div>
+                ) : dias.length <= 1 ? (
                   <div className='rutina-dia'>
                     {dias[0] && <h4>{dias[0].nombre}</h4>}
                     {dias[0]?.descripcion && <p className='dia-desc'>{dias[0].descripcion}</p>}

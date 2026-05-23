@@ -155,6 +155,15 @@ const createRutina = async (data) => {
     }
 };
 
+const createRutinaSimple = async (data) => {
+    try {
+        const response = await apiClient.post("/rutinas/simple", data);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || "Error al crear la rutina simplificada");
+    }
+};
+
 const editRutina = async (idRutina, data) => {
     try {
         const response = await apiClient.put(`/rutinas/${idRutina}`, data);
@@ -642,6 +651,7 @@ export default {
     getRutinaById,
     getUserRutinas,
     createRutina,
+    createRutinaSimple,
     editRutina,
     deleteRutina,
     getRutinasEntrenadores,

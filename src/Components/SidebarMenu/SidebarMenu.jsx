@@ -447,8 +447,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                           }`}
                       >
                         <li className="menu-item">
-                          <Notebook className="icon" /> Mi
-                          rutina
+                          <Notebook className="icon" /> Mi plan de entrenamiento
                         </li>
                       </Link>
                       <Link

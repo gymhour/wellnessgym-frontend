@@ -43,12 +43,14 @@ const CuotasUsuarios = () => {
 
   // — Estados de filtros (inputs) —
   const [inputEmail, setInputEmail] = useState('');
+  const [inputDni, setInputDni] = useState('');
   const [inputEstado, setInputEstado] = useState(''); // '' | 'true' | 'false' | 'vencida'
   const [inputMesDate, setInputMesDate] = useState(null);
   const [inputPlan, setInputPlan] = useState('');
 
   // — Filtros aplicados + paginación —
   const [filterEmail, setFilterEmail] = useState('');
+  const [filterDni, setFilterDni] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterMesDate, setFilterMesDate] = useState(null);
   const [filterPlan, setFilterPlan] = useState('');
@@ -145,6 +147,7 @@ const CuotasUsuarios = () => {
     try {
       const params = {};
       if (filterEmail) params.email = filterEmail;
+      if (filterDni) params.dni = filterDni;
 
       if (filterEstado === 'vencida') {
         params.vencida = true;
@@ -184,7 +187,7 @@ const CuotasUsuarios = () => {
   useEffect(() => {
     fetchCuotas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filterEmail, filterEstado, filterMesDate, filterPlan]);
+  }, [page, filterEmail, filterDni, filterEstado, filterMesDate, filterPlan]);
 
   const openConfirmation = (type, cuota) => {
     setActionType(type);
@@ -301,6 +304,7 @@ const CuotasUsuarios = () => {
   const applyFilters = () => {
     setPage(1);
     setFilterEmail(inputEmail.trim());
+    setFilterDni(inputDni.trim());
     setFilterEstado(inputEstado);
     setFilterPlan(inputPlan);
     setFilterMesDate(inputMesDate);
@@ -308,12 +312,14 @@ const CuotasUsuarios = () => {
 
   const clearFilters = () => {
     setInputEmail('');
+    setInputDni('');
     setInputEstado('');
     setInputPlan('');
     setInputMesDate(null);
 
     setPage(1);
     setFilterEmail('');
+    setFilterDni('');
     setFilterEstado('');
     setFilterPlan('');
     setFilterMesDate(null);
@@ -373,6 +379,18 @@ const CuotasUsuarios = () => {
                 placeholder="Ej: valen2@example.com"
                 value={inputEmail}
                 onChange={e => setInputEmail(e.target.value)}
+                width='300px'
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <label htmlFor="inputDni">DNI:</label>
+              <CustomInput
+                id="inputDni"
+                type="text"
+                placeholder="Ej: 38444555"
+                value={inputDni}
+                onChange={e => setInputDni(e.target.value)}
                 width='300px'
               />
             </div>

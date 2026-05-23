@@ -6,7 +6,7 @@ import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown.jsx';
 import apiService from '../../../services/apiService';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
-import { Edit2, Trash2, ChevronDown, ChevronUp, Video } from 'lucide-react';
+import { ChevronDown, ChevronUp, Video } from 'lucide-react';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp.jsx';
 import { toast } from 'react-toastify';
 import { useNavigate, Link } from 'react-router-dom';
@@ -437,7 +437,7 @@ const MiRutina = () => {
       <div className='content-layout mi-rutina-ctn'>
 
         <div className='mi-rutina-title'>
-          <h2>Mis rutinas</h2>
+          <h2>Mi plan de entrenamiento</h2>
         </div>
 
         <div style={{ margin: '30px 0px' }}>
@@ -480,6 +480,80 @@ const MiRutina = () => {
           ) : (
             filteredRutinas.map(rutina => {
               const dias = normalizeDias(rutina);
+
+              if (rutina.urlPlanificacion) {
+                return (
+                  <div key={rutina.ID_Rutina} className='rutina-card rutina-card-premium'>
+                    <div className="premium-glow-effect"></div>
+                    <div className='rutina-header premium-header'>
+                      <div className="premium-badge">
+                        <span className="sparkle-icon">✨</span>
+                        PLAN DE ENTRENAMIENTO PREMIUM
+                      </div>
+                      <h3>{rutina.nombre}</h3>
+                      {rutina.desc && <p className="premium-desc">{rutina.desc}</p>}
+                    </div>
+
+                    <div className='rutina-data premium-data'>
+                      <div className="data-item">
+                        <span className="label">Clase</span>
+                        <span className="value">{rutina.claseRutina || 'General'}</span>
+                      </div>
+                      <div className="data-item">
+                        <span className="label">Enfoque</span>
+                        <span className="value">{rutina.grupoMuscularRutina || 'Personalizado'}</span>
+                      </div>
+                      {rutina.entrenador && (
+                        <div className="data-item">
+                          <span className="label">Entrenador</span>
+                          <span className="value">
+                            {[rutina.entrenador.nombre, rutina.entrenador.apellido].filter(Boolean).join(' ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="premium-action-zone">
+                      <div className="sheets-icon-container">
+                        <svg className="sheets-svg-icon" viewBox="0 0 24 24" width="48" height="48">
+                          <path fill="#0F9D58" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                          <path fill="#FFF" d="M13 9h5v2h-5V9zm0 4h5v2h-5v-2zm-9 3v2h5v-2H4zm9 1h5v2h-5v-2zM4 12v2h5v-2H4zm0-4v2h5V8H4z"/>
+                          <path fill="#E0E0E0" d="M14 2L20 8h-6V2z"/>
+                        </svg>
+                      </div>
+                      <div className="premium-action-text">
+                        <h4>Tu Planificación Digital</h4>
+                        <p>Hacé click en el botón de abajo para abrir tu planilla interactiva de Google Sheets y registrar tu progreso de hoy.</p>
+                      </div>
+                      <a 
+                        href={rutina.urlPlanificacion} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="premium-cta-btn"
+                      >
+                        <span>Abrir Planilla de Google Sheets</span>
+                        <span className="arrow-icon">→</span>
+                      </a>
+                    </div>
+                    
+                    <div className="iframe-collapsible-section">
+                      <details className="iframe-details">
+                        <summary className="iframe-summary">
+                          <span>Visualizar Planilla Embebida (Pantalla Completa)</span>
+                        </summary>
+                        <div className="iframe-wrapper">
+                          <iframe 
+                            src={rutina.urlPlanificacion.replace('/edit', '/preview').replace('?usp=sharing', '')} 
+                            title="Plan de Entrenamiento"
+                            className="premium-iframe"
+                            allowFullScreen
+                          />
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div key={rutina.ID_Rutina} className='rutina-card'>

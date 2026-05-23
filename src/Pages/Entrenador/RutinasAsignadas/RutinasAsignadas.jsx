@@ -479,10 +479,22 @@ const RutinasAsignadas = () => {
     }));
   };
 
-  // ====== Duplicar rutina (incluye TABATA fields) ======
+  // ====== Duplicar rutina (incluye TABATA fields y urlPlanificacion) ======
   const buildDuplicatePayload = (rutina) => {
     const entrenadorId = Number(localStorage.getItem('usuarioId')) || null;
     const alumnoId = rutina?.alumno?.ID_Usuario || null;
+
+    if (rutina?.urlPlanificacion) {
+      return {
+        ID_Usuario: alumnoId,
+        ID_Entrenador: entrenadorId,
+        nombre: `${rutina?.nombre || 'Rutina'} (1)`,
+        desc: rutina?.desc || '',
+        claseRutina: rutina?.claseRutina || 'Combinada',
+        grupoMuscularRutina: rutina?.grupoMuscularRutina || 'Mixto',
+        urlPlanificacion: rutina.urlPlanificacion,
+      };
+    }
 
     const parseBloques = (bloquesArr) => {
       const bloques = Array.isArray(bloquesArr) ? bloquesArr : [];
@@ -555,7 +567,11 @@ const RutinasAsignadas = () => {
     try {
       setLoading(true);
       const payload = buildDuplicatePayload(rutina);
-      await apiService.createRutina(payload);
+      if (rutina?.urlPlanificacion) {
+        await apiService.createRutinaSimple(payload);
+      } else {
+        await apiService.createRutina(payload);
+      }
       toast.success('Rutina duplicada correctamente.');
       await loadRutinasAsignadas();
     } catch (error) {
@@ -616,7 +632,14 @@ const RutinasAsignadas = () => {
             return (
               <div key={rutina.ID_Rutina} className='rutina-card'>
                 <div className='rutina-header'>
-                  <h3>{rutina.nombre}</h3>
+                  <h3>
+                    {rutina.nombre}
+                    {rutina.urlPlanificacion && (
+                      <span className="routine-badge sheet-badge">
+                        Planilla Digital
+                      </span>
+                    )}
+                  </h3>
                   <div className="rutina-header-acciones">
                     {/* Botón duplicar */}
                     <button
@@ -646,15 +669,31 @@ const RutinasAsignadas = () => {
                 <div className='rutina-data'>
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
-                  <p>
-                    {rutina.semanas && rutina.semanas.length > 0
-                      ? `Semanas totales: ${rutina.semanas.length}`
-                      : `Días totales: ${dias.length}`}
-                  </p>
+                  {rutina.urlPlanificacion ? (
+                    <p>Modalidad: Planificación Digital</p>
+                  ) : (
+                    <p>
+                      {rutina.semanas && rutina.semanas.length > 0
+                        ? `Semanas totales: ${rutina.semanas.length}`
+                        : `Días totales: ${dias.length}`}
+                    </p>
+                  )}
                 </div>
 
                 {/* ===== SEMANAS o DÍAS ===== */}
-                {rutina.semanas && rutina.semanas.length > 0 ? (
+                {rutina.urlPlanificacion ? (
+                  <div className="sheet-quick-access">
+                    <p className="sheet-quick-title">Plan de entrenamiento con planilla digital asignada</p>
+                    <a
+                      href={rutina.urlPlanificacion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sheet-quick-btn"
+                    >
+                      <span>Abrir Google Sheets</span>
+                    </a>
+                  </div>
+                ) : rutina.semanas && rutina.semanas.length > 0 ? (
                   <div className='rutina-semanas-accordion'>
                     {rutina.semanas.map((s, idx) => {
                       const key = `sem_${s.id || idx}`;
