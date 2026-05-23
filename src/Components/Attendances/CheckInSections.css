@@ -19,12 +19,18 @@
   font-size: 14px;
 }
 
-.dni-checkin-row,
-.qr-checkin-controls {
+.dni-checkin-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
+}
+
+.qr-checkin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .dni-checkin-row input {
@@ -105,18 +111,25 @@
   min-width: 0;
 }
 
-.qr-checkin-controls.single-action {
-  display: flex;
-  justify-content: flex-end;
-}
-
 @media screen and (max-width: 760px) {
-  .dni-checkin-row,
-  .qr-checkin-controls {
+  .dni-checkin-row {
     grid-template-columns: 1fr;
+  }
+
+  .qr-checkin-controls {
+    flex-direction: column;
   }
 
   .attendance-primary-action {
     width: 100%;
   }
+}
+
+.spinning-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
