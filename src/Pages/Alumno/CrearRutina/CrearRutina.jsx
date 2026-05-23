@@ -369,7 +369,9 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   ];
 
   const [users, setUsers] = useState([]);
-  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [selectedUserOptions, setSelectedUserOptions] = useState([]);
+  const [gruposUsuarios, setGruposUsuarios] = useState([]);
+  const [selectedGroupOptions, setSelectedGroupOptions] = useState([]);
 
   const [allExercises, setAllExercises] = useState([]);
 
@@ -433,8 +435,10 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         try {
           const clientes = await fetchAllClientsActive(apiService, { take: 100 });
           setUsers(clientes);
+          const gruposResp = await apiService.getGruposUsuarios();
+          setGruposUsuarios(Array.isArray(gruposResp?.grupos) ? gruposResp.grupos : []);
         } catch {
-          toast.error('No se pudieron cargar todos los usuarios');
+          toast.error('No se pudieron cargar usuarios o grupos');
         }
       })();
     }
@@ -463,9 +467,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const selectedUserId = useMemo(() => {
     if (!canAssign) return Number(localStorage.getItem("usuarioId"));
     if (!users.length) return null;
-    const u = users.find(u => u.email === selectedEmail);
-    return u?.ID_Usuario ?? null;
-  }, [canAssign, users, selectedEmail]);
+    return selectedUserOptions?.[0]?.value ?? null;
+  }, [canAssign, selectedUserOptions]);
 
   useEffect(() => {
     if (!canAssign) return;
@@ -515,26 +518,27 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       setSelectedGrupoMuscular(r.grupoMuscularRutina || "");
 
       if (canAssign) {
-        const alumnoEmail = r?.alumno?.email ?? r?.alumnoEmail ?? null;
-        const alumnoId = r?.ID_Usuario ?? r?.alumno?.ID_Usuario ?? null;
-        let selected = null;
-        if (alumnoEmail) {
-          selected = alumnoEmail;
-        } else if (alumnoId) {
-          // Force wait for users if empty?
-          const uid = Number(alumnoId);
-          const u = users.find(u => u.ID_Usuario === uid);
-          if (u) {
-            selected = u.email;
-          } else {
-            // Fallback: if user not found yet, maybe check if we can fetch individual?
-            // checking if users array is populated
-            if (users.length > 0) {
-              console.warn("User ID not found in users list", uid);
-            }
-          }
-        }
-        setSelectedEmail(selected);
+        const asignacionesUsuarios = Array.isArray(r?.asignacionesUsuarios) && r.asignacionesUsuarios.length
+          ? r.asignacionesUsuarios
+          : (r?.alumno ? [r.alumno] : []);
+        const selectedUsers = asignacionesUsuarios
+          .map(a => {
+            const id = Number(a.ID_Usuario);
+            const u = users.find(user => user.ID_Usuario === id) || a;
+            return id ? {
+              label: `${u.nombre || ''} ${u.apellido || ''} (${u.email || 'sin email'})`,
+              value: id
+            } : null;
+          })
+          .filter(Boolean);
+        setSelectedUserOptions(selectedUsers);
+        const selectedGroups = (Array.isArray(r?.asignacionesGrupos) ? r.asignacionesGrupos : [])
+          .map(g => ({
+            label: g.nombre,
+            value: g.ID_GrupoUsuario
+          }))
+          .filter(g => g.value);
+        setSelectedGroupOptions(selectedGroups);
       }
 
       const mapBloques = (bloquesApi = []) =>
@@ -643,8 +647,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       return toast.error("Ingresá un nombre para la rutina");
     if (!days.length)
       return toast.error("Agregá al menos un día");
-    if (canAssign && !selectedEmail)
-      return toast.error("Seleccioná un usuario para asignar la rutina");
+    if (canAssign && selectedUserOptions.length === 0 && selectedGroupOptions.length === 0)
+      return toast.error("Seleccioná al menos un usuario o grupo para asignar la rutina");
     setStep(2);
   };
 
@@ -1199,12 +1203,17 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   // Payload
   const buildPayload = () => {
-    const userId = canAssign
-      ? (users.find(u => u.email === selectedEmail)?.ID_Usuario ?? null)
-      : Number(localStorage.getItem("usuarioId"));
+    const usuariosAsignados = canAssign
+      ? selectedUserOptions.map(option => Number(option.value)).filter(Boolean)
+      : [Number(localStorage.getItem("usuarioId"))].filter(Boolean);
+    const gruposAsignados = canAssign
+      ? selectedGroupOptions.map(option => Number(option.value)).filter(Boolean)
+      : [];
+    const currentUserId = Number(localStorage.getItem("usuarioId"));
+    const userId = usuariosAsignados[0] || currentUserId;
 
     const entrenadorId = canAssign
-      ? Number(localStorage.getItem("usuarioId"))
+      ? currentUserId
       : null;
 
     const transformBlocks = (blocksList) => {
@@ -1349,6 +1358,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     const payload = {
       ID_Usuario: userId,
       ID_Entrenador: entrenadorId,
+      usuariosAsignados,
+      gruposAsignados,
       nombre: formData.nombre,
       desc: formData.descripcion,
       claseRutina: selectedClase,
@@ -1574,35 +1585,35 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 />
 
                 {canAssign && (
-                  <Select
-                    options={users.map(u => ({
-                      label: `${u.nombre} ${u.apellido} (${u.email})`,
-                      value: u.email
-                    }))}
-                    value={
-                      selectedEmail
-                        ? {
-                          label: `${users.find(
-                            u =>
-                              u.email ===
-                              selectedEmail
-                          )?.nombre || ''} ${users.find(
-                            u =>
-                              u.email ===
-                              selectedEmail
-                          )?.apellido || ''} (${selectedEmail})`,
-                          value: selectedEmail
-                        }
-                        : null
-                    }
-                    onChange={option =>
-                      setSelectedEmail(option.value)
-                    }
-                    placeholder="Seleccioná un usuario"
-                    isSearchable
-                    required={!!fromEntrenador}
-                    styles={customStyles}
-                  />
+                  <>
+                    <Select
+                      options={users.map(u => ({
+                        label: `${u.nombre || ''} ${u.apellido || ''} (${u.email})`,
+                        value: u.ID_Usuario
+                      }))}
+                      value={selectedUserOptions}
+                      onChange={options => setSelectedUserOptions(options || [])}
+                      placeholder="Usuarios asignados"
+                      isMulti
+                      isSearchable
+                      styles={customStyles}
+                    />
+
+                    <Select
+                      options={gruposUsuarios
+                        .filter(g => g.estado !== false)
+                        .map(g => ({
+                          label: `${g.nombre} (${g.miembros?.length || 0} usuarios)`,
+                          value: g.ID_GrupoUsuario
+                        }))}
+                      value={selectedGroupOptions}
+                      onChange={options => setSelectedGroupOptions(options || [])}
+                      placeholder="Grupos asignados"
+                      isMulti
+                      isSearchable
+                      styles={customStyles}
+                    />
+                  </>
                 )}
 
                 <div className='crearRutina-s1-continuar-btn-ctn'>

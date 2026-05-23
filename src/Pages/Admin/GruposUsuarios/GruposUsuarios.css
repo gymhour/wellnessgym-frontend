@@ -1,0 +1,131 @@
+.grupos-usuarios-page {
+  gap: 20px;
+}
+
+.grupo-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+}
+
+.grupo-form input[type="text"],
+.grupo-form > input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--background-color);
+  color: var(--text-color);
+}
+
+.grupo-estado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.grupo-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.grupos-list {
+  display: grid;
+  gap: 12px;
+}
+
+.grupo-card {
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+}
+
+.grupo-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.grupo-card-header h3 {
+  margin: 0 0 4px;
+}
+
+.grupo-card-header p {
+  margin: 0;
+  color: var(--text-color-distinct);
+}
+
+.grupo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.grupo-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.grupo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.grupo-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.grupo-status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.grupo-status.active {
+  background: rgba(46, 204, 113, 0.16);
+  color: #2ecc71;
+}
+
+.grupo-status.inactive {
+  background: rgba(231, 76, 60, 0.16);
+  color: #e74c3c;
+}
+
+.grupo-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.grupo-members span {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--background-color);
+}
+
+@media (max-width: 760px) {
+  .grupo-form {
+    grid-template-columns: 1fr;
+  }
+}

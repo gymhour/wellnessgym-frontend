@@ -212,6 +212,18 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     </li>
                   </Link>
                   <Link
+                    to="/admin/grupos-usuarios"
+                    className={`menu-link ${location.pathname === "/admin/grupos-usuarios"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <UserCog className="icon" />{" "}
+                      Grupos de usuarios
+                    </li>
+                  </Link>
+                  <Link
                     to="/admin/ejercicios"
                     className={`menu-link ${location.pathname === "/admin/ejercicios"
                       ? "active"

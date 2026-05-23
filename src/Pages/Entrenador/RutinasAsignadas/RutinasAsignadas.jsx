@@ -686,7 +686,17 @@ const RutinasAsignadas = () => {
                 )}
 
                 <div className="rutina-asignada" style={{ marginTop: 10 }}>
-                  <strong>Asignada a:</strong> {rutina?.alumno?.nombre} {rutina?.alumno?.apellido}
+                  <strong>Usuarios:</strong>{' '}
+                  {Array.isArray(rutina?.asignacionesUsuarios) && rutina.asignacionesUsuarios.length > 0
+                    ? rutina.asignacionesUsuarios.map(u => `${u.nombre || ''} ${u.apellido || ''}`.trim()).join(', ')
+                    : `${rutina?.alumno?.nombre || ''} ${rutina?.alumno?.apellido || ''}`.trim() || '—'}
+
+                  <div>
+                    <strong>Grupos:</strong>{' '}
+                    {Array.isArray(rutina?.asignacionesGrupos) && rutina.asignacionesGrupos.length > 0
+                      ? rutina.asignacionesGrupos.map(g => g.nombre).join(', ')
+                      : '—'}
+                  </div>
 
                   <div>
                     <strong>Por:</strong> {`${rutina?.entrenador?.nombre || ''} ${rutina?.entrenador?.apellido || ''}`.trim() || '—'}

@@ -200,6 +200,52 @@ const getRutinasAdmins = async () => {
     }
 }
 
+// Grupos de usuarios
+const getGruposUsuarios = async () => {
+    try {
+        const response = await apiClient.get('/grupos-usuarios');
+        return response.data;
+    } catch (error) {
+        throw new Error('Error al obtener grupos de usuarios');
+    }
+}
+
+const getGrupoUsuarioById = async (id) => {
+    try {
+        const response = await apiClient.get(`/grupos-usuarios/${id}`);
+        return response.data;
+    } catch (error) {
+        throw new Error('Error al obtener el grupo de usuarios');
+    }
+}
+
+const createGrupoUsuario = async (body) => {
+    try {
+        const response = await apiClient.post('/grupos-usuarios', body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al crear grupo de usuarios');
+    }
+}
+
+const updateGrupoUsuario = async (id, body) => {
+    try {
+        const response = await apiClient.put(`/grupos-usuarios/${id}`, body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al actualizar grupo de usuarios');
+    }
+}
+
+const deleteGrupoUsuario = async (id) => {
+    try {
+        const response = await apiClient.delete(`/grupos-usuarios/${id}`);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al eliminar grupo de usuarios');
+    }
+}
+
 /* Entrenadores */
 const getEntrenadores = async () => {
     try {
@@ -601,6 +647,11 @@ export default {
     getRutinasEntrenadores,
     getRutinasAdmins,
     getRutinasAsignadas,
+    getGruposUsuarios,
+    getGrupoUsuarioById,
+    createGrupoUsuario,
+    updateGrupoUsuario,
+    deleteGrupoUsuario,
     // Entrenadores
     getEntrenadores,
     addEntrenadorToClase,

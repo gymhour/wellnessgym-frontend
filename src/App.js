@@ -42,6 +42,7 @@ import EjercicioDetail from './Pages/Shared/EjercicioDetail/EjercicioDetail';
 import RutinaDetail from './Pages/Shared/RutinaDetail/RutinaDetail';
 import CrearRutinaRecomendada from './Pages/Admin/CrearRutinaRecomendada/CrearRutinaRecomendada';
 import RutinasAsignadasAdmin from './Pages/Admin/RutinasAsignadasAdmin/RutinasAsignadasAdmin';
+import GruposUsuarios from './Pages/Admin/GruposUsuarios/GruposUsuarios';
 import AdminAttendancePage from './Pages/Admin/Attendances/AdminAttendancePage';
 import AdminCheckInPage from './Pages/Admin/CheckIn/AdminCheckInPage';
 import UserMyAttendancesPage from './Pages/Alumno/MisAsistencias/UserMyAttendancesPage';
@@ -142,6 +143,13 @@ function App() {
           element={
             <ProtectedRoute>
               <UsuariosList fromAdmin={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/admin/grupos-usuarios"
+          element={
+            <ProtectedRoute>
+              <GruposUsuarios />
             </ProtectedRoute>
           }
         />
