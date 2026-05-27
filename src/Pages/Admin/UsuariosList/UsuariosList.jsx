@@ -228,24 +228,10 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         ) : (
           <div className="table-responsive">
             <table className='usuarios-table'>
-              <colgroup>
-                <col style={{ width: '5%' }} />
-                <col style={{ width: fromAdmin ? '14%' : '17%' }} />
-                <col style={{ width: fromAdmin ? '9%' : '10%' }} />
-                <col style={{ width: fromAdmin ? '18%' : '22%' }} />
-                <col style={{ width: fromAdmin ? '8%' : '9%' }} />
-                <col style={{ width: fromAdmin ? '8%' : '9%' }} />
-                <col style={{ width: fromAdmin ? '9%' : '10%' }} />
-                <col style={{ width: fromAdmin ? '9%' : '9%' }} />
-                <col style={{ width: fromAdmin ? '8%' : '9%' }} />
-                {fromAdmin && <col style={{ width: '12%' }} />}
-              </colgroup>
-              <thead>
+<thead>
                 <tr>
-                  <th>ID</th>
                   <th>Nombre y apellido</th>
                   <th>DNI</th>
-                  <th>Email</th>
                   <th>Tipo</th>
                   <th>Plan</th>
                   <th>Registro</th>
@@ -257,27 +243,29 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
               <tbody>
                 {usuarios.map(u => (
                   <tr key={u.ID_Usuario}>
-                    <td data-label="ID">{u.ID_Usuario}</td>
-
-                    <td data-label="Nombre y apellido" style={{ textTransform: 'capitalize' }}>
-                      {u.nombre} {u.apellido}
+                    <td data-label="Nombre y apellido">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {u.avatarUrl && (
+                          <div
+                            className="usuarios-table-userimage"
+                            style={{
+                              backgroundImage: `url(${u.avatarUrl})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              backgroundRepeat: 'no-repeat',
+                              flexShrink: 0
+                            }}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <div>
+                          <div style={{ textTransform: 'capitalize' }}>{u.nombre} {u.apellido}</div>
+                          <div style={{ color: '#9ca3af', fontSize: '0.78rem' }}>{u.email}</div>
+                        </div>
+                      </div>
                     </td>
 
                     <td data-label="DNI">{u.dni || '—'}</td>
-
-                    <td data-label="Email" className="usuarios-table-email">
-                      <div
-                        className="usuarios-table-userimage"
-                        style={{
-                          backgroundImage: `url(${u.avatarUrl || defaultAvatar})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          backgroundRepeat: 'no-repeat'
-                        }}
-                        aria-hidden="true"
-                      />
-                      <span className="usuarios-table-email-text">{u.email}</span>
-                    </td>
 
                     <td data-label="Tipo" style={{ textTransform: 'capitalize' }}>{u.tipo}</td>
 

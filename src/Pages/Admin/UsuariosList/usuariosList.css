@@ -9,7 +9,7 @@
 .usuarios-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .usuarios-table tr {
@@ -18,7 +18,7 @@
 
 .usuarios-table th,
 .usuarios-table td {
-  padding: 8px;
+  padding: 16px 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
