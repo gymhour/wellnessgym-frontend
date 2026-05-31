@@ -5,7 +5,7 @@ const BASE_URL = 'https://gym-backend-lzwci68j1-vdevv2024-gmailcoms-projects.ver
 //const BASE_URL = 'http://localhost:3000';
 // const BASE_URL = 'https://gym-backend-rust.vercel.app';
 // const BASE_URL = 'https://backend-agentrenamiento.vercel.app';
-
+// 
 // Cliente para login / register / cambiar contraseña (sin interceptores)
 export const authClient = axios.create({
   baseURL: BASE_URL,
