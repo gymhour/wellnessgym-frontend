@@ -177,10 +177,9 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     const ausentes = filteredTurnos.filter(t => t.estado === 'AUSENTE').length;
     const activos = filteredTurnos.filter(t => t.estado === 'ACTIVO').length;
     const cancelados = filteredTurnos.filter(t => t.estado === 'CANCELADO').length;
-    const pendientes = filteredTurnos.filter(t => t.estado === 'pendiente').length;
     const conEstado = asistidos + ausentes;
     const porcentaje = conEstado > 0 ? Math.round((asistidos / conEstado) * 100) : 0;
-    return { total, asistidos, ausentes, activos, cancelados, pendientes, porcentaje };
+    return { total, asistidos, ausentes, activos, cancelados, porcentaje };
   }, [filteredTurnos]);
 
   // Agrupación por mes
@@ -213,7 +212,6 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       AUSENTE: 'turno-ausente',
       ACTIVO: 'turno-activo',
       CANCELADO: 'turno-cancelado',
-      pendiente: 'turno-pendiente',
     };
     return map[estado] || '';
   };
@@ -223,7 +221,6 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       AUSENTE: 'Ausente',
       ACTIVO: 'Activo',
       CANCELADO: 'Cancelado',
-      pendiente: 'Pendiente',
     };
     return map[estado] || estado;
   };
@@ -233,9 +230,8 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       AUSENTE: '#ef4444',
       ACTIVO: '#3b82f6',
       CANCELADO: '#6b7280',
-      pendiente: '#f59e0b',
     };
-    return map[estado] || '#6b7280';
+    return map[estado] || '#999';
   };
 
   const goPrevPage = () => page > 1 && setPage(p => p - 1);
@@ -547,7 +543,6 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                         <option value="AUSENTE">Ausentes</option>
                         <option value="ACTIVO">Activos</option>
                         <option value="CANCELADO">Cancelados</option>
-                        <option value="pendiente">Pendientes</option>
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
