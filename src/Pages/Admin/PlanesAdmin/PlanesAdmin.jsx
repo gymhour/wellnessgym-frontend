@@ -6,6 +6,7 @@ import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton'
 import { Edit, Trash2 } from 'lucide-react'
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput'
+import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown'
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen'
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp'
 import { toast } from 'react-toastify'
@@ -202,13 +203,20 @@ const PlanesAdmin = () => {
                 </div>
                 <div className="plan-form-input-container">
                   <label>Duración</label>
-                  <select value={duracion} onChange={(e) => setDuracion(e.target.value)}>
-                    <option value="SEMANAL">Semanal</option>
-                    <option value="MENSUAL">Mensual</option>
-                    <option value="TRIMESTRAL">Trimestral</option>
-                    <option value="SEMESTRAL">Semestral</option>
-                    <option value="ANUAL">Anual</option>
-                  </select>
+                  <CustomDropdown
+                    options={[
+                      { value: 'SEMANAL', label: 'Semanal' },
+                      { value: 'MENSUAL', label: 'Mensual' },
+                      { value: 'TRIMESTRAL', label: 'Trimestral' },
+                      { value: 'SEMESTRAL', label: 'Semestral' },
+                      { value: 'ANUAL', label: 'Anual' },
+                    ]}
+                    value={duracion}
+                    onChange={(e) => setDuracion(e.target.value)}
+                    placeholderOption={null}
+                    name="duracion"
+                    id="duracion"
+                  />
                 </div>
                 <div className="plan-form-input-container">
                   <label>Sesiones por semana</label>
@@ -228,12 +236,15 @@ const PlanesAdmin = () => {
                     onChange={(e) => setSesionesGracia(e.target.value)}
                   />
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={requiereTurno}
-                    onChange={(e) => setRequiereTurno(e.target.checked)}
-                  />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={requiereTurno}
+                      onChange={(e) => setRequiereTurno(e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </span>
                   Requiere turno para asistir
                 </label>
                 <div className="modal-actions">

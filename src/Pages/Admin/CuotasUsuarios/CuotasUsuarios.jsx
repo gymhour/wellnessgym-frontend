@@ -40,6 +40,7 @@ const CuotasUsuarios = () => {
   // — Estados para carga masiva —
   const [bulkMesDate, setBulkMesDate] = useState(null);
   const [bulkVenceDate, setBulkVenceDate] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
 
   // — Estados de filtros (inputs) —
   const [inputEmail, setInputEmail] = useState('');
@@ -263,7 +264,7 @@ const CuotasUsuarios = () => {
 
     const payload = { mes: mesString, importe: Number(importe), vence: venceIso };
     try {
-      await apiClient.post(`/cuotas/usuario/${selectedUserOpt.value}`, payload);
+      const resp = await apiClient.post(`/cuotas/usuario/${selectedUserOpt.value}`, payload);
       setSelectedUserOpt(null);
       setMesDate(null);
       setVenceDate(null);
@@ -271,7 +272,12 @@ const CuotasUsuarios = () => {
       setPage(1);
       setShowModal(false);
       await fetchCuotas();
-      toast.success('Cuota creada correctamente.');
+      const advertencias = resp?.data?.advertencias;
+      if (advertencias) {
+        toast.warning(advertencias.mensaje, { autoClose: 8000 });
+      } else {
+        toast.success('Cuota creada correctamente.');
+      }
     } catch (err) {
       console.error('Error al crear cuota:', err);
       alert('No se pudo crear la cuota.');
@@ -283,19 +289,25 @@ const CuotasUsuarios = () => {
   const handleBulkGenerate = async () => {
     if (!bulkMesDate) { alert('Selecciona un mes válido.'); return; }
     if (!bulkVenceDate) { alert('Selecciona fecha de vencimiento.'); return; }
+    setShowBulkModal(false);
     setLoading(true);
     try {
       const mesString = buildMesString(bulkMesDate);
       const venceIso = toIsoUtcEndOfDay(bulkVenceDate);
+
       const payload = { mes: mesString, vence: venceIso };
-      await apiService.postCuotasMasivas(payload);
-      setShowBulkModal(false);
+      const resp = await apiService.postCuotasMasivas(payload);
       setPage(1);
       fetchCuotas();
-      toast.success("Las cuotas se generaron correctamente.");
+      toast.success("Las cuotas se generaron correctamente con todos los turnos fijos.");
     } catch (err) {
       console.error('Error al generar cuotas masivas:', err);
-      toast.error('No se pudieron generar las cuotas masivas.');
+      const errData = err?.response?.data;
+      if (errData && errData.valido === false && errData.usuariosConProblemas) {
+        setValidationResult(errData);
+      } else {
+        toast.error(errData?.message || 'No se pudieron generar las cuotas masivas.');
+      }
     } finally {
       setLoading(false);
     }
@@ -635,6 +647,40 @@ const CuotasUsuarios = () => {
           </div>
         )}
       </ConfirmationPopup>
+
+      {validationResult && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <h3>Problemas de turnos fijos detectados</h3>
+            <p>
+              Se encontraron <strong>{validationResult.usuariosConProblemas.length}</strong> usuario(s) con problemas en sus turnos fijos.
+              Corregí los siguientes casos y volvé a intentar:
+            </p>
+            <div style={{ maxHeight: '350px', overflowY: 'auto', marginTop: '12px' }}>
+              {validationResult.usuariosConProblemas.map(u => (
+                <div key={u.usuarioId} style={{ marginBottom: '16px', padding: '10px', background: '#fef2f2', borderRadius: '6px' }}>
+                  <strong style={{ color: '#b91c1c' }}>{u.usuario}</strong>
+                  <span style={{ fontSize: '13px', color: '#666' }}> ({u.cantidadProblemas} problema(s))</span>
+                  <ul style={{ marginTop: '6px', paddingLeft: '20px', fontSize: '14px' }}>
+                    {u.problemas.map((p, i) => (
+                      <li key={i} style={{ marginBottom: '4px' }}>{p.descripcion}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions" style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                className="modal-primary-button"
+                onClick={() => setValidationResult(null)}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

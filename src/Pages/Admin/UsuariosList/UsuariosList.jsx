@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import '../../../App.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiClient from '../../../axiosConfig';
+import apiService from '../../../services/apiService';
 import './usuariosList.css';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
@@ -9,7 +10,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
@@ -17,6 +18,15 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [loading, setLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+
+  // Historial de turnos modal
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyUser, setHistoryUser] = useState(null);
+  const [turnosHistory, setTurnosHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [histFiltroEstado, setHistFiltroEstado] = useState('');
+  const [histFechaDesde, setHistFechaDesde] = useState('');
+  const [histFechaHasta, setHistFechaHasta] = useState('');
 
   // ➜ agregamos estado en filtros
   const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '' });
@@ -117,6 +127,115 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       updateUsuarioEstado(selectedUserId, estadoBool);
     }
     closePopup();
+  };
+
+  const fetchTurnosHistory = async (user) => {
+    setHistoryUser(user);
+    setHistFiltroEstado('');
+    setHistFechaDesde('');
+    setHistFechaHasta('');
+    setHistoryLoading(true);
+    setShowHistoryModal(true);
+    try {
+      const data = await apiService.getTurnosUsuario(user.ID_Usuario);
+      setTurnosHistory(data || []);
+    } catch {
+      toast.error('Error al cargar historial de turnos');
+      setTurnosHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+  const closeHistoryModal = () => {
+    setShowHistoryModal(false);
+    setHistoryUser(null);
+    setTurnosHistory([]);
+  };
+
+  // Turnos filtrados
+  const filteredTurnos = useMemo(() => {
+    let list = [...turnosHistory];
+    if (histFiltroEstado) {
+      list = list.filter(t => t.estado === histFiltroEstado);
+    }
+    if (histFechaDesde) {
+      const d = new Date(histFechaDesde);
+      list = list.filter(t => new Date(t.fecha) >= d);
+    }
+    if (histFechaHasta) {
+      const d = new Date(histFechaHasta);
+      d.setHours(23, 59, 59, 999);
+      list = list.filter(t => new Date(t.fecha) <= d);
+    }
+    return list;
+  }, [turnosHistory, histFiltroEstado, histFechaDesde, histFechaHasta]);
+
+  // Resumen de asistencia
+  const stats = useMemo(() => {
+    const total = filteredTurnos.length;
+    const asistidos = filteredTurnos.filter(t => t.estado === 'ASISTIDO').length;
+    const ausentes = filteredTurnos.filter(t => t.estado === 'AUSENTE').length;
+    const activos = filteredTurnos.filter(t => t.estado === 'ACTIVO').length;
+    const cancelados = filteredTurnos.filter(t => t.estado === 'CANCELADO').length;
+    const pendientes = filteredTurnos.filter(t => t.estado === 'pendiente').length;
+    const conEstado = asistidos + ausentes;
+    const porcentaje = conEstado > 0 ? Math.round((asistidos / conEstado) * 100) : 0;
+    return { total, asistidos, ausentes, activos, cancelados, pendientes, porcentaje };
+  }, [filteredTurnos]);
+
+  // Agrupación por mes
+  const groupedByMonth = useMemo(() => {
+    const groups = {};
+    for (const t of filteredTurnos) {
+      const d = new Date(t.fecha);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    }
+    const sorted = Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+    return sorted;
+  }, [filteredTurnos]);
+
+  const formatFecha = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  const formatHora = (iso) => (iso || '').slice(11, 16);
+  const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const getDiaSemana = (iso) => diasSemana[new Date(iso).getDay()];
+  const getMesLabel = (key) => {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  };
+  const badgeClass = (estado) => {
+    const map = {
+      ASISTIDO: 'turno-asistido',
+      AUSENTE: 'turno-ausente',
+      ACTIVO: 'turno-activo',
+      CANCELADO: 'turno-cancelado',
+      pendiente: 'turno-pendiente',
+    };
+    return map[estado] || '';
+  };
+  const badgeLabel = (estado) => {
+    const map = {
+      ASISTIDO: 'Asistió',
+      AUSENTE: 'Ausente',
+      ACTIVO: 'Activo',
+      CANCELADO: 'Cancelado',
+      pendiente: 'Pendiente',
+    };
+    return map[estado] || estado;
+  };
+  const badgeColor = (estado) => {
+    const map = {
+      ASISTIDO: '#10b981',
+      AUSENTE: '#ef4444',
+      ACTIVO: '#3b82f6',
+      CANCELADO: '#6b7280',
+      pendiente: '#f59e0b',
+    };
+    return map[estado] || '#6b7280';
   };
 
   const goPrevPage = () => page > 1 && setPage(p => p - 1);
@@ -312,6 +431,10 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                           text="Editar"
                           linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
                         />
+                        <SecondaryButton
+                          text="Ver turnos"
+                          onClick={() => fetchTurnosHistory(u)}
+                        />
                         {u.tipo !== 'admin' && (
                           <SecondaryButton
                             text="Cambiar estado"
@@ -358,6 +481,174 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             options={["Activar", "Desactivar"]}
             placeholderOption="Elige estado"
           />
+        )}
+
+        {/* ─── Modal historial de turnos ─── */}
+        {showHistoryModal && (
+          <div className="modal-overlay" onClick={closeHistoryModal}>
+            <div
+              className="modal-content"
+              style={{ maxWidth: '760px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <h3 style={{ margin: 0 }}>Historial de turnos</h3>
+                  <span style={{ fontSize: '14px', color: 'var(--text-color-distinct)' }}>
+                    {historyUser?.nombre} {historyUser?.apellido} · {historyUser?.email}
+                  </span>
+                </div>
+                <button onClick={closeHistoryModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              {historyLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>Cargando turnos...</div>
+              ) : (
+                <>
+                  {/* ─── Resumen de asistencia ─── */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                    {[
+                      { label: 'Total', value: stats.total, color: 'var(--text-color)' },
+                      { label: 'Asistidos', value: stats.asistidos, color: '#10b981', pct: stats.porcentaje },
+                      { label: 'Ausentes', value: stats.ausentes, color: '#ef4444' },
+                      { label: 'Próximos', value: stats.activos, color: '#3b82f6' },
+                      { label: 'Cancelados', value: stats.cancelados, color: '#6b7280' },
+                    ].map(s => (
+                      <div key={s.label} style={{
+                        flex: 1, minWidth: '80px', background: 'var(--background-color-distinct)',
+                        borderRadius: '10px', padding: '10px 14px', textAlign: 'center'
+                      }}>
+                        <div style={{ fontSize: '22px', fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>{s.label}</div>
+                        {s.pct !== undefined && (
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: s.color }}>{s.pct}%</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ─── Filtros ─── */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'end' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
+                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Estado</label>
+                      <select
+                        value={histFiltroEstado}
+                        onChange={(e) => setHistFiltroEstado(e.target.value)}
+                        style={{
+                          padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
+                        }}
+                      >
+                        <option value="">Todos</option>
+                        <option value="ASISTIDO">Asistidos</option>
+                        <option value="AUSENTE">Ausentes</option>
+                        <option value="ACTIVO">Activos</option>
+                        <option value="CANCELADO">Cancelados</option>
+                        <option value="pendiente">Pendientes</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Desde</label>
+                      <input
+                        type="date"
+                        value={histFechaDesde}
+                        onChange={(e) => setHistFechaDesde(e.target.value)}
+                        style={{
+                          padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Hasta</label>
+                      <input
+                        type="date"
+                        value={histFechaHasta}
+                        onChange={(e) => setHistFechaHasta(e.target.value)}
+                        style={{
+                          padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
+                        }}
+                      />
+                    </div>
+                    {(histFiltroEstado || histFechaDesde || histFechaHasta) && (
+                      <button
+                        onClick={() => { setHistFiltroEstado(''); setHistFechaDesde(''); setHistFechaHasta(''); }}
+                        style={{
+                          padding: '7px 14px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'transparent', color: 'var(--text-color-distinct)', cursor: 'pointer', fontSize: '13px'
+                        }}
+                      >
+                        Limpiar filtros
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ─── Turnos agrupados por mes ─── */}
+                  <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
+                    {groupedByMonth.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: 'var(--text-color-distinct)', padding: '30px' }}>
+                        No se encontraron turnos.
+                      </p>
+                    ) : groupedByMonth.map(([mesKey, turnos]) => (
+                      <div key={mesKey} style={{ marginBottom: '16px' }}>
+                        <div style={{
+                          fontSize: '14px', fontWeight: 700, color: 'var(--text-color-distinct)',
+                          textTransform: 'capitalize', padding: '6px 0', borderBottom: '1px solid var(--border-color)',
+                          marginBottom: '6px'
+                        }}>
+                          {getMesLabel(mesKey)}
+                        </div>
+                        {turnos.map(t => {
+                          const clase = t.HorarioClase?.Clase?.nombre || '—';
+                          const horario = t.HorarioClase;
+                          return (
+                            <div key={t.id_turno} style={{
+                              display: 'flex', gap: '8px', alignItems: 'center', padding: '8px 6px',
+                              borderBottom: '1px solid var(--border-color)', fontSize: '13px'
+                            }}>
+                              <span style={{ minWidth: '85px', fontWeight: 500 }}>
+                                {getDiaSemana(t.fecha)} {formatFecha(t.fecha)}
+                              </span>
+                              <span style={{ minWidth: '50px', color: 'var(--text-color-distinct)' }}>
+                                {formatHora(horario?.horaIni)}
+                              </span>
+                              <span style={{ minWidth: '90px' }}>{clase}</span>
+                              <span style={{
+                                fontSize: '11px', padding: '2px 8px', borderRadius: '5px',
+                                background: t.origen === 'FIJO' ? 'rgba(59,130,246,0.12)' : 'rgba(107,114,128,0.12)',
+                                color: t.origen === 'FIJO' ? '#3b82f6' : '#6b7280',
+                                fontWeight: 600, minWidth: '46px', textAlign: 'center'
+                              }}>
+                                {t.origen || '—'}
+                              </span>
+                              <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                  padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                                  background: `${badgeColor(t.estado)}18`,
+                                  color: badgeColor(t.estado),
+                                }}>
+                                  <span style={{
+                                    width: '7px', height: '7px', borderRadius: '50%',
+                                    background: badgeColor(t.estado), display: 'inline-block'
+                                  }} />
+                                  {badgeLabel(t.estado)}
+                                </span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

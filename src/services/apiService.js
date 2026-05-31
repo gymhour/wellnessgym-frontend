@@ -470,6 +470,15 @@ const postCuotasMasivas = async (body) => {
     }
 }
 
+const postValidarTurnosFijos = async (body) => {
+    try {
+        const response = await apiClient.post("cuotas/validate-turnos-fijos", body);
+        return response;
+    } catch (error) {
+        throw new Error("Error en el servicio de postValidarTurnosFijos")
+    }
+}
+
 const getCuotasUsuario = async (id) => {
     try {
         const response = await apiClient.get(`cuotas/usuario/${id}/cuotas`);
@@ -693,6 +702,7 @@ export default {
     // Cuotas
     getCuotasUsuario,
     postCuotasMasivas,
+    postValidarTurnosFijos,
     getCuotasReminder,
     // Asistencias
     registerAttendance,
