@@ -632,7 +632,7 @@ const CuotasUsuarios = () => {
         message={
           actionType === 'pay'
             ? `¿Confirmar pago de la cuota ${selectedCuota?.ID_Cuota}?`
-            : `¿Eliminar la cuota ${selectedCuota?.ID_Cuota}?`
+            : `¿Estas seguro de eliminar la cuota? Si la cuota tiene turnos fijos asociados se eliminaran también.`
         }
       >
         {actionType === 'pay' && (

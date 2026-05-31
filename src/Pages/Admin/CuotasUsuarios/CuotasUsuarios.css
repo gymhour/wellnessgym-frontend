@@ -136,6 +136,9 @@
   border-radius: 16px;
   min-width: 360px;
   max-width: 92vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  margin: 40px 0;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: 2px solid var(--border-color);
 }

@@ -29,7 +29,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [histFechaHasta, setHistFechaHasta] = useState('');
 
   // ➜ agregamos estado en filtros
-  const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '' });
+  const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' });
   const [draftFiltros, setDraftFiltros] = useState(filtros);
 
   const [page, setPage] = useState(1);
@@ -38,6 +38,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const defaultAvatar = "https://..."; // tu URL
   const opcionesTipo = fromAdmin ? ['Cliente', 'Entrenador', 'Admin'] : ['Cliente'];
   const opcionesEstado = ['Activo', 'Inactivo'];
+  const [planesList, setPlanesList] = useState([]);
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -56,6 +57,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       if (filtros.apellido) params.apellido = filtros.apellido;
       if (filtros.email) params.email = filtros.email;
       if (filtros.dni) params.dni = filtros.dni;
+      if (filtros.plan) params.planId = filtros.plan;
 
       // ➜ enviar estado=true/false si corresponde
       if (filtros.estado) {
@@ -81,6 +83,12 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
 
   useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
 
+  useEffect(() => {
+    apiService.getPlanes().then(res => {
+      if (Array.isArray(res)) setPlanesList(res);
+    }).catch(() => {});
+  }, []);
+
   const handleChangeDraft = (e) =>
     setDraftFiltros(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -91,7 +99,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   };
 
   const limpiarFiltros = () => {
-    const empty = { tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '' };
+    const empty = { tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' };
     setDraftFiltros(empty);
     setFiltros(empty);
     setPage(1);
@@ -328,6 +336,18 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                 value={draftFiltros.email}
                 onChange={handleChangeDraft}
                 placeholder="Ej: juan@gmail.com"
+              />
+            </div>
+
+            <div className='usuarios-filtros-form-inputs-ctn'>
+              <label htmlFor="plan">Plan:</label>
+              <CustomDropdown
+                id="plan"
+                name="plan"
+                value={draftFiltros.plan}
+                onChange={handleChangeDraft}
+                options={planesList.map(p => ({ value: String(p.ID_Plan), label: p.nombre }))}
+                placeholderOption="— Todos —"
               />
             </div>
 
