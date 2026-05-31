@@ -479,7 +479,7 @@ const CuotasUsuarios = () => {
                     <td data-label="Mes" className='cuotas-usuario-mes-col'>{formatMonth(c.mes)}</td>
                     <td data-label="Importe">{formatCurrency(c.importe)}</td>
                     <td data-label="Vence">{formatDate(c.vence)}</td>
-                    <td data-label="Plan">{c.User?.plan?.nombre ?? '–'}</td>
+                    <td data-label="Plan">{c.planNombreSnapshot ?? '–'}</td>
                     <td data-label="Estado">
                       <span
                         className={`badge ${c.vencida ? 'expired' : c.pagada ? 'paid' : 'pending'}`}

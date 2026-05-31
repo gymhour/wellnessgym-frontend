@@ -51,6 +51,9 @@ const mapAttendanceHistoryItem = item => {
         status: item?.permitido ? ATTENDANCE_STATUS.ALLOWED : ATTENDANCE_STATUS.REJECTED,
         reason: attendanceReasonMap[item?.resultado],
         rejectionReason: item?.permitido ? '' : item?.motivo,
+        plan: item?.Cuota?.planNombreSnapshot
+            ? { name: item.Cuota.planNombreSnapshot }
+            : undefined,
     };
 };
 
