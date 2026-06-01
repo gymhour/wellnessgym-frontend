@@ -260,7 +260,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           <div style={{ display: 'flex', gap: '10px' }}>
             <PrimaryButton
               text="Crear usuario"
-              onClick={() => navigate('/admin/crear-usuario')}
+              linkTo="/admin/crear-usuario"
             />
             <SecondaryButton
               text="Importar usuarios"

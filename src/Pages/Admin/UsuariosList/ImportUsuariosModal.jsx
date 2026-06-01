@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import apiClient from '../../../axiosConfig';
 import { toast } from 'react-toastify';
@@ -8,6 +8,7 @@ import { X, Upload, FileSpreadsheet } from 'lucide-react';
 const COLUMNAS_ESPERADAS = ['email', 'dni', 'nombre', 'apellido', 'tel', 'direc', 'profesion', 'fechaCumple', 'plan'];
 
 const ImportUsuariosModal = ({ onClose, onSuccess }) => {
+  const fileInputRef = useRef(null);
   const [usuarios, setUsuarios] = useState([]);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,8 +50,9 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
   };
 
   const handleImport = async () => {
+    if (loading) return;
     if (usuarios.length === 0) {
-      toast.error('No hay datos para importar');
+      toast.error('No hay datos para importar. Verifique que el archivo tenga datos en las columnas correctas.');
       return;
     }
 
@@ -105,16 +107,41 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '12px 16px', border: '2px dashed var(--border-color)', borderRadius: '8px', background: 'var(--background-color-distinct)' }}>
-            <FileSpreadsheet size={24} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFile}
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 16px', width: '100%',
+              border: '2px dashed var(--border-color)',
+              borderRadius: '8px', background: 'var(--background-color-distinct)',
+              cursor: 'pointer', fontSize: '14px', color: 'var(--text-color)',
+              fontFamily: 'inherit'
+            }}
+          >
+            <FileSpreadsheet size={22} />
             <span>{fileName || 'Haga clic para seleccionar archivo .xlsx'}</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFile}
-              style={{ display: 'none' }}
-            />
-          </label>
+            {fileName && (
+              <>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-color-distinct)' }}>
+                  ({usuarios.length} registro(s))
+                </span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); setUsuarios([]); setFileName(''); setErrors(null); }}
+                  style={{ cursor: 'pointer', color: 'var(--text-color-distinct)', marginLeft: '8px' }}
+                >
+                  <X size={18} />
+                </span>
+              </>
+            )}
+          </button>
         </div>
 
         {usuarios.length > 0 && (
@@ -168,10 +195,18 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
         <div className="modal-actions">
           <SecondaryButton text="Cancelar" onClick={onClose} />
           <button
-            className="primary-button"
             onClick={handleImport}
-            disabled={usuarios.length === 0 || loading}
-            style={{ opacity: usuarios.length === 0 || loading ? 0.6 : 1, cursor: usuarios.length === 0 || loading ? 'not-allowed' : 'pointer' }}
+            style={{
+              padding: '10px 16px',
+              background: 'var(--primary-color)',
+              color: '#FAFAFA',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: usuarios.length === 0 || loading ? 'default' : 'pointer',
+              opacity: usuarios.length === 0 || loading ? 0.5 : 1
+            }}
           >
             {loading ? 'Importando...' : 'Importar'}
           </button>
