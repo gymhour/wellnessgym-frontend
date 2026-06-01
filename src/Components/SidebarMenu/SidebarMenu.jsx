@@ -17,7 +17,6 @@ import {
   Notebook,
   CalendarCheck,
   Star,
-  UserPlus,
   Users,
   Menu,
   X,
@@ -197,18 +196,6 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     <li className="menu-item">
                       <Users className="icon" />{" "}
                       Usuarios
-                    </li>
-                  </Link>
-                  <Link
-                    to="/admin/crear-usuario"
-                    className={`menu-link ${location.pathname === "/admin/crear-usuario"
-                      ? "active"
-                      : ""
-                      }`}
-                  >
-                    <li className="menu-item">
-                      <UserPlus className="icon" />{" "}
-                      Crear usuario
                     </li>
                   </Link>
                   <Link

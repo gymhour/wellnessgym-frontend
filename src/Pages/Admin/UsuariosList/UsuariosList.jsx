@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../../App.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiClient from '../../../axiosConfig';
@@ -10,14 +11,17 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload } from 'lucide-react';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
+import ImportUsuariosModal from './ImportUsuariosModal';
 
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
+  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Historial de turnos modal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -251,9 +255,21 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
 
       <div className='content-layout'>
-        <h2>Lista de usuarios</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>Lista de usuarios</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <PrimaryButton
+              text="Crear usuario"
+              onClick={() => navigate('/admin/crear-usuario')}
+            />
+            <SecondaryButton
+              text="Importar usuarios"
+              onClick={() => setShowImportModal(true)}
+            />
+          </div>
+        </div>
 
-        <div style={{ margin: '30px 0px' }}>
+        <div style={{ margin: '20px 0px' }}>
           <button
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
@@ -664,6 +680,13 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
               )}
             </div>
           </div>
+        )}
+
+        {showImportModal && (
+          <ImportUsuariosModal
+            onClose={() => setShowImportModal(false)}
+            onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
+          />
         )}
       </div>
     </div>
