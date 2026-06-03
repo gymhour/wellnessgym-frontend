@@ -482,6 +482,16 @@ const postValidarTurnosFijos = async (body) => {
     }
 }
 
+const regenerateTurnosFijosUsuario = async (idUsuario) => {
+    try {
+        const response = await apiClient.post(`cuotas/usuario/${idUsuario}/regenerate-turnos-fijos`);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || "Error en el servicio de regenerateTurnosFijosUsuario");
+    }
+}
+
 const getCuotasUsuario = async (id) => {
     try {
         const response = await apiClient.get(`cuotas/usuario/${id}/cuotas`);
@@ -706,6 +716,7 @@ export default {
     getCuotasUsuario,
     postCuotasMasivas,
     postValidarTurnosFijos,
+    regenerateTurnosFijosUsuario,
     getCuotasReminder,
     // Asistencias
     registerAttendance,

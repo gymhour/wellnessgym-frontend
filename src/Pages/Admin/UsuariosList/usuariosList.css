@@ -351,3 +351,195 @@
 .usuarios-table-actions .secondary-button:active {
   transform: translateY(0);
 }
+
+/* ====================================================
+   Historial de turnos
+   ==================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal-content {
+  width: min(92vw, 620px);
+  max-height: 90vh;
+  overflow: hidden;
+  background: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+  padding: 24px;
+}
+
+.turnos-history-modal {
+  width: min(94vw, 980px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.turnos-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.turnos-history-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.turnos-history-close:hover {
+  border-color: var(--border-color);
+  background: var(--background-color-distinct);
+}
+
+.turnos-history-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+}
+
+.turnos-history-tab {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color-distinct);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.turnos-history-tab.active {
+  background: var(--background-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.turnos-history-tab span {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.turnos-history-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 220px;
+  max-height: 48vh;
+  padding-right: 4px;
+}
+
+.turnos-history-bulk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -6px 0 14px;
+}
+
+.turnos-history-cancel-all,
+.turnos-history-regenerate-fixed {
+  padding: 9px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.turnos-history-regenerate-fixed {
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+}
+
+.turnos-history-regenerate-fixed:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.55);
+}
+
+.turnos-history-cancel-all {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+.turnos-history-cancel-all:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+.turnos-history-cancel-all:disabled,
+.turnos-history-regenerate-fixed:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media screen and (max-width: 700px) {
+  .modal-overlay {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .modal-content,
+  .turnos-history-modal {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    padding: 16px;
+  }
+
+  .turnos-history-header {
+    align-items: flex-start;
+  }
+
+  .turnos-history-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .turnos-history-list {
+    max-height: none;
+  }
+
+  .turnos-history-bulk-actions {
+    justify-content: stretch;
+  }
+
+  .turnos-history-cancel-all,
+  .turnos-history-regenerate-fixed {
+    width: 100%;
+  }
+}

@@ -31,6 +31,11 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [histFiltroEstado, setHistFiltroEstado] = useState('');
   const [histFechaDesde, setHistFechaDesde] = useState('');
   const [histFechaHasta, setHistFechaHasta] = useState('');
+  const [historyActiveTab, setHistoryActiveTab] = useState('past');
+  const [showCancelPendingPopup, setShowCancelPendingPopup] = useState(false);
+  const [cancelPendingLoading, setCancelPendingLoading] = useState(false);
+  const [showRegenerateFixedPopup, setShowRegenerateFixedPopup] = useState(false);
+  const [regenerateFixedLoading, setRegenerateFixedLoading] = useState(false);
 
   // ➜ agregamos estado en filtros
   const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' });
@@ -146,6 +151,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setHistFiltroEstado('');
     setHistFechaDesde('');
     setHistFechaHasta('');
+    setHistoryActiveTab('past');
     setHistoryLoading(true);
     setShowHistoryModal(true);
     try {
@@ -164,23 +170,140 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setTurnosHistory([]);
   };
 
+  const parseLocalISO = useCallback((isoString) => {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return null;
+    return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+  }, []);
+
+  const getTurnoDateTime = useCallback((turno) => {
+    const fecha = new Date(turno.fecha);
+    if (Number.isNaN(fecha.getTime())) return new Date(0);
+
+    const horaIni = turno.HorarioClase?.horaIni ? parseLocalISO(turno.HorarioClase.horaIni) : null;
+    if (horaIni) {
+      fecha.setHours(horaIni.getHours(), horaIni.getMinutes(), horaIni.getSeconds(), 0);
+    }
+
+    return fecha;
+  }, [parseLocalISO]);
+
+  const isPendingTurno = useCallback((turno, now = new Date()) =>
+    getTurnoDateTime(turno) > now && turno.estado !== 'CANCELADO',
+    [getTurnoDateTime]
+  );
+
+  const isPastTurno = useCallback((turno, now = new Date()) =>
+    getTurnoDateTime(turno) <= now,
+    [getTurnoDateTime]
+  );
+
+  const historyTabCounts = useMemo(() => {
+    const now = new Date();
+    return {
+      past: turnosHistory.filter(t => isPastTurno(t, now)).length,
+      pending: turnosHistory.filter(t => isPendingTurno(t, now)).length,
+    };
+  }, [turnosHistory, isPastTurno, isPendingTurno]);
+
+  const pendingTurnos = useMemo(() => {
+    const now = new Date();
+    return turnosHistory.filter(t => isPendingTurno(t, now));
+  }, [turnosHistory, isPendingTurno]);
+
+  const handleCancelPendingTurnos = async () => {
+    if (cancelPendingLoading) return;
+
+    if (pendingTurnos.length === 0) {
+      setShowCancelPendingPopup(false);
+      return;
+    }
+
+    setCancelPendingLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        pendingTurnos.map(t => apiService.deleteTurno(t.id_turno))
+      );
+      const successfulIds = pendingTurnos
+        .filter((_, index) => results[index].status === 'fulfilled')
+        .map(t => t.id_turno);
+      const failedCount = results.length - successfulIds.length;
+
+      if (successfulIds.length > 0) {
+        setTurnosHistory(prev =>
+          prev.map(t =>
+            successfulIds.includes(t.id_turno) ? { ...t, estado: 'CANCELADO' } : t
+          )
+        );
+      }
+
+      if (failedCount > 0) {
+        toast.error(`Se cancelaron ${successfulIds.length} turno(s), pero ${failedCount} no se pudieron cancelar.`);
+      } else {
+        toast.success('Todos los turnos pendientes fueron cancelados.');
+      }
+    } catch {
+      toast.error('Error al cancelar los turnos pendientes.');
+    } finally {
+      setCancelPendingLoading(false);
+      setShowCancelPendingPopup(false);
+    }
+  };
+
+  const handleRegenerateFixedTurnos = async () => {
+    if (regenerateFixedLoading) return;
+
+    if (!historyUser?.ID_Usuario) {
+      setShowRegenerateFixedPopup(false);
+      return;
+    }
+
+    setRegenerateFixedLoading(true);
+    try {
+      const result = await apiService.regenerateTurnosFijosUsuario(historyUser.ID_Usuario);
+      const data = await apiService.getTurnosUsuario(historyUser.ID_Usuario);
+      setTurnosHistory(data || []);
+      setHistoryActiveTab('pending');
+
+      if (result?.advertencias?.detalles?.length > 0) {
+        toast.warning(result.advertencias.mensaje || result.message || 'Se regeneraron algunos turnos fijos con advertencias.');
+      } else {
+        toast.success(result?.message || 'Turnos fijos regenerados correctamente.');
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Error al regenerar turnos fijos.');
+    } finally {
+      setRegenerateFixedLoading(false);
+      setShowRegenerateFixedPopup(false);
+    }
+  };
+
   // Turnos filtrados
   const filteredTurnos = useMemo(() => {
-    let list = [...turnosHistory];
+    const now = new Date();
+    let list = turnosHistory.filter(t =>
+      historyActiveTab === 'pending' ? isPendingTurno(t, now) : isPastTurno(t, now)
+    );
+
     if (histFiltroEstado) {
       list = list.filter(t => t.estado === histFiltroEstado);
     }
     if (histFechaDesde) {
       const d = new Date(histFechaDesde);
-      list = list.filter(t => new Date(t.fecha) >= d);
+      list = list.filter(t => getTurnoDateTime(t) >= d);
     }
     if (histFechaHasta) {
       const d = new Date(histFechaHasta);
       d.setHours(23, 59, 59, 999);
-      list = list.filter(t => new Date(t.fecha) <= d);
+      list = list.filter(t => getTurnoDateTime(t) <= d);
     }
-    return list;
-  }, [turnosHistory, histFiltroEstado, histFechaDesde, histFechaHasta]);
+
+    return list.sort((a, b) => {
+      const dateA = getTurnoDateTime(a).getTime();
+      const dateB = getTurnoDateTime(b).getTime();
+      return historyActiveTab === 'pending' ? dateA - dateB : dateB - dateA;
+    });
+  }, [turnosHistory, historyActiveTab, histFiltroEstado, histFechaDesde, histFechaHasta, isPastTurno, isPendingTurno, getTurnoDateTime]);
 
   // Resumen de asistencia
   const stats = useMemo(() => {
@@ -203,9 +326,11 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       if (!groups[key]) groups[key] = [];
       groups[key].push(t);
     }
-    const sorted = Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+    const sorted = Object.entries(groups).sort((a, b) =>
+      historyActiveTab === 'pending' ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0])
+    );
     return sorted;
-  }, [filteredTurnos]);
+  }, [filteredTurnos, historyActiveTab]);
 
   const formatFecha = (iso) => {
     const d = new Date(iso);
@@ -519,19 +644,22 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         {showHistoryModal && (
           <div className="modal-overlay" onClick={closeHistoryModal}>
             <div
-              className="modal-content"
-              style={{ maxWidth: '760px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+              className="modal-content turnos-history-modal"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div className="turnos-history-header">
                 <div>
                   <h3 style={{ margin: 0 }}>Historial de turnos</h3>
                   <span style={{ fontSize: '14px', color: 'var(--text-color-distinct)' }}>
                     {historyUser?.nombre} {historyUser?.apellido} · {historyUser?.email}
                   </span>
                 </div>
-                <button onClick={closeHistoryModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)' }}>
+                <button
+                  className="turnos-history-close"
+                  onClick={closeHistoryModal}
+                  aria-label="Cerrar historial de turnos"
+                >
                   <X size={24} />
                 </button>
               </div>
@@ -618,11 +746,57 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                     )}
                   </div>
 
+                  <div className="turnos-history-tabs" role="tablist" aria-label="Tipo de turnos">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={historyActiveTab === 'past'}
+                  className={`turnos-history-tab ${historyActiveTab === 'past' ? 'active' : ''}`}
+                  onClick={() => setHistoryActiveTab('past')}
+                >
+                  Turnos pasados
+                  <span>{historyTabCounts.past}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={historyActiveTab === 'pending'}
+                  className={`turnos-history-tab ${historyActiveTab === 'pending' ? 'active' : ''}`}
+                  onClick={() => setHistoryActiveTab('pending')}
+                >
+                  Turnos pendientes
+                  <span>{historyTabCounts.pending}</span>
+                </button>
+              </div>
+
+                  {historyActiveTab === 'pending' && (
+                    <div className="turnos-history-bulk-actions">
+                      <button
+                        type="button"
+                        className="turnos-history-regenerate-fixed"
+                        onClick={() => setShowRegenerateFixedPopup(true)}
+                        disabled={regenerateFixedLoading}
+                      >
+                        {regenerateFixedLoading ? 'Regenerando...' : 'Regenerar turnos fijos'}
+                      </button>
+                      <button
+                        type="button"
+                        className="turnos-history-cancel-all"
+                        onClick={() => setShowCancelPendingPopup(true)}
+                        disabled={pendingTurnos.length === 0 || cancelPendingLoading}
+                      >
+                        {cancelPendingLoading ? 'Cancelando...' : 'Cancelar todos los turnos'}
+                      </button>
+                    </div>
+                  )}
+
                   {/* ─── Turnos agrupados por mes ─── */}
-                  <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
+                  <div className="turnos-history-list">
                     {groupedByMonth.length === 0 ? (
                       <p style={{ textAlign: 'center', color: 'var(--text-color-distinct)', padding: '30px' }}>
-                        No se encontraron turnos.
+                        {historyActiveTab === 'pending'
+                          ? 'No se encontraron turnos pendientes.'
+                          : 'No se encontraron turnos pasados.'}
                       </p>
                     ) : groupedByMonth.map(([mesKey, turnos]) => (
                       <div key={mesKey} style={{ marginBottom: '16px' }}>
@@ -688,6 +862,32 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
           />
         )}
+
+        <ConfirmationPopup
+          isOpen={showCancelPendingPopup}
+          onClose={() => {
+            if (!cancelPendingLoading) setShowCancelPendingPopup(false);
+          }}
+          onConfirm={handleCancelPendingTurnos}
+          message={`¿Seguro que querés cancelar todos los turnos pendientes de ${historyUser?.nombre || 'este usuario'}?`}
+        >
+          <p style={{ margin: '8px 0 0', color: 'var(--text-color-distinct)', fontSize: '14px' }}>
+            Se cancelarán {pendingTurnos.length} turno(s).
+          </p>
+        </ConfirmationPopup>
+
+        <ConfirmationPopup
+          isOpen={showRegenerateFixedPopup}
+          onClose={() => {
+            if (!regenerateFixedLoading) setShowRegenerateFixedPopup(false);
+          }}
+          onConfirm={handleRegenerateFixedTurnos}
+          message={`¿Regenerar los turnos fijos futuros de ${historyUser?.nombre || 'este usuario'}?`}
+        >
+          <p style={{ margin: '8px 0 0', color: 'var(--text-color-distinct)', fontSize: '14px' }}>
+            Se usarán los turnos fijos actuales del perfil y la cuota vigente.
+          </p>
+        </ConfirmationPopup>
       </div>
     </div>
   );
