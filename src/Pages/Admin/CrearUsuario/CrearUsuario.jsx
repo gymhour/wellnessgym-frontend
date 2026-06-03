@@ -38,6 +38,8 @@ const CrearUsuario = () => {
     fechaCumple: '',
     plan: '',
     usaTurnosFijos: false,
+    observacionesSalud: '',
+    fichaMedicaUrl: '',
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -199,6 +201,8 @@ const CrearUsuario = () => {
       payload.append('tel', formData.tel.trim());
       payload.append('tipo', formData.tipo ? formData.tipo.toLowerCase() : '');
       payload.append('fechaCumple', isoFecha);
+      payload.append('observacionesSalud', formData.observacionesSalud.trim());
+      payload.append('fichaMedicaUrl', formData.fichaMedicaUrl.trim());
 
       if (idPlan) payload.append('ID_Plan', idPlan);
       payload.append('usaTurnosFijos', String(formData.usaTurnosFijos));
@@ -431,6 +435,36 @@ const CrearUsuario = () => {
           <CustomInput
             type="date" id="fechaCumple" name="fechaCumple"
             value={formData.fechaCumple} onChange={handleChange}
+          />
+
+          <label htmlFor="fichaMedicaUrl">Ficha médica:</label>
+          <CustomInput
+            type="text" id="fichaMedicaUrl" name="fichaMedicaUrl"
+            value={formData.fichaMedicaUrl} onChange={handleChange}
+            placeholder="URL de la ficha médica"
+          />
+
+          <label htmlFor="observacionesSalud">Observaciones de Salud:</label>
+          <textarea
+            id="observacionesSalud"
+            name="observacionesSalud"
+            value={formData.observacionesSalud}
+            onChange={handleChange}
+            placeholder="Observaciones de salud"
+            rows={5}
+            style={{
+              width: '100%',
+              minHeight: '120px',
+              padding: '10px',
+              borderRadius: '12px',
+              border: '1.5px solid var(--border-color)',
+              background: 'var(--background-color)',
+              color: 'var(--text-color)',
+              font: 'inherit',
+              fontWeight: 400,
+              resize: 'vertical',
+              outline: 'none',
+            }}
           />
 
           <label htmlFor="avatar">Avatar:</label>

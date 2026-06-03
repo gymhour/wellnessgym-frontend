@@ -610,6 +610,46 @@
     color: var(--text-color-distinct);
 }
 
+.user-health {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.user-health__section {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--background-color);
+}
+
+.user-health__section strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    font-size: 13px;
+}
+
+.user-health__text {
+    margin: 0;
+    color: var(--text-color-distinct);
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.user-health__link {
+    color: var(--primary-color);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.user-health__link:hover {
+    text-decoration: underline;
+}
+
 .metrics-list {
     display: flex;
     flex-direction: column;

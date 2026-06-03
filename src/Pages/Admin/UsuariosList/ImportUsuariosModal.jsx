@@ -99,7 +99,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
           </code>
           <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
             <li><strong>email</strong> y <strong>dni</strong> son obligatorios</li>
-            <li><strong>password</strong> se asigna por defecto: <code>12345678</code></li>
+            <li><strong>password</strong> se asigna por defecto con el <strong>DNI</strong> del usuario</li>
             <li><strong>tipo</strong> se asigna por defecto: <code>Cliente</code></li>
             <li><strong>plan</strong> debe coincidir con el nombre de un plan existente (opcional)</li>
             <li><strong>fechaCumple</strong> formato: <code>dd/mm/yyyy</code></li>

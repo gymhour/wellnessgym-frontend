@@ -41,6 +41,8 @@ const EditarUsuario = () => {
     plan: '',
     estado: true,
     usaTurnosFijos: false,
+    observacionesSalud: '',
+    fichaMedicaUrl: '',
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -180,7 +182,9 @@ const EditarUsuario = () => {
           fechaCumple: fechaISO,
           estado: !!user?.estado,
           usaTurnosFijos: !!user?.usaTurnosFijos,
-          plan: tipoLower === 'cliente' ? planNombre : ''
+          plan: tipoLower === 'cliente' ? planNombre : '',
+          observacionesSalud: user?.observacionesSalud || '',
+          fichaMedicaUrl: user?.fichaMedicaUrl || ''
         });
         setPlanSesionesSemana(user?.plan?.sesionesPorSemana || 0);
         setTurnosFijos((user?.TurnosFijos || []).filter(t => t.activo).map(t => ({
@@ -249,6 +253,8 @@ const EditarUsuario = () => {
       payload.append('tel', formData.tel);
       payload.append('tipo', formData.tipo.toLowerCase());
       payload.append('fechaCumple', isoFecha);
+      payload.append('observacionesSalud', formData.observacionesSalud.trim());
+      payload.append('fichaMedicaUrl', formData.fichaMedicaUrl.trim());
 
       if (formData.tipo === 'Cliente' && selectedPlan) {
         payload.append('ID_Plan', selectedPlan.value);
@@ -305,6 +311,19 @@ const EditarUsuario = () => {
         }
         .form-field.full-width {
           width: 100%;
+        }
+        .health-textarea {
+          width: 100%;
+          min-height: 130px;
+          padding: 10px;
+          border-radius: 12px;
+          border: 1.5px solid var(--border-color);
+          background: var(--background-color);
+          color: var(--text-color);
+          font: inherit;
+          font-weight: 400;
+          resize: vertical;
+          outline: none;
         }
         @media (max-width: 768px) {
           .form-field {
@@ -562,6 +581,32 @@ const EditarUsuario = () => {
                 value={formData.fechaCumple}
                 onChange={handleChange}
                 width="100%"
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="fichaMedicaUrl">Ficha médica:</label>
+              <CustomInput
+                type="text"
+                id="fichaMedicaUrl"
+                name="fichaMedicaUrl"
+                value={formData.fichaMedicaUrl}
+                onChange={handleChange}
+                placeholder="URL de la ficha médica"
+                width="100%"
+              />
+            </div>
+
+            <div className="form-field full-width">
+              <label htmlFor="observacionesSalud">Observaciones de Salud:</label>
+              <textarea
+                id="observacionesSalud"
+                name="observacionesSalud"
+                value={formData.observacionesSalud}
+                onChange={handleChange}
+                placeholder="Observaciones de salud"
+                className="health-textarea"
+                rows={5}
               />
             </div>
 

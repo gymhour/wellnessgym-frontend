@@ -314,6 +314,15 @@ const updateUserById = async (id, body) => {
     }
 }
 
+const updateUserHealthById = async (id, body) => {
+    try {
+        const response = await apiClient.put(`/usuarios/${id}/salud`, body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || `Error al editar salud del usuario con ID ${id}`);
+    }
+}
+
 const getUsuariosAdmins = async () => {
     try {
         const response = await apiClient.get(`/usuarios/admins`);
@@ -692,6 +701,7 @@ export default {
     getAllUsuarios,
     getUserById,
     updateUserById,
+    updateUserHealthById,
     getUsuariosAdmins,
     // Contraseña
     forgotPassword,

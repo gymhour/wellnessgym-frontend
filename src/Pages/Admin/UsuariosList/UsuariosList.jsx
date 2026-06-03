@@ -11,7 +11,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink } from 'lucide-react';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
 
@@ -36,6 +36,10 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [cancelPendingLoading, setCancelPendingLoading] = useState(false);
   const [showRegenerateFixedPopup, setShowRegenerateFixedPopup] = useState(false);
   const [regenerateFixedLoading, setRegenerateFixedLoading] = useState(false);
+  const [showHealthModal, setShowHealthModal] = useState(false);
+  const [healthUser, setHealthUser] = useState(null);
+  const [healthForm, setHealthForm] = useState({ observacionesSalud: '', fichaMedicaUrl: '' });
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // ➜ agregamos estado en filtros
   const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' });
@@ -278,6 +282,59 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     }
   };
 
+  const openHealthModal = (user) => {
+    setHealthUser(user);
+    setHealthForm({
+      observacionesSalud: user?.observacionesSalud || '',
+      fichaMedicaUrl: user?.fichaMedicaUrl || '',
+    });
+    setShowHealthModal(true);
+  };
+
+  const closeHealthModal = () => {
+    if (healthLoading) return;
+    setShowHealthModal(false);
+    setHealthUser(null);
+    setHealthForm({ observacionesSalud: '', fichaMedicaUrl: '' });
+  };
+
+  const handleHealthChange = (e) => {
+    const { name, value } = e.target;
+    setHealthForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveHealth = async (e) => {
+    e.preventDefault();
+    if (healthLoading || !healthUser?.ID_Usuario) return;
+
+    setHealthLoading(true);
+    try {
+      const updated = await apiService.updateUserHealthById(healthUser.ID_Usuario, {
+        observacionesSalud: healthForm.observacionesSalud,
+        fichaMedicaUrl: healthForm.fichaMedicaUrl,
+      });
+      setUsuarios(prev =>
+        prev.map(u =>
+          u.ID_Usuario === healthUser.ID_Usuario
+            ? {
+              ...u,
+              observacionesSalud: updated.observacionesSalud || '',
+              fichaMedicaUrl: updated.fichaMedicaUrl || '',
+            }
+            : u
+        )
+      );
+      toast.success('Datos de salud actualizados correctamente.');
+      setShowHealthModal(false);
+      setHealthUser(null);
+      setHealthForm({ observacionesSalud: '', fichaMedicaUrl: '' });
+    } catch (error) {
+      toast.error(error?.message || 'No se pudieron actualizar los datos de salud.');
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
   // Turnos filtrados
   const filteredTurnos = useMemo(() => {
     const now = new Date();
@@ -513,7 +570,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                   <th>Registro</th>
                   <th>Estado</th>
                   <th>WhatsApp</th>
-                  {fromAdmin && <th>Acciones</th>}
+                  {(fromAdmin || fromEntrenador) && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -582,21 +639,31 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                       )}
                     </td>
 
-                    {fromAdmin && (
+                    {(fromAdmin || fromEntrenador) && (
                       <td data-label="Acciones" className="usuarios-table-actions">
-                        <PrimaryButton
-                          text="Editar"
-                          linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
-                        />
-                        <SecondaryButton
-                          text="Ver turnos"
-                          onClick={() => fetchTurnosHistory(u)}
-                        />
-                        {u.tipo !== 'admin' && (
+                        {fromAdmin && (
+                          <>
+                            <PrimaryButton
+                              text="Editar"
+                              linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
+                            />
+                            <SecondaryButton
+                              text="Ver turnos"
+                              onClick={() => fetchTurnosHistory(u)}
+                            />
+                          </>
+                        )}
+                        {fromEntrenador && (
                           <SecondaryButton
-                            text="Cambiar estado"
-                            onClick={() => openEstadoPopup(u.ID_Usuario)}
+                            text="Salud"
+                            onClick={() => openHealthModal(u)}
                           />
+                        )}
+                        {fromAdmin && u.tipo !== 'admin' && (
+                          <SecondaryButton
+                              text="Cambiar estado"
+                              onClick={() => openEstadoPopup(u.ID_Usuario)}
+                            />
                         )}
                       </td>
                     )}
@@ -861,6 +928,90 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             onClose={() => setShowImportModal(false)}
             onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
           />
+        )}
+
+        {showHealthModal && (
+          <div className="modal-overlay" onClick={closeHealthModal}>
+            <div
+              className="modal-content health-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="turnos-history-header">
+                <div>
+                  <h3 style={{ margin: 0 }}>Datos de salud</h3>
+                  <span style={{ fontSize: '14px', color: 'var(--text-color-distinct)' }}>
+                    {healthUser?.nombre} {healthUser?.apellido} · {healthUser?.email}
+                  </span>
+                </div>
+                <button
+                  className="turnos-history-close"
+                  onClick={closeHealthModal}
+                  aria-label="Cerrar datos de salud"
+                  type="button"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form className="health-modal-form" onSubmit={handleSaveHealth}>
+                <label className="health-modal-field" htmlFor="healthFichaMedicaUrl">
+                  <span className="health-modal-label-row">
+                    Ficha médica
+                    {healthForm.fichaMedicaUrl.trim() && (
+                      <a
+                        className="health-modal-external-link"
+                        href={healthForm.fichaMedicaUrl.trim()}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Abrir ficha médica"
+                        aria-label="Abrir ficha médica"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink size={15} />
+                      </a>
+                    )}
+                  </span>
+                  <input
+                    id="healthFichaMedicaUrl"
+                    name="fichaMedicaUrl"
+                    type="text"
+                    value={healthForm.fichaMedicaUrl}
+                    onChange={handleHealthChange}
+                    placeholder="URL de la ficha médica"
+                  />
+                </label>
+
+                <label className="health-modal-field" htmlFor="healthObservacionesSalud">
+                  <span>Observaciones de Salud</span>
+                  <textarea
+                    id="healthObservacionesSalud"
+                    name="observacionesSalud"
+                    value={healthForm.observacionesSalud}
+                    onChange={handleHealthChange}
+                    placeholder="Observaciones de salud"
+                    rows={7}
+                  />
+                </label>
+
+                <div className="health-modal-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={closeHealthModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={healthLoading}
+                  >
+                    {healthLoading ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
         <ConfirmationPopup

@@ -3301,6 +3301,30 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
                       {selectedUserId && (
                         <>
+                          <div className="user-health">
+                            <div className="user-health__section">
+                              <strong>Observaciones de Salud</strong>
+                              <p className="user-health__text">
+                                {selectedUser?.observacionesSalud || 'Sin observaciones cargadas.'}
+                              </p>
+                            </div>
+                            <div className="user-health__section">
+                              <strong>Ficha médica</strong>
+                              {selectedUser?.fichaMedicaUrl ? (
+                                <a
+                                  className="user-health__link"
+                                  href={selectedUser.fichaMedicaUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Ver ficha médica
+                                </a>
+                              ) : (
+                                <p className="user-health__text">Sin ficha médica cargada.</p>
+                              )}
+                            </div>
+                          </div>
+
                           {loadingMetrics && (
                             <p className="info-loading">
                               Cargando

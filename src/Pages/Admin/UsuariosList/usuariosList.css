@@ -385,6 +385,83 @@
   flex-direction: column;
 }
 
+.health-modal {
+  width: min(94vw, 680px);
+}
+
+.health-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.health-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.health-modal-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-modal-external-link {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--background-color-distinct);
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.health-modal-external-link:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.health-modal-field input,
+.health-modal-field textarea {
+  width: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+  color: var(--text-color);
+  font: inherit;
+  font-weight: 400;
+  outline: none;
+}
+
+.health-modal-field input {
+  padding: 10px 12px;
+}
+
+.health-modal-field textarea {
+  min-height: 180px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.health-modal-field input:focus,
+.health-modal-field textarea:focus {
+  border-color: var(--primary-color);
+}
+
+.health-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .turnos-history-header {
   display: flex;
   justify-content: space-between;
@@ -541,5 +618,9 @@
   .turnos-history-cancel-all,
   .turnos-history-regenerate-fixed {
     width: 100%;
+  }
+
+  .health-modal-actions {
+    justify-content: stretch;
   }
 }
