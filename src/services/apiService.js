@@ -185,9 +185,13 @@ const deleteRutina = async (id) => {
     }
 }
 
-const getRutinasAsignadas = async() => {
+const getRutinasAsignadas = async ({ page = 1, take = 6, grupoId, usuarioId, asignadasPorMi } = {}) => {
     try {
-        const response = await apiClient.get("/rutinas/asignadas");
+        const params = { page, take };
+        if (grupoId) params.grupoId = grupoId;
+        if (usuarioId) params.usuarioId = usuarioId;
+        if (asignadasPorMi) params.asignadasPorMi = true;
+        const response = await apiClient.get("/rutinas/asignadas", { params });
         return response.data;
     } catch {
         throw new Error("Error al traer las rutinas asignadas");

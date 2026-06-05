@@ -133,9 +133,10 @@ const RutinasAdmin = () => {
   };
 
   const fetchRutinas = async () => {
-    const userId = localStorage.getItem('usuarioId');
     try {
-      const { rutinas: lista = [] } = await apiService.getUserRutinas(userId);
+      // "Rutinas recomendadas" del admin: mismas rutinas genéricas que ve el alumno
+      // (no las rutinas de las que el admin es dueño). Usa el endpoint de recomendadas.
+      const { rutinas: lista = [] } = await apiService.getRutinasAdmins();
       setRutinas(lista);
       const init = {};
       (lista || []).forEach(r => {
@@ -275,7 +276,7 @@ const RutinasAdmin = () => {
       <SidebarMenu isAdmin={true} />
       <div className='content-layout mi-rutina-ctn'>
         <div className="mi-rutina-title">
-          <h2>Mis Rutinas</h2>
+          <h2>Rutinas recomendadas</h2>
           <PrimaryButton text="Crear rutina" linkTo="/admin/crear-rutina" />
         </div>
 

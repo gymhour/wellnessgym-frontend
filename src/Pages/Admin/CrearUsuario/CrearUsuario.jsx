@@ -86,6 +86,14 @@ const CrearUsuario = () => {
   const getClaseForHorario = (horarioId) =>
     clases.find(c => c.HorariosClase?.some(h => h.ID_HorarioClase === horarioId)) || null;
 
+  const getDiaForHorario = (horarioId) => {
+    for (const c of clases) {
+      const h = (c.HorariosClase || []).find(h => h.ID_HorarioClase === horarioId);
+      if (h) return String(h.diaSemana || '').trim().toLowerCase();
+    }
+    return null;
+  };
+
   const getHorariosForClase = (claseId) => {
     const clase = clases.find(c => c.ID_Clase === claseId);
     if (!clase) return [];
@@ -99,8 +107,8 @@ const CrearUsuario = () => {
   const getFirstHorarioForClase = (claseId) => getHorariosForClase(claseId)[0] || null;
 
   const addTurnoFijo = () => {
-    if (planSesionesSemana > 0 && turnosFijos.length >= planSesionesSemana) {
-      toast.warning(`El plan seleccionado permite hasta ${planSesionesSemana} turno(s) por semana.`);
+    if (turnosFijos.length >= 7) {
+      toast.warning('Máximo un turno fijo por día (hasta 7).');
       return;
     }
     const firstClase = clasesWithAvailable[0];
@@ -133,6 +141,12 @@ const CrearUsuario = () => {
   };
 
   const confirmTurnoFijo = (index) => {
+    const current = turnosFijos[index];
+    const dia = current?.horarioId ? getDiaForHorario(current.horarioId) : null;
+    if (dia && turnosFijos.some((t, i) => i !== index && t.horarioId && getDiaForHorario(t.horarioId) === dia)) {
+      toast.warning('Ya tenés un turno fijo ese día. No se permiten dos turnos fijos el mismo día.');
+      return;
+    }
     setTurnosFijos(prev => prev.map((item, idx) =>
       idx === index ? { ...item, editing: false } : item
     ));
@@ -396,11 +410,9 @@ const CrearUsuario = () => {
                   <button type="button" className="turno-fijo-btn-add" onClick={addTurnoFijo} disabled={clasesWithAvailable.length === 0}>
                     + Agregar turno fijo
                   </button>
-                  {planSesionesSemana > 0 && (
-                    <span style={{ fontSize: '13px', color: 'var(--text-color-distinct)' }}>
-                      Límite del plan: {planSesionesSemana} turno(s) por semana
-                    </span>
-                  )}
+                  <span style={{ fontSize: '13px', color: 'var(--text-color-distinct)' }}>
+                    Máximo un turno fijo por día.
+                  </span>
                 </div>
               )}
             </>

@@ -358,11 +358,14 @@ const customStyles = {
 
 const RutinasAsignadas = () => {
   const [loading, setLoading] = useState(false);
-  const [allRutinas, setAllRutinas] = useState([]);
   const [rutinas, setRutinas] = useState([]);
   const [users, setUsers] = useState([]);
+  const [grupos, setGrupos] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedGrupo, setSelectedGrupo] = useState(null);
   const [asignadasPorMi, setAsignadasPorMi] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedRutinaId, setSelectedRutinaId] = useState(null);
   const navigate = useNavigate();
@@ -372,8 +375,20 @@ const RutinasAsignadas = () => {
 
   useEffect(() => {
     fetchUsers();
-    loadRutinasAsignadas();
+    fetchGrupos();
+    fetchRutinas(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchGrupos = async () => {
+    try {
+      const data = await apiService.getGruposUsuarios();
+      setGrupos(Array.isArray(data) ? data : (data?.grupos || data?.data || []));
+    } catch (error) {
+      console.error('Error cargando grupos:', error);
+      toast.error('No se pudieron cargar los grupos para el filtro.');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -385,35 +400,46 @@ const RutinasAsignadas = () => {
     }
   };
 
-  const loadRutinasAsignadas = async () => {
+  const buildOpenState = (lista) => {
+    const init = {};
+    lista.forEach(r => {
+      init[r.ID_Rutina] = {};
+      if (r.semanas && r.semanas.length > 0) {
+        const firstSem = r.semanas[0];
+        const semKey = `sem_${firstSem.id || 0}`;
+        init[r.ID_Rutina][semKey] = true;
+        const semDias = normalizeDias({ dias: firstSem.dias });
+        if (semDias.length > 0) {
+          init[r.ID_Rutina][`${semKey}_${semDias[0].key}`] = true;
+        }
+      } else {
+        const dias = normalizeDias(r);
+        if (dias.length > 0) {
+          init[r.ID_Rutina][dias[0].key] = true;
+        }
+      }
+    });
+    return init;
+  };
+
+  const fetchRutinas = async (targetPage = 1, filtros = {}) => {
     setLoading(true);
     try {
-      const { rutinas: lista = [] } = await apiService.getRutinasAsignadas();
-
-      // abrir primer día por defecto por rutina
-      const init = {};
-      lista.forEach(r => {
-        init[r.ID_Rutina] = {};
-        if (r.semanas && r.semanas.length > 0) {
-          const firstSem = r.semanas[0];
-          const semKey = `sem_${firstSem.id || 0}`;
-          init[r.ID_Rutina][semKey] = true;
-          // open first day of first week
-          const semDias = normalizeDias({ dias: firstSem.dias });
-          if (semDias.length > 0) {
-            init[r.ID_Rutina][`${semKey}_${semDias[0].key}`] = true;
-          }
-        } else {
-          const dias = normalizeDias(r);
-          if (dias.length > 0) {
-            init[r.ID_Rutina][dias[0].key] = true;
-          }
-        }
+      const {
+        grupoId = selectedGrupo?.value,
+        usuarioId = selectedUser?.value,
+        soloMias = asignadasPorMi,
+      } = filtros;
+      const { rutinas: lista = [], meta } = await apiService.getRutinasAsignadas({
+        page: targetPage,
+        grupoId,
+        usuarioId,
+        asignadasPorMi: soloMias,
       });
-
-      setAllRutinas(lista);
       setRutinas(lista);
-      setOpenState(init);
+      setOpenState(buildOpenState(lista));
+      setPage(meta?.page || targetPage);
+      setTotalPages(meta?.totalPages || 1);
     } catch (error) {
       console.error('Error cargando rutinas:', error);
       toast.error('Error al cargar las rutinas. Intenta nuevamente.');
@@ -423,25 +449,14 @@ const RutinasAsignadas = () => {
   };
 
   const handleSearch = () => {
-    let filtrado = [...allRutinas];
-
-    if (selectedUser) {
-      const userId = Number(selectedUser.value);
-      filtrado = filtrado.filter(r => Number(r?.alumno?.ID_Usuario) === userId);
-    }
-
-    if (asignadasPorMi) {
-      const myId = Number(localStorage.getItem('usuarioId'));
-      filtrado = filtrado.filter(r => Number(r?.ID_Entrenador) === myId || Number(r?.entrenador?.ID_Usuario) === myId);
-    }
-
-    setRutinas(filtrado);
+    fetchRutinas(1);
   };
 
   const limpiarFiltros = () => {
     setSelectedUser(null);
+    setSelectedGrupo(null);
     setAsignadasPorMi(false);
-    setRutinas(allRutinas);
+    fetchRutinas(1, { grupoId: null, usuarioId: null, soloMias: false });
   };
 
   const openDeletePopup = id => {
@@ -455,20 +470,18 @@ const RutinasAsignadas = () => {
   };
 
   const handleConfirmDelete = async () => {
+    if (!selectedRutinaId) return;
     setLoading(true);
-    if (selectedRutinaId) {
-      try {
-        await apiService.deleteRutina(selectedRutinaId);
-        setAllRutinas(prev => prev.filter(r => r.ID_Rutina !== selectedRutinaId));
-        setRutinas(prev => prev.filter(r => r.ID_Rutina !== selectedRutinaId));
-        toast.success('Rutina eliminada correctamente.');
-      } catch (error) {
-        toast.error('Error al eliminar la rutina');
-        console.error('Error al eliminar rutina', error);
-      } finally {
-        setLoading(false);
-        closePopup();
-      }
+    try {
+      await apiService.deleteRutina(selectedRutinaId);
+      toast.success('Rutina eliminada correctamente.');
+      closePopup();
+      await fetchRutinas(page);
+    } catch (error) {
+      toast.error('Error al eliminar la rutina');
+      console.error('Error al eliminar rutina', error);
+      setLoading(false);
+      closePopup();
     }
   };
 
@@ -573,7 +586,7 @@ const RutinasAsignadas = () => {
         await apiService.createRutina(payload);
       }
       toast.success('Rutina duplicada correctamente.');
-      await loadRutinasAsignadas();
+      await fetchRutinas(page);
     } catch (error) {
       console.error('Error al duplicar rutina:', error);
       toast.error('No se pudo duplicar la rutina. Intente nuevamente.');
@@ -602,6 +615,18 @@ const RutinasAsignadas = () => {
             value={selectedUser}
             onChange={setSelectedUser}
             placeholder='Seleccioná un usuario'
+            isClearable
+            isSearchable
+            styles={customStyles}
+          />
+          <Select
+            options={grupos.map(g => ({
+              label: g.nombre,
+              value: g.ID_GrupoUsuario
+            }))}
+            value={selectedGrupo}
+            onChange={setSelectedGrupo}
+            placeholder='Filtrar por grupo'
             isClearable
             isSearchable
             styles={customStyles}
@@ -752,6 +777,30 @@ const RutinasAsignadas = () => {
           })
           }
         </div>
+
+        {totalPages > 1 && (
+          <div className="rutinas-paginacion" style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', marginTop: '20px' }}>
+            <button
+              type="button"
+              className="rutina-ver-detalle-btn"
+              onClick={() => fetchRutinas(page - 1)}
+              disabled={page <= 1}
+              style={{ opacity: page <= 1 ? 0.5 : 1, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}
+            >
+              Anterior
+            </button>
+            <span>Página {page} de {totalPages}</span>
+            <button
+              type="button"
+              className="rutina-ver-detalle-btn"
+              onClick={() => fetchRutinas(page + 1)}
+              disabled={page >= totalPages}
+              style={{ opacity: page >= totalPages ? 0.5 : 1, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
 
         <ConfirmationPopup
           isOpen={isPopupOpen}

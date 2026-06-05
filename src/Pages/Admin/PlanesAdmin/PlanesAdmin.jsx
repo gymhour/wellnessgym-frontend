@@ -19,7 +19,7 @@ const PlanesAdmin = () => {
   const [nuevoPrecio, setNuevoPrecio] = useState('')
   const [nuevaDesc, setNuevaDesc] = useState('')
   const [duracion, setDuracion] = useState('MENSUAL')
-  const [sesionesPorSemana, setSesionesPorSemana] = useState('')
+  const [sesionesTotales, setSesionesTotales] = useState('')
   const [sesionesGracia, setSesionesGracia] = useState('')
   const [requiereTurno, setRequiereTurno] = useState(true)
   const [toDelete, setToDelete] = useState(null)
@@ -49,7 +49,7 @@ const PlanesAdmin = () => {
     setNuevoPrecio('')
     setNuevaDesc('')
     setDuracion('MENSUAL')
-    setSesionesPorSemana('')
+    setSesionesTotales('')
     setSesionesGracia('')
     setRequiereTurno(true)
     setShowModal(true)
@@ -62,7 +62,7 @@ const PlanesAdmin = () => {
     setNuevoPrecio(plan.precio)
     setNuevaDesc(plan.desc || '')
     setDuracion(plan.duracion || 'MENSUAL')
-    setSesionesPorSemana(plan.sesionesPorSemana ?? '')
+    setSesionesTotales(plan.sesionesTotales ?? '')
     setSesionesGracia(plan.sesionesGracia ?? '')
     setRequiereTurno(plan.requiereTurno !== false)
     setShowModal(true)
@@ -75,7 +75,7 @@ const PlanesAdmin = () => {
     setNuevoPrecio('')
     setNuevaDesc('')
     setDuracion('MENSUAL')
-    setSesionesPorSemana('')
+    setSesionesTotales('')
     setSesionesGracia('')
     setRequiereTurno(true)
     setShowModal(false)
@@ -90,7 +90,7 @@ const PlanesAdmin = () => {
       precio: Number(nuevoPrecio),
       desc: nuevaDesc,
       duracion,
-      sesionesPorSemana: Number(sesionesPorSemana || 0),
+      sesionesTotales: Number(sesionesTotales || 0),
       sesionesGracia: Number(sesionesGracia || 0),
       requiereTurno
     }
@@ -154,7 +154,7 @@ const PlanesAdmin = () => {
                 <p className="plan-desc">{plan.desc || 'Sin descripción'}</p>
                 <p className="plan-price">${plan.precio.toLocaleString()}</p>
                 <p className="plan-desc">
-                  {plan.duracion || 'MENSUAL'} · {plan.sesionesPorSemana || 0} ses./semana · {plan.sesionesGracia || 0} gracia
+                  {plan.duracion || 'MENSUAL'} · {plan.sesionesTotales || 0} ses. totales · {plan.sesionesGracia || 0} gracia
                 </p>
                 <div className="plan-actions">
                   <div onClick={() => handleEdit(plan)} style={{ cursor: 'pointer' }}>
@@ -219,12 +219,12 @@ const PlanesAdmin = () => {
                   />
                 </div>
                 <div className="plan-form-input-container">
-                  <label>Sesiones por semana</label>
+                  <label>Sesiones totales</label>
                   <CustomInput
                     type="number"
                     min="0"
-                    value={sesionesPorSemana}
-                    onChange={(e) => setSesionesPorSemana(e.target.value)}
+                    value={sesionesTotales}
+                    onChange={(e) => setSesionesTotales(e.target.value)}
                   />
                 </div>
                 <div className="plan-form-input-container">
