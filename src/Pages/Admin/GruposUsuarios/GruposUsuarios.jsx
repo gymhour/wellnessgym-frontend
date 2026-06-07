@@ -7,7 +7,7 @@ import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
-import apiService, { fetchAllClientsActive } from '../../../services/apiService';
+import apiService from '../../../services/apiService';
 import './GruposUsuarios.css';
 
 const customStyles = {
@@ -47,28 +47,26 @@ const emptyForm = {
   miembros: []
 };
 
+const usuarioToOption = (usuario) => ({
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : ''}`,
+  value: usuario.ID_Usuario
+});
+
 const GruposUsuarios = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [grupos, setGrupos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
+  const [usuarioOptions, setUsuarioOptions] = useState([]);
+  const [usuarioSearch, setUsuarioSearch] = useState('');
+  const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState(null);
-
-  const usuarioOptions = useMemo(() => usuarios.map(u => ({
-    label: `${u.nombre || ''} ${u.apellido || ''} (${u.email})`,
-    value: u.ID_Usuario
-  })), [usuarios]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [gruposResp, clientes] = await Promise.all([
-        apiService.getGruposUsuarios(),
-        fetchAllClientsActive(apiService, { take: 100 })
-      ]);
+      const gruposResp = await apiService.getGruposUsuarios();
       setGrupos(Array.isArray(gruposResp?.grupos) ? gruposResp.grupos : []);
-      setUsuarios(clientes);
     } catch (error) {
       toast.error('No se pudieron cargar los grupos de usuarios');
     } finally {
@@ -79,6 +77,56 @@ const GruposUsuarios = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const term = usuarioSearch.trim();
+    let isCurrentRequest = true;
+
+    if (term.length < 2) {
+      setUsuarioOptions([]);
+      setUsuariosLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsuariosLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUsuarioOptions(options);
+      } catch (error) {
+        if (isCurrentRequest) {
+          setUsuarioOptions([]);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsuariosLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [usuarioSearch]);
+
+  const mergedUsuarioOptions = useMemo(() => {
+    const optionsById = new Map();
+    [...form.miembros, ...usuarioOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [form.miembros, usuarioOptions]);
 
   const resetForm = () => setForm(emptyForm);
 
@@ -91,7 +139,7 @@ const GruposUsuarios = () => {
       miembros: (grupo.miembros || []).map(m => {
         const usuario = m.usuario || m;
         return {
-          label: `${usuario.nombre || ''} ${usuario.apellido || ''} (${usuario.email})`,
+          label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : ''}`,
           value: usuario.ID_Usuario
         };
       }).filter(m => m.value)
@@ -167,12 +215,19 @@ const GruposUsuarios = () => {
             placeholder="Descripción (opcional)"
           />
           <Select
-            options={usuarioOptions}
+            options={mergedUsuarioOptions}
             value={form.miembros}
             onChange={options => setForm(prev => ({ ...prev, miembros: options || [] }))}
+            onInputChange={(value, meta) => {
+              if (meta.action === 'input-change') setUsuarioSearch(value);
+            }}
             placeholder="Miembros del grupo"
+            noOptionsMessage={() => usuarioSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+            loadingMessage={() => 'Buscando usuarios...'}
             isMulti
             isSearchable
+            isLoading={usuariosLoading}
+            filterOption={null}
             styles={customStyles}
           />
           <label className="grupo-estado">

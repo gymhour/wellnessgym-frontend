@@ -14,15 +14,13 @@ import apiService from '../../../services/apiService'
 moment.locale('es')
 
 const localizer = momentLocalizer(moment)
-const CURRENT_YEAR = new Date().getFullYear()
-const CURRENT_MONTH = moment().month()
 
 const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const [rawTurnos, setRawTurnos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [calendarDate, setCalendarDate] = useState(new Date())
 
   // filtros
-  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH)
   const [selectedClass, setSelectedClass] = useState('')
 
   // modal
@@ -36,19 +34,43 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
   );
 
+  const selectedMonth = moment(calendarDate).month()
+  const selectedYear = moment(calendarDate).year()
+  const weekStart = useMemo(
+    () => moment(calendarDate).startOf('isoWeek').format('YYYY-MM-DD'),
+    [calendarDate]
+  )
+  const weekEnd = useMemo(
+    () => moment(calendarDate).startOf('isoWeek').add(6, 'days').format('YYYY-MM-DD'),
+    [calendarDate]
+  )
+
   useEffect(() => {
-    apiService.getTurnos()
-      .then(data => setRawTurnos(data))
-      .catch(err => console.log(err))
-      .finally(() => setLoading(false))
-  }, [])
+    let isCurrentRequest = true
+
+    setLoading(true)
+    apiService.getTurnos({ fechaDesde: weekStart, fechaHasta: weekEnd })
+      .then(data => {
+        if (isCurrentRequest) setRawTurnos(data)
+      })
+      .catch(err => {
+        console.log(err)
+        if (isCurrentRequest) toast.error('Error al cargar los turnos de la semana.')
+      })
+      .finally(() => {
+        if (isCurrentRequest) setLoading(false)
+      })
+
+    return () => { isCurrentRequest = false }
+  }, [weekStart, weekEnd])
 
   // opciones de filtro
   const monthOptions = useMemo(() => {
-    return Array.from(new Set(rawTurnos.map(t => moment(t.fecha).month())))
-      .sort()
-      .map(m => ({ value: m, label: moment().month(m).format('MMMM YYYY') }))
-  }, [rawTurnos])
+    return Array.from({ length: 12 }, (_, m) => ({
+      value: m,
+      label: moment({ year: selectedYear, month: m, day: 1 }).format('MMMM YYYY')
+    }))
+  }, [selectedYear])
 
   const classOptions = useMemo(() => {
     return Array.from(
@@ -61,6 +83,11 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     return new Date(d.getTime() + d.getTimezoneOffset() * 60000)
   }
 
+  const parseTurnoDate = isoString => {
+    const d = new Date(isoString)
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  }
+
   const events = useMemo(() => {
     // 1) filtramos
     const filtrados = rawTurnos.filter(t =>
@@ -70,7 +97,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     // 2) reducimos a un objeto de grupos
     const grupos = filtrados.reduce((acc, t) => {
       // fecha base (día correcto)
-      const fecha = new Date(t.fecha)
+      const fecha = parseTurnoDate(t.fecha)
 
       // parseo de horaIni/horaFin en local
       const horaIni = parseLocalISO(t.HorarioClase.horaIni)
@@ -107,11 +134,21 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     setIsModalOpen(true)
   }
 
-  // defaultDate: hoy si es el mes actual, o día 1 del mes seleccionado
-  const initialDate =
-    selectedMonth === CURRENT_MONTH
-      ? new Date()
-      : new Date(CURRENT_YEAR, selectedMonth, 1)
+  const handleMonthChange = e => {
+    const nextMonth = Number(e.target.value)
+    const today = moment()
+    const nextDate = moment(calendarDate)
+      .date(1)
+      .month(nextMonth)
+      .date(nextMonth === today.month() && selectedYear === today.year() ? today.date() : 1)
+      .toDate()
+
+    setCalendarDate(nextDate)
+  }
+
+  const handleNavigate = nextDate => {
+    setCalendarDate(nextDate)
+  }
 
   useEffect(() => {
     const onResize = () => setIsNarrow(window.innerWidth < MOBILE_BREAKPOINT);
@@ -143,7 +180,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       {loading && <LoaderFullScreen />}
       <div className='content-layout'>
-        <h2>Turnos – {moment().month(selectedMonth).format('MMMM YYYY')}</h2>
+        <h2>Turnos – Semana del {moment(weekStart).format('D [de] MMMM')} al {moment(weekEnd).format('D [de] MMMM YYYY')}</h2>
 
         <div className='turnos-filters'>
           <div className='turnos-filters-input-ctn'>
@@ -151,7 +188,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
             <CustomDropdown
               options={monthOptions}
               value={String(selectedMonth ?? '')}
-              onChange={e => setSelectedMonth(+e.target.value)}
+              onChange={handleMonthChange}
               name="month"
               id="month"
               placeholderOption={null}
@@ -175,18 +212,19 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
 
         <div className="calendar-wrapper">
           <Calendar
-            key={`${selectedMonth}-${isNarrow ? 'day' : 'week'}`}
+            key={isNarrow ? 'day' : 'week'}
             localizer={localizer}
             events={events}
             startAccessor="start"
             endAccessor="end"
             defaultView={isNarrow ? 'day' : 'week'}
             views={isNarrow ? ['day'] : ['week']}
+            date={calendarDate}
+            onNavigate={handleNavigate}
             step={60}
             timeslots={1}
             onSelectEvent={handleSelectEvent}
             scrollToTime={new Date(1970, 1, 1, 6)}
-            defaultDate={initialDate}
             messages={messages}
           />
         </div>

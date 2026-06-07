@@ -282,7 +282,9 @@ const RutinasAdmin = () => {
 
         <div className="mis-rutinas-list">
           {rutinas.length === 0 ? (
-            <p>No hay rutinas cargadas</p>
+            <div className="rutinas-admin-empty-state">
+              <p>No tiene rutinas cargadas aún.</p>
+            </div>
           ) : rutinas.map(rutina => {
             const dias = normalizeDias(rutina);
 

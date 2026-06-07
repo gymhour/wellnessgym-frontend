@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Select from 'react-select';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
-import apiService, { fetchAllClientsActive } from '../../../services/apiService';
+import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
@@ -360,10 +360,17 @@ const customStyles = {
   })
 };
 
+const usuarioToOption = (usuario) => ({
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
+  value: usuario.ID_Usuario
+});
+
 const RutinasAsignadas = () => {
   const [loading, setLoading] = useState(false);
   const [rutinas, setRutinas] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLoading, setUsersLoading] = useState(false);
   const [grupos, setGrupos] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedGrupo, setSelectedGrupo] = useState(null);
@@ -378,11 +385,60 @@ const RutinasAsignadas = () => {
   const [openState, setOpenState] = useState({});
 
   useEffect(() => {
-    fetchUsers();
     fetchGrupos();
     fetchRutinas(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const term = userSearch.trim();
+    let isCurrentRequest = true;
+
+    if (term.length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsersLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUserOptions(options);
+      } catch (error) {
+        if (isCurrentRequest) {
+          setUserOptions([]);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [userSearch]);
+
+  const mergedUserOptions = useMemo(() => {
+    const optionsById = new Map();
+    [selectedUser, ...userOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [selectedUser, userOptions]);
 
   const fetchGrupos = async () => {
     try {
@@ -391,16 +447,6 @@ const RutinasAsignadas = () => {
     } catch (error) {
       console.error('Error cargando grupos:', error);
       toast.error('No se pudieron cargar los grupos para el filtro.');
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const clientes = await fetchAllClientsActive(apiService, { take: 100 });
-      setUsers(clientes);
-    } catch (error) {
-      console.error('Error cargando usuarios:', error);
-      toast.error('No se pudieron cargar los usuarios para el filtro.');
     }
   };
 
@@ -612,15 +658,19 @@ const RutinasAsignadas = () => {
         {/* ——— Filtro por usuario ——— */}
         <div className='rutinas-asignadas-filtro-ctn'>
           <Select
-            options={users.map(u => ({
-              label: `${u.nombre} ${u.apellido} (${u.email})`,
-              value: u.ID_Usuario
-            }))}
+            options={mergedUserOptions}
             value={selectedUser}
             onChange={setSelectedUser}
+            onInputChange={(value, meta) => {
+              if (meta.action === 'input-change') setUserSearch(value);
+            }}
             placeholder='Seleccioná un usuario'
+            noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+            loadingMessage={() => 'Buscando usuarios...'}
             isClearable
             isSearchable
+            isLoading={usersLoading}
+            filterOption={null}
             styles={customStyles}
           />
           <Select

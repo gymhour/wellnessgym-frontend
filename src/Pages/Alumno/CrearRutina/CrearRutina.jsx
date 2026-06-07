@@ -5,7 +5,7 @@ import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropd
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput.jsx';
 import './CrearRutina.css';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton.jsx';
-import apiService, { fetchAllClientsActive } from '../../../services/apiService';
+import apiService from '../../../services/apiService';
 import { toast } from "react-toastify";
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -347,6 +347,12 @@ const normalizeUserMetrics = (resp) => {
   return { ejercicios };
 };
 
+const usuarioToOption = (usuario) => ({
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
+  value: usuario.ID_Usuario,
+  usuario
+});
+
 /* ================= Component ================= */
 const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const { rutinaId } = useParams();
@@ -370,7 +376,9 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     "Full Body", "Mixto"
   ];
 
-  const [users, setUsers] = useState([]);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLoading, setUsersLoading] = useState(false);
   const [selectedUserOptions, setSelectedUserOptions] = useState([]);
   const [gruposUsuarios, setGruposUsuarios] = useState([]);
   const [selectedGroupOptions, setSelectedGroupOptions] = useState([]);
@@ -435,16 +443,66 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     if (canAssign) {
       (async () => {
         try {
-          const clientes = await fetchAllClientsActive(apiService, { take: 100 });
-          setUsers(clientes);
           const gruposResp = await apiService.getGruposUsuarios();
           setGruposUsuarios(Array.isArray(gruposResp?.grupos) ? gruposResp.grupos : []);
         } catch {
-          toast.error('No se pudieron cargar usuarios o grupos');
+          toast.error('No se pudieron cargar los grupos de usuarios');
         }
       })();
     }
   }, [canAssign]);
+
+  useEffect(() => {
+    if (!canAssign) return;
+
+    const term = userSearch.trim();
+    let isCurrentRequest = true;
+
+    if (term.length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsersLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUserOptions(options);
+      } catch {
+        if (isCurrentRequest) {
+          setUserOptions([]);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [canAssign, userSearch]);
+
+  const mergedUserOptions = useMemo(() => {
+    const optionsById = new Map();
+    [...selectedUserOptions, ...userOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [selectedUserOptions, userOptions]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -459,16 +517,15 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   }, []);
 
   useEffect(() => {
-    if (isEditing && (!canAssign || users.length > 0)) {
+    if (isEditing) {
       fetchRoutine();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, canAssign, users]);
+  }, [isEditing, canAssign]);
 
   /* Restoring selectedUserId for JSX usage */
   const selectedUserId = useMemo(() => {
     if (!canAssign) return Number(localStorage.getItem("usuarioId"));
-    if (!users.length) return null;
     return selectedUserOptions?.[0]?.value ?? null;
   }, [canAssign, selectedUserOptions]);
 
@@ -533,11 +590,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         const selectedUsers = asignacionesUsuarios
           .map(a => {
             const id = Number(a.ID_Usuario);
-            const u = users.find(user => user.ID_Usuario === id) || a;
-            return id ? {
-              label: `${u.nombre || ''} ${u.apellido || ''} (${u.email || 'sin email'})`,
-              value: id
-            } : null;
+            return id ? usuarioToOption({ ...a, ID_Usuario: id }) : null;
           })
           .filter(Boolean);
         setSelectedUserOptions(selectedUsers);
@@ -1507,10 +1560,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   const selectedUser = useMemo(() => {
     if (!canAssign) return null;
-    return (
-      users.find(u => u.ID_Usuario === selectedUserId) || null
-    );
-  }, [canAssign, users, selectedUserId]);
+    return selectedUserOptions.find(option => option.value === selectedUserId)?.usuario || null;
+  }, [canAssign, selectedUserOptions, selectedUserId]);
 
   /* ================= Render ================= */
   return (
@@ -1675,15 +1726,19 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 {canAssign && (
                   <>
                     <Select
-                      options={users.map(u => ({
-                        label: `${u.nombre || ''} ${u.apellido || ''} (${u.email})`,
-                        value: u.ID_Usuario
-                      }))}
+                      options={mergedUserOptions}
                       value={selectedUserOptions}
                       onChange={options => setSelectedUserOptions(options || [])}
+                      onInputChange={(value, meta) => {
+                        if (meta.action === 'input-change') setUserSearch(value);
+                      }}
                       placeholder="Usuarios asignados"
+                      noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+                      loadingMessage={() => 'Buscando usuarios...'}
                       isMulti
                       isSearchable
+                      isLoading={usersLoading}
+                      filterOption={null}
                       styles={customStyles}
                     />
 

@@ -73,9 +73,13 @@ const getClases = async () => {
 };
 
 // Turnos
-const getTurnos = async () => {
+const getTurnos = async (filters = {}) => {
     try {
-        const response = await apiClient.get(`/turnos`);
+        const params = {};
+        if (filters.fechaDesde) params.fechaDesde = filters.fechaDesde;
+        if (filters.fechaHasta) params.fechaHasta = filters.fechaHasta;
+
+        const response = await apiClient.get(`/turnos`, { params });
         return response.data;
     } catch (error) {
         throw new Error("Error en el service de getTurnos")
@@ -212,6 +216,11 @@ const getRutinasAdmins = async () => {
         const response = await apiClient.get(`/rutinas/admins`)
         return response.data;
     } catch (error) {
+        const apiMessage = error.response?.data?.message;
+        if (error.response?.status === 404 && apiMessage === 'No se encontraron rutinas creadas por admins') {
+            return { rutinas: [] };
+        }
+
         throw new Error("Error al traer las rutinas del admin");
     }
 }
@@ -288,10 +297,20 @@ const removeEntrenadorFromClase = async (idClase, idEntrenador) => {
     }
 }
 
-const getAllUsuarios = async ({ page = 1, take = 15 } = {}) => {
+const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombre, apellido, email, dni, planId } = {}) => {
     try {
+        const params = { page, take };
+        if (tipo) params.tipo = tipo;
+        if (estado !== undefined) params.estado = estado;
+        if (search?.trim()) params.search = search.trim();
+        if (nombre?.trim()) params.nombre = nombre.trim();
+        if (apellido?.trim()) params.apellido = apellido.trim();
+        if (email?.trim()) params.email = email.trim();
+        if (dni?.trim()) params.dni = dni.trim();
+        if (planId) params.planId = planId;
+
         const response = await apiClient('/usuarios', {
-            params: { page, take },
+            params,
         });
         return response.data;
     } catch (error) {
