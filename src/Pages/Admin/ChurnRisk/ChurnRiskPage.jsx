@@ -6,15 +6,15 @@ import apiService from '../../../services/apiService';
 import './ChurnRiskPage.css';
 
 const RISK_OPTIONS = [
-  { value: 'MEDIO_ALTO', label: 'Medio/alto' },
   { value: '', label: 'Todos los riesgos' },
+  { value: 'MEDIO_ALTO', label: 'Medio/alto' },
   { value: 'ALTO', label: 'Alto' },
   { value: 'MEDIO', label: 'Medio' },
   { value: 'BAJO', label: 'Bajo' },
 ];
 
 const PAGE_SIZE = 20;
-const DEFAULT_RISK_LEVEL = 'MEDIO_ALTO';
+const DEFAULT_RISK_LEVEL = '';
 
 const formatDate = value => {
   if (!value) return 'Sin asistencias';
@@ -43,6 +43,31 @@ const getRiskLabel = riskLevel => ({
 const getStudentName = user => (
   [user?.nombre, user?.apellido].filter(Boolean).join(' ') || user?.email || 'Alumno sin nombre'
 );
+
+// Normaliza un teléfono argentino al formato que espera wa.me: "54 9" + (área + abonado).
+// Contempla +54 / 0054, el código de país 54, el prefijo de larga distancia 0,
+// el "9" de móvil y el "15" heredado que queda entre el área y el número.
+const normalizeArWhatsapp = tel => {
+  let d = String(tel ?? '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('00')) d = d.slice(2);   // salida internacional (00)
+  if (d.startsWith('54')) d = d.slice(2);   // código de país
+  if (d.startsWith('9')) d = d.slice(1);    // prefijo de móvil (se re-agrega al final)
+  if (d.startsWith('0')) d = d.slice(1);    // prefijo de larga distancia
+  if (d.length > 10) {
+    // Quita el "15" que queda entre el código de área (2, 3 o 4 dígitos) y el abonado.
+    const m = d.match(/^(11|\d{3}|\d{4})15(\d+)$/);
+    if (m && (m[1] + m[2]).length === 10) d = m[1] + m[2];
+  }
+  if (d.length !== 10) return '';            // no parece un número argentino válido
+  if (d.startsWith('15')) return '';         // "15" suelto sin código de área: ambiguo, no se puede resolver
+  return `549${d}`;
+};
+
+const buildWhatsappLink = tel => {
+  const num = normalizeArWhatsapp(tel);
+  return num ? `https://wa.me/${num}` : '';
+};
 
 const ChurnRiskPage = () => {
   const [searchInput, setSearchInput] = useState('');
@@ -213,7 +238,9 @@ const ChurnRiskPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.data.map(item => (
+                  {report.data.map(item => {
+                    const waLink = buildWhatsappLink(item.user?.tel);
+                    return (
                     <tr key={item.user?.id}>
                       <td data-label="Alumno">
                         <div className="churn-risk-user">
@@ -241,9 +268,9 @@ const ChurnRiskPage = () => {
                       <td data-label="Consistencia">{item.metrics?.activeWeeksLast4 || 0}/4 sem.</td>
                       <td data-label="Motivo">{item.mainReason}</td>
                       <td data-label="Contactar">
-                        {item.user?.tel ? (
+                        {waLink ? (
                           <a
-                            href={`https://wa.me/${item.user.tel.replace(/[^\d]/g, '')}`}
+                            href={waLink}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="whatsapp-btn-table"
@@ -264,7 +291,8 @@ const ChurnRiskPage = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
