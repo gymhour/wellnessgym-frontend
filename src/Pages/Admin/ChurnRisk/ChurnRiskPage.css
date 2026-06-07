@@ -1,0 +1,333 @@
+.churn-risk-page {
+  min-height: 100vh;
+}
+
+.churn-risk-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.churn-risk-header p {
+  margin-top: 6px;
+  color: var(--text-color-distinct);
+}
+
+.churn-risk-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.churn-risk-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-card-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.churn-risk-card span {
+  display: block;
+  color: var(--text-color-distinct);
+  font-size: 13px;
+}
+
+.churn-risk-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+}
+
+.churn-risk-card.high .churn-risk-card-icon {
+  color: #ef4444;
+}
+
+.churn-risk-card.medium .churn-risk-card-icon {
+  color: #f59e0b;
+}
+
+.churn-risk-card.low .churn-risk-card-icon {
+  color: #10b981;
+}
+
+.churn-risk-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.churn-risk-search,
+.churn-risk-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.churn-risk-search {
+  min-width: min(100%, 420px);
+}
+
+.churn-risk-search label,
+.churn-risk-filter-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-distinct);
+}
+
+.churn-risk-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-search-row input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  color: var(--text-color);
+  background: transparent;
+}
+
+.churn-risk-search-row button,
+.churn-risk-clear,
+.churn-risk-pagination button {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: var(--text-color);
+  background: var(--background-color);
+  cursor: pointer;
+}
+
+.churn-risk-search-row button:hover,
+.churn-risk-clear:hover,
+.churn-risk-pagination button:hover:not(:disabled) {
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-filter-field select {
+  min-width: 170px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-color);
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-clear {
+  margin-bottom: 0;
+}
+
+.churn-risk-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.churn-risk-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.churn-risk-table tr {
+  border: 1px solid var(--border-color);
+}
+
+.churn-risk-table th,
+.churn-risk-table td {
+  padding: 14px 10px;
+  text-align: left;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.churn-risk-table th {
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-user {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.churn-risk-user span {
+  color: var(--text-color-distinct);
+  font-size: 12px;
+}
+
+.churn-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.churn-risk-badge.alto {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.churn-risk-badge.medio {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.churn-risk-badge.bajo {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.churn-risk-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 110px;
+}
+
+.churn-risk-score span {
+  min-width: 24px;
+  font-weight: 700;
+}
+
+.churn-risk-score-track {
+  width: 70px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border-color);
+}
+
+.churn-risk-score-track div {
+  height: 100%;
+  border-radius: inherit;
+  background: #ef4444;
+}
+
+.churn-risk-state {
+  padding: 34px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: center;
+  background: var(--background-color-distinct);
+}
+
+.churn-risk-state p {
+  margin-top: 8px;
+  color: var(--text-color-distinct);
+}
+
+.churn-risk-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.churn-risk-pagination button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media screen and (max-width: 1000px) {
+  .churn-risk-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .churn-risk-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .churn-risk-search,
+  .churn-risk-filter-field,
+  .churn-risk-filter-field select,
+  .churn-risk-clear {
+    width: 100%;
+  }
+
+  .churn-risk-search-row {
+    flex-wrap: wrap;
+  }
+
+  .churn-risk-search-row input {
+    flex-basis: calc(100% - 32px);
+  }
+
+  .churn-risk-search-row button {
+    width: 100%;
+  }
+
+  .churn-risk-table thead {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+  }
+
+  .churn-risk-table,
+  .churn-risk-table tbody,
+  .churn-risk-table tr,
+  .churn-risk-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .churn-risk-table tr {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--background-color-distinct);
+  }
+
+  .churn-risk-table td {
+    position: relative;
+    min-height: 44px;
+    padding: 12px 12px 12px 44%;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .churn-risk-table td:last-child {
+    border-bottom: none;
+  }
+
+  .churn-risk-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 36%;
+    font-weight: 700;
+    color: var(--text-color-distinct);
+  }
+}

@@ -458,6 +458,20 @@ const getKPIs = async () => {
     }
 }
 
+const getChurnRisk = async ({ page = 1, take = 20, riskLevel = '', search = '' } = {}) => {
+    try {
+        const params = { page, take };
+        if (riskLevel) params.riskLevel = riskLevel;
+        if (search?.trim()) params.search = search.trim();
+
+        const response = await apiClient.get("/admin/churn-risk", { params });
+        return response.data;
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "Error en el servicio de getChurnRisk");
+    }
+}
+
 // Admin planes
 const getPlanes = async () => {
     try {
@@ -740,6 +754,7 @@ export default {
     postEjercicioResultado,
     // Admin dashboard
     getKPIs,
+    getChurnRisk,
     // Planes
     getPlanes,
     postPlanes,

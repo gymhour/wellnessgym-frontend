@@ -26,7 +26,8 @@ import {
   Dumbbell,
   FilePenLine,
   ClipboardCheck,
-  ScanLine
+  ScanLine,
+  AlertTriangle
 } from 'lucide-react';
 
 
@@ -298,6 +299,18 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     <li className="menu-item">
                       <ClipboardCheck className="icon" />{" "}
                       Asistencias
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/predictor-bajas"
+                    className={`menu-link ${location.pathname === "/admin/predictor-bajas"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <AlertTriangle className="icon" />{" "}
+                      Riesgo de baja
                     </li>
                   </Link>
                 </>

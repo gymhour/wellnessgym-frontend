@@ -45,6 +45,7 @@ import RutinasAsignadasAdmin from './Pages/Admin/RutinasAsignadasAdmin/RutinasAs
 import GruposUsuarios from './Pages/Admin/GruposUsuarios/GruposUsuarios';
 import AdminAttendancePage from './Pages/Admin/Attendances/AdminAttendancePage';
 import AdminCheckInPage from './Pages/Admin/CheckIn/AdminCheckInPage';
+import ChurnRiskPage from './Pages/Admin/ChurnRisk/ChurnRiskPage';
 import UserMyAttendancesPage from './Pages/Alumno/MisAsistencias/UserMyAttendancesPage';
 import PublicCheckInPage from './Pages/Public/CheckIn/PublicCheckInPage';
 import React, { useState, useEffect } from 'react';
@@ -258,6 +259,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminAttendancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/predictor-bajas"
+          element={
+            <ProtectedRoute>
+              <ChurnRiskPage />
             </ProtectedRoute>
           }
         />
