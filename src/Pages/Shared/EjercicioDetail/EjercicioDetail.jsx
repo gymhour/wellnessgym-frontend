@@ -6,6 +6,27 @@ import { ReactComponent as ArrowLeftIcon } from '../../../assets/icons/arrow-lef
 import './EjercicioDetail.css';
 import apiService from '../../../services/apiService';
 
+// Extrae el ID de YouTube de cualquier formato (watch?v=, youtu.be, shorts, embed).
+const extractVideoId = (url) => {
+    if (!url) return '';
+    try {
+        const u = new URL(url);
+        if (u.hostname.includes('youtu.be')) return u.pathname.replace('/', '').trim();
+        const v = u.searchParams.get('v');
+        if (v) return v.trim();
+        const parts = u.pathname.split('/').filter(Boolean);
+        const embedIdx = parts.indexOf('embed');
+        if (embedIdx !== -1 && parts[embedIdx + 1]) return parts[embedIdx + 1].trim();
+        const shortsIdx = parts.indexOf('shorts');
+        if (shortsIdx !== -1 && parts[shortsIdx + 1]) return parts[shortsIdx + 1].trim();
+        return '';
+    } catch {
+        const reg = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/;
+        const m = String(url).match(reg);
+        return m ? m[1] : '';
+    }
+};
+
 const EjercicioDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     const { id } = useParams();
     const [ejercicio, setEjercicio] = useState(null);
@@ -39,6 +60,8 @@ const EjercicioDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
             ? "/entrenador/ejercicios"
             : "/alumno/ejercicios";
 
+    const videoId = extractVideoId(ejercicio.youtubeUrl);
+
     return (
         <div className="page-layout">
             <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} isAlumno={fromAlumno} />
@@ -52,12 +75,13 @@ const EjercicioDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 />
 
                 {/* Video / Media */}
-                {ejercicio.youtubeUrl ? (
+                {videoId ? (
                     <div className="ejercicio-detail__media video">
                         <iframe
-                            src={ejercicio.youtubeUrl.replace("watch?v=", "embed/")}
+                            src={`https://www.youtube-nocookie.com/embed/${videoId}`}
                             title={ejercicio.nombre}
                             frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                         />
                     </div>

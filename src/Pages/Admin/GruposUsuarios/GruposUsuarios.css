@@ -740,14 +740,14 @@
     width: 100%;
   }
 
-  .grupo-user-row,
-  .grupo-roster-row {
-    grid-template-columns: minmax(0, 1fr);
+  /* En mobile la fila de búsqueda mantiene info | botón en una sola línea
+     para que "Agregar" quede siempre visible y tocable (antes el botón
+     caía debajo a todo el ancho y quedaba inaccesible). */
+  .grupo-user-row {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .grupo-user-add,
-  .grupo-user-added,
-  .grupo-user-remove {
-    width: 100%;
+  .grupo-roster-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
