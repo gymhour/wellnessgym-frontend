@@ -574,15 +574,21 @@ const registerAttendance = async ({ dni, method = 'DNI' }) => {
     }
 }
 
-const getAttendances = async (filters = {}) => {
+const getAttendances = async (filters = {}, { page = 1, take = 20 } = {}) => {
     try {
         const params = {
-            page: 1,
-            limit: 500,
+            page,
+            limit: take,
         };
 
         if (filters.dni?.trim()) {
             params.dni = filters.dni.trim();
+        }
+        if (filters.student?.trim()) {
+            params.student = filters.student.trim();
+        }
+        if (filters.method?.trim()) {
+            params.metodo = filters.method.trim().toUpperCase();
         }
         if (filters.fromDate) {
             params.fechaInicio = filters.fromDate;
@@ -599,16 +605,11 @@ const getAttendances = async (filters = {}) => {
 
         const response = await apiClient.get('/usuarios/asistencias/historial', { params });
         const data = Array.isArray(response.data?.data) ? response.data.data : [];
-        const normalizedStudent = filters.student?.trim().toLowerCase();
-        const normalizedMethod = filters.method?.trim();
 
-        return data
-            .map(mapAttendanceHistoryItem)
-            .filter(attendance => {
-                const matchesStudent = !normalizedStudent || attendance.student?.name?.toLowerCase().includes(normalizedStudent);
-                const matchesMethod = !normalizedMethod || attendance.method === normalizedMethod;
-                return matchesStudent && matchesMethod;
-            });
+        return {
+            items: data.map(mapAttendanceHistoryItem),
+            pagination: response.data?.pagination || { total: data.length, pages: 1, page, limit: take },
+        };
     } catch (error) {
         const apiMsg = error.response?.data?.message;
         throw new Error(apiMsg || 'No se pudieron cargar las asistencias.');
