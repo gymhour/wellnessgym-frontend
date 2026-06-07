@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
+// API URLs
 //const BASE_URL = 'https://gym-backend-dev-rust.vercel.app'
 const BASE_URL = 'https://saddlebrown-okapi-551688.hostingersite.com'
 // const BASE_URL = 'http://localhost:3000';
