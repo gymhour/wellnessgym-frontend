@@ -437,21 +437,23 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
 
       <div className='content-layout'>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>Lista de usuarios</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="usuarios-page-header">
+          <h2>Lista de usuarios</h2>
+          <div className="usuarios-page-actions">
             <PrimaryButton
               text="Crear usuario"
               linkTo="/admin/crear-usuario"
+              icon={UserPlus}
             />
             <SecondaryButton
               text="Importar usuarios"
               onClick={() => setShowImportModal(true)}
+              icon={Upload}
             />
           </div>
         </div>
 
-        <div style={{ margin: '20px 0px' }}>
+        <div className="usuarios-filters-toggle-row">
           <button
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
@@ -463,7 +465,6 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         {showFilters && (
           <form
             className="filtros-form"
-            style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}
           >
             <div className='usuarios-filtros-form-inputs-ctn'>
               <label htmlFor="tipo">Tipo:</label>
@@ -550,8 +551,12 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             </div>
 
             <div className='usuarios-filtros-form-ctn'>
-              <PrimaryButton type="submit" text="Aplicar filtros" onClick={aplicarFiltros} />
-              <SecondaryButton className="secondary-btn" onClick={limpiarFiltros} text="Limpiar filtros" />
+              <button type="submit" className="primary-button" onClick={aplicarFiltros}>
+                Aplicar filtros
+              </button>
+              <button type="button" className="secondary-button" onClick={limpiarFiltros}>
+                Limpiar filtros
+              </button>
             </div>
           </form>
         )}
@@ -643,27 +648,29 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                       <td data-label="Acciones" className="usuarios-table-actions">
                         {fromAdmin && (
                           <>
-                            <PrimaryButton
-                              text="Editar"
-                              linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
-                            />
                             <SecondaryButton
                               text="Ver turnos"
                               onClick={() => fetchTurnosHistory(u)}
                             />
                           </>
                         )}
+                          {fromAdmin && u.tipo !== 'admin' && (
+                            <SecondaryButton
+                                text="Cambiar estado"
+                                onClick={() => openEstadoPopup(u.ID_Usuario)}
+                              />
+                          )}
+                        {fromAdmin && (
+                          <PrimaryButton
+                            text="Editar"
+                            linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
+                          />
+                        )}
                         {fromEntrenador && (
                           <SecondaryButton
                             text="Salud"
                             onClick={() => openHealthModal(u)}
                           />
-                        )}
-                        {fromAdmin && u.tipo !== 'admin' && (
-                          <SecondaryButton
-                              text="Cambiar estado"
-                              onClick={() => openEstadoPopup(u.ID_Usuario)}
-                            />
                         )}
                       </td>
                     )}
@@ -674,7 +681,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           </div>
         )}
 
-        <div className="paginacion-controls" style={{ marginTop: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="paginacion-controls">
           <button
             onClick={goPrevPage}
             disabled={page === 1}

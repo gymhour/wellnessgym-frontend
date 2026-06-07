@@ -120,76 +120,274 @@
 }
 
 /* Modal overlay y contenido */
-.modal-overlay {
+.cuotas-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--background-color);
   padding: 24px;
-  border-radius: 16px;
-  min-width: 360px;
-  max-width: 92vw;
-  max-height: 85vh;
-  overflow-y: auto;
-  margin: 40px 0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 2px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.38);
 }
 
-.modal-content h3 {
+.cuotas-modal {
+  width: min(92vw, 680px);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
   color: var(--text-color);
-  margin: 0 0 16px 0;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+}
+
+.cuotas-modal-small {
+  width: min(92vw, 560px);
+}
+
+.cuotas-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cuotas-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+
+.cuotas-modal-header span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-color-distinct);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cuotas-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+  color: var(--text-color-distinct);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.cuotas-modal-close:hover {
+  border-color: rgba(218, 70, 50, 0.34);
+  background: var(--background-hover-color);
+  color: var(--text-color);
 }
 
 .modal-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 18px;
 }
 
-.modal-form label {
-  margin: 8px 0 4px;
-  font-weight: 500;
+.cuotas-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cuotas-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cuotas-modal-field-wide {
+  grid-column: 1 / -1;
+}
+
+.cuotas-modal-field label {
+  color: var(--text-color-distinct);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.cuotas-modal .custom-input-wrapper,
+.cuotas-modal .custom-dropdown,
+.cuotas-modal .custom-datepicker,
+.cuotas-modal .custom-datepicker-mes {
+  width: 100%;
+  min-width: 0;
+}
+
+.cuotas-modal .custom-input,
+.cuotas-modal .custom-dropdown,
+.cuotas-modal .custom-datepicker,
+.cuotas-modal .custom-datepicker-mes {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.cuotas-modal .custom-input:focus,
+.cuotas-modal .custom-dropdown:focus,
+.cuotas-modal .custom-datepicker:focus,
+.cuotas-modal .custom-datepicker-mes:focus {
+  border-color: rgba(218, 70, 50, 0.48);
+  box-shadow: 0 0 0 3px rgba(218, 70, 50, 0.12);
+}
+
+.cuotas-modal .cuotas-select__control {
+  width: 100% !important;
+  min-height: 44px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+  box-shadow: none;
+}
+
+.cuotas-modal .cuotas-select__control:hover,
+.cuotas-modal .cuotas-select__control--is-focused {
+  border-color: rgba(218, 70, 50, 0.48);
+  box-shadow: 0 0 0 3px rgba(218, 70, 50, 0.12);
+}
+
+.cuotas-modal .cuotas-select__single-value,
+.cuotas-modal .cuotas-select__input-container {
+  color: var(--text-color);
+}
+
+.cuotas-modal .cuotas-select__placeholder {
   color: var(--text-color-distinct);
 }
 
-.modal-actions {
-  width: 100%;
+.cuotas-modal .cuotas-select__menu {
+  z-index: 1001;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-color);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+}
+
+.cuotas-modal .cuotas-select__option {
+  color: var(--text-color);
+  background: var(--background-color);
+  font-size: 14px;
+}
+
+.cuotas-modal .cuotas-select__option--is-focused {
+  background: var(--background-hover-color);
+}
+
+.cuotas-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 }
 
-.modal-primary-button,
-.modal-secondary-button {
-  padding: 10px;
+.cuotas-modal-primary-button,
+.cuotas-modal-secondary-button {
   display: inline-flex;
-  gap: 8px;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  text-decoration: none;
-  font-size: 14px;
+  min-height: 40px;
+  padding: 10px 14px;
   border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
   cursor: pointer;
-  outline: none;
-  border: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.modal-primary-button {
+.cuotas-modal-primary-button {
+  border: 0;
   background-color: var(--primary-color);
+  color: #fff;
 }
 
-.modal-secondary-button {
-  background-color: var(--medium-grey);
+.cuotas-modal-primary-button:hover {
+  background-color: var(--primary-color-hover);
+}
+
+.cuotas-modal-secondary-button {
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color-distinct);
+  color: var(--text-color);
+}
+
+.cuotas-modal-secondary-button:hover {
+  border-color: rgba(218, 70, 50, 0.28);
+  background: var(--background-hover-color);
+}
+
+.validation-modal {
+  width: min(92vw, 660px);
+}
+
+.validation-summary {
+  margin: 16px 0 0;
+  color: var(--text-color-distinct);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.validation-problems-list {
+  display: grid;
+  gap: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  margin-top: 14px;
+  padding-right: 4px;
+}
+
+.validation-problem-card {
+  padding: 12px;
+  border: 1px solid rgba(218, 70, 50, 0.18);
+  border-radius: 8px;
+  background: rgba(218, 70, 50, 0.07);
+}
+
+.validation-problem-card strong {
+  display: block;
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.validation-problem-card span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-color-distinct);
+  font-size: 13px;
+}
+
+.validation-problem-card ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-color);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.validation-problem-card li + li {
+  margin-top: 4px;
 }
 
 /* DatePicker / Select */
@@ -242,6 +440,32 @@
   .cuotas-table th,
   .cuotas-table td {
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 700px) {
+  .cuotas-modal-overlay {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .cuotas-modal {
+    width: 100%;
+    max-height: 92vh;
+    padding: 18px;
+  }
+
+  .cuotas-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cuotas-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cuotas-modal-primary-button,
+  .cuotas-modal-secondary-button {
+    width: 100%;
   }
 }
 
@@ -310,11 +534,6 @@
 
 /* 3) Modales y filtros en teléfonos */
 @media (max-width: 480px) {
-  .modal-content {
-    min-width: auto;
-    width: 92vw;
-  }
-
   .header-actions {
     display: flex;
     flex-wrap: wrap;

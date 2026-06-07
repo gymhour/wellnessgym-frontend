@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import '../../../App.css';
 import './clasesActividadesAdmin.css'
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
-import SecondaryButton from "../../../Components/utils/SecondaryButton/SecondaryButton";
+import PrimaryButton from "../../../Components/utils/PrimaryButton/PrimaryButton";
 import { PlusCircle } from 'lucide-react';
 import { Link } from "react-router-dom";
 import apiClient from "../../../axiosConfig";
@@ -39,12 +39,12 @@ const ClasesActividadesAdmin = ({ fromAdmin, fromEntrenador }) => {
         <div className='page-layout'>
             <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
             <div className='content-layout'>
-                <div className="clases-actividades-ctn">
+                <div className="clases-actividades-ctn clases-actividades-admin-page">
                     <div className="create-clase-title">
                         <h2>Clases y actividades</h2>
                         {
                             fromAdmin &&
-                            <SecondaryButton text="Agregar" linkTo="/admin/agregar-clase" icon={PlusCircle}></SecondaryButton>
+                            <PrimaryButton text="Agregar" linkTo="/admin/agregar-clase" icon={PlusCircle}></PrimaryButton>
                         }
                     </div>
                     {loading ? (

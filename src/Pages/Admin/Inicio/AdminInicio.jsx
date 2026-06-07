@@ -144,8 +144,6 @@ const AdminInicio = () => {
     setFilterEndDate(null);
   };
 
-  const datePickerClass = 'custom-datepicker-mes';
-
   const currentMonthName = new Date().toLocaleDateString('es-ES', {
     month: 'long',
     year: 'numeric'
@@ -157,11 +155,13 @@ const AdminInicio = () => {
       <SidebarMenu isAdmin={true} />
 
       <div className='content-layout'>
-        <h2> ¡Hola, {nombreUsuario}! </h2>
+        <div className="admin-inicio-header">
+          <h2>¡Hola, {nombreUsuario}!</h2>
+        </div>
 
-        <div className='cards-container'>
-          <div className='card'>
-            <div className='card-text-ctn'>
+        <div className='admin-kpi-grid'>
+          <div className='admin-kpi-card'>
+            <div className='admin-kpi-card-header'>
               <Users
                 size={20}
                 className="icon-soft-grey"
@@ -171,8 +171,8 @@ const AdminInicio = () => {
             <p className='value'>{kpi.totalActiveUsers}</p>
           </div>
 
-          <div className='card'>
-            <div className="card-text-ctn">
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
               <DollarSign
                 size={20}
                 className="icon-soft-grey"
@@ -184,14 +184,14 @@ const AdminInicio = () => {
             </div>
             <p className='value'>
               {currencyFormatter(kpi.totalAmountPaidThisMonth)}
-              <span style={{ fontWeight: 400, fontSize: '16px' }}>
+              <span className="admin-kpi-count">
                 ({kpi.quotasPaidThisMonth})
               </span>
             </p>
           </div>
 
-          <div className='card'>
-            <div className="card-text-ctn">
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
               <Clock
                 size={20}
                 className="icon-soft-grey"
@@ -203,14 +203,14 @@ const AdminInicio = () => {
             </div>
             <p className='value'>
               {currencyFormatter(kpi.totalAmountPendingThisMonth)}
-              <span style={{ fontWeight: 400, fontSize: '16px' }}>
+              <span className="admin-kpi-count">
                 ({kpi.quotasPendingThisMonth})
               </span>
             </p>
           </div>
 
-          <div className='card'>
-            <div className="card-text-ctn">
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
               <Clock
                 size={20}
                 className="icon-soft-grey"
@@ -222,8 +222,8 @@ const AdminInicio = () => {
             </p>
           </div>
 
-          <div className='card'>
-            <div className="card-text-ctn">
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
               <Clock
                 size={20}
                 className="icon-soft-grey"
@@ -238,9 +238,10 @@ const AdminInicio = () => {
 
         {/* === Sección del gráfico de barras === */}
         <div className='chart-section'>
-          <h3>Ingresos Mensuales</h3>
-
-          <div style={{ margin: '30px 0px' }}>
+          <div className="chart-section-header">
+            <div>
+              <h3>Ingresos mensuales</h3>
+            </div>
             <button
               className='toggle-filters-button'
               onClick={() => setShowFilters(prev => !prev)}
@@ -250,8 +251,8 @@ const AdminInicio = () => {
           </div>
 
           {showFilters && (
-            <div className='filters-container' style={{ marginTop: '20px', marginBottom: '20px', display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div className='admin-inicio-filtros-inputs-ctn' style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className='filters-container'>
+              <div className='admin-inicio-filtros-inputs-ctn'>
                 <label>Desde (Mes/Año):</label>
                 <ReactDatePicker
                   selected={inputStartDate}
@@ -262,7 +263,7 @@ const AdminInicio = () => {
                   className='custom-datepicker-mes'
                 />
               </div>
-              <div className='admin-inicio-filtros-inputs-ctn' style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className='admin-inicio-filtros-inputs-ctn'>
                 <label>Hasta (Mes/Año):</label>
                 <ReactDatePicker
                   selected={inputEndDate}
@@ -273,7 +274,7 @@ const AdminInicio = () => {
                   className='custom-datepicker-mes'
                 />
               </div>
-              <div className='admin-inicio-filtros-btns-ctn' style={{ display: 'flex', gap: '10px' }}>
+              <div className='admin-inicio-filtros-btns-ctn'>
                 <PrimaryButton
                   onClick={applyFilters}
                   text="Aplicar filtros"

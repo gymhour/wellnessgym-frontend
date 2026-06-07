@@ -8,7 +8,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
-import { ChevronDown, ChevronUp, Copy, Edit, Trash2, Video } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Edit, Trash2, Video, MoreVertical, FileSpreadsheet, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../../Entrenador/RutinasAsignadas/RutinasAsignadas.css';
 
 /* ===================== Helpers ===================== */
@@ -332,13 +332,17 @@ const customStyles = {
   }),
   control: (provided) => ({
     ...provided,
-    backgroundColor: 'var(--background-color-distinct)',
-    borderColor: 'transparent',
-    borderRadius: '12px',
-    padding: '6px',
+    minHeight: '42px',
+    backgroundColor: 'var(--background-color)',
+    borderColor: 'var(--border-color)',
+    borderRadius: '8px',
+    padding: '2px',
     boxShadow: 'none',
     color: 'var(--text-color)',
-    width: '300px',
+    width: '100%',
+    ':hover': {
+      borderColor: 'var(--primary-color)',
+    },
   }),
   singleValue: (provided) => ({
     ...provided,
@@ -348,6 +352,8 @@ const customStyles = {
     ...provided,
     backgroundColor: 'var(--background-color)',
     border: '1px solid var(--border-color)',
+    borderRadius: '8px',
+    overflow: 'hidden',
     zIndex: 100
   }),
   input: (provided) => ({
@@ -379,6 +385,8 @@ const RutinasAsignadas = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedRutinaId, setSelectedRutinaId] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [openActionsId, setOpenActionsId] = useState(null);
   const navigate = useNavigate();
 
   // estado de desplegables: { [ID_Rutina]: { [diaKey]: boolean } }
@@ -510,6 +518,7 @@ const RutinasAsignadas = () => {
   };
 
   const openDeletePopup = id => {
+    setOpenActionsId(null);
     setSelectedRutinaId(id);
     setIsPopupOpen(true);
   };
@@ -628,6 +637,7 @@ const RutinasAsignadas = () => {
 
   const handleDuplicate = async (rutina) => {
     try {
+      setOpenActionsId(null);
       setLoading(true);
       const payload = buildDuplicatePayload(rutina);
       if (rutina?.urlPlanificacion) {
@@ -649,56 +659,79 @@ const RutinasAsignadas = () => {
   return (
     <div className='page-layout'>
       <SidebarMenu isAdmin={true} isEntrenador={false} />
-      <div className='content-layout mi-rutina-ctn'>
+      <div className='content-layout mi-rutina-ctn rutinas-asignadas-page'>
 
-        <div className='mi-rutina-title' style={{ marginBottom: '20px' }}>
+        <div className='mi-rutina-title rutinas-asignadas-title'>
           <h2>Rutinas asignadas</h2>
         </div>
 
-        {/* ——— Filtro por usuario ——— */}
-        <div className='rutinas-asignadas-filtro-ctn'>
-          <Select
-            options={mergedUserOptions}
-            value={selectedUser}
-            onChange={setSelectedUser}
-            onInputChange={(value, meta) => {
-              if (meta.action === 'input-change') setUserSearch(value);
-            }}
-            placeholder='Seleccioná un usuario'
-            noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
-            loadingMessage={() => 'Buscando usuarios...'}
-            isClearable
-            isSearchable
-            isLoading={usersLoading}
-            filterOption={null}
-            styles={customStyles}
-          />
-          <Select
-            options={grupos.map(g => ({
-              label: g.nombre,
-              value: g.ID_GrupoUsuario
-            }))}
-            value={selectedGrupo}
-            onChange={setSelectedGrupo}
-            placeholder='Filtrar por grupo'
-            isClearable
-            isSearchable
-            styles={customStyles}
-          />
-          <div className="rutinas-asignadas-checkbox-ctn">
-            <input
-              type="checkbox"
-              id="asignadasPorMi"
-              checked={asignadasPorMi}
-              onChange={(e) => setAsignadasPorMi(e.target.checked)}
-              style={{ cursor: 'pointer', width: '18px', height: '18px', accentColor: 'var(--primary-color)' }}
-            />
-            <label htmlFor="asignadasPorMi" style={{ cursor: 'pointer', margin: 0, fontWeight: 500 }}>Asignadas por mi</label>
-          </div>
-          <div className="rutinas-asignadas-filtros-btns">
-            <PrimaryButton onClick={handleSearch} text="Buscar" />
-            <SecondaryButton onClick={limpiarFiltros} text="Limpiar" />
-          </div>
+        <div className="rutinas-asignadas-filter-shell">
+          <button
+            type="button"
+            className="rutinas-asignadas-filter-trigger"
+            onClick={() => setShowFilters(prev => !prev)}
+            aria-expanded={showFilters}
+          >
+            <span>Filtros</span>
+            <span className="rutinas-asignadas-filter-meta">
+              {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </span>
+          </button>
+
+          {showFilters && (
+            <div className='rutinas-asignadas-filtro-ctn'>
+              <label className="rutinas-asignadas-filter-field">
+                <span>Usuario</span>
+                <Select
+                  options={mergedUserOptions}
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  onInputChange={(value, meta) => {
+                    if (meta.action === 'input-change') setUserSearch(value);
+                  }}
+                  placeholder='Seleccioná un usuario'
+                  noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+                  loadingMessage={() => 'Buscando usuarios...'}
+                  isClearable
+                  isSearchable
+                  isLoading={usersLoading}
+                  filterOption={null}
+                  styles={customStyles}
+                />
+              </label>
+
+              <label className="rutinas-asignadas-filter-field">
+                <span>Grupo</span>
+                <Select
+                  options={grupos.map(g => ({
+                    label: g.nombre,
+                    value: g.ID_GrupoUsuario
+                  }))}
+                  value={selectedGrupo}
+                  onChange={setSelectedGrupo}
+                  placeholder='Filtrar por grupo'
+                  isClearable
+                  isSearchable
+                  styles={customStyles}
+                />
+              </label>
+
+              <div className="rutinas-asignadas-checkbox-ctn">
+                <input
+                  type="checkbox"
+                  id="asignadasPorMi"
+                  checked={asignadasPorMi}
+                  onChange={(e) => setAsignadasPorMi(e.target.checked)}
+                />
+                <label htmlFor="asignadasPorMi">Asignadas por mi</label>
+              </div>
+
+              <div className="rutinas-asignadas-filtros-btns">
+                <PrimaryButton onClick={handleSearch} text="Buscar" />
+                <SecondaryButton onClick={limpiarFiltros} text="Limpiar" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ——— Listado de rutinas ——— */}
@@ -713,38 +746,49 @@ const RutinasAsignadas = () => {
                 <div className='rutina-header'>
                   <h3>
                     {rutina.nombre}
-                    {rutina.urlPlanificacion && (
+                    {/* {rutina.urlPlanificacion && (
                       <span className="routine-badge sheet-badge">
+                        <FileSpreadsheet size={13} />
                         Planilla Digital
                       </span>
-                    )}
+                    )} */}
                   </h3>
                   <div className="rutina-header-acciones">
                     <button
-                      onClick={() => handleDuplicate(rutina)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Duplicar rutina'
+                      type="button"
+                      onClick={() => setOpenActionsId(prev => prev === rutina.ID_Rutina ? null : rutina.ID_Rutina)}
+                      className='rutina-actions-trigger'
+                      title='Opciones de rutina'
+                      aria-expanded={openActionsId === rutina.ID_Rutina}
                     >
-                      <Copy size={18} />
+                      <MoreVertical size={19} />
                     </button>
-                    <button
-                      onClick={() => openDeletePopup(rutina.ID_Rutina)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Eliminar rutina'
-                    >
-                      <Trash2 width={20} height={20} />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/admin/editar-rutina/${rutina.ID_Rutina}`)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Editar rutina'
-                    >
-                      <Edit width={20} height={20} />
-                    </button>
+                    {openActionsId === rutina.ID_Rutina && (
+                      <div className="rutina-actions-menu">
+                        <button type="button" onClick={() => handleDuplicate(rutina)}>
+                          <Copy size={16} />
+                          Duplicar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionsId(null);
+                            navigate(`/admin/editar-rutina/${rutina.ID_Rutina}`);
+                          }}
+                        >
+                          <Edit size={16} />
+                          Editar
+                        </button>
+                        <button type="button" className="danger" onClick={() => openDeletePopup(rutina.ID_Rutina)}>
+                          <Trash2 size={16} />
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className='rutina-data'>
+                {/* <div className='rutina-data'>
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
                   {rutina.urlPlanificacion ? (
@@ -756,19 +800,28 @@ const RutinasAsignadas = () => {
                         : `Días totales: ${dias.length}`}
                     </p>
                   )}
-                </div>
+                </div> */}
 
                 {/* ===== SEMANAS o DÍAS ===== */}
                 {rutina.urlPlanificacion ? (
                   <div className="sheet-quick-access">
-                    <p className="sheet-quick-title">Plan de entrenamiento con planilla digital asignada</p>
+                    <div className="sheet-quick-copy">
+                      <span className="sheet-quick-icon">
+                        <FileSpreadsheet size={18} />
+                      </span>
+                      <div>
+                        <p className="sheet-quick-title">Planilla digital</p>
+                        <span>Google Sheets vinculado a esta rutina.</span>
+                      </div>
+                    </div>
                     <a
                       href={rutina.urlPlanificacion}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="sheet-quick-btn"
                     >
-                      <span>Abrir Google Sheets</span>
+                      <span>Abrir planilla</span>
+                      <ExternalLink size={15} />
                     </a>
                   </div>
                 ) : rutina.semanas && rutina.semanas.length > 0 ? (
@@ -802,7 +855,7 @@ const RutinasAsignadas = () => {
                   renderDiasContent(dias, rutina.ID_Rutina, openState, toggleDia)
                 )}
 
-                <div className="rutina-asignada" style={{ marginTop: 10 }}>
+                <div className="rutina-asignada">
                   <strong>Usuarios:</strong>{' '}
                   {Array.isArray(rutina?.asignacionesUsuarios) && rutina.asignacionesUsuarios.length > 0
                     ? rutina.asignacionesUsuarios.map(u => `${u.nombre || ''} ${u.apellido || ''}`.trim()).join(', ')
@@ -820,7 +873,7 @@ const RutinasAsignadas = () => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12 }}>
+                <div className="rutina-card-footer">
                   <button className='rutina-ver-detalle-btn' onClick={() => navigate(`/admin/rutinas/${rutina.ID_Rutina}`)}>
                     Ver mas detalles
                   </button>
@@ -831,25 +884,29 @@ const RutinasAsignadas = () => {
         </div>
 
         {totalPages > 1 && (
-          <div className="rutinas-paginacion" style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center', marginTop: '20px' }}>
+          <div className="rutinas-paginacion">
             <button
               type="button"
-              className="rutina-ver-detalle-btn"
+              className="rutinas-pagination-btn"
               onClick={() => fetchRutinas(page - 1)}
               disabled={page <= 1}
-              style={{ opacity: page <= 1 ? 0.5 : 1, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}
+              aria-label="Página anterior"
             >
-              Anterior
+              <ChevronLeft size={18} />
+              <span>Anterior</span>
             </button>
-            <span>Página {page} de {totalPages}</span>
+            <span className="rutinas-pagination-status">
+              Página <strong>{page}</strong> de {totalPages}
+            </span>
             <button
               type="button"
-              className="rutina-ver-detalle-btn"
+              className="rutinas-pagination-btn"
               onClick={() => fetchRutinas(page + 1)}
               disabled={page >= totalPages}
-              style={{ opacity: page >= totalPages ? 0.5 : 1, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
+              aria-label="Página siguiente"
             >
-              Siguiente
+              <span>Siguiente</span>
+              <ChevronRight size={18} />
             </button>
           </div>
         )}

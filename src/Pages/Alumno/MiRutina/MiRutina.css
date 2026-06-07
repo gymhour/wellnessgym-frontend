@@ -3,10 +3,17 @@
 .mi-rutina-title {
     display: flex;
     gap: 12px;
-    max-width: 300px;
+    max-width: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin: 0 auto 28px;
+}
+
+.mi-rutina-title h2 {
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: -0.5px;
 }
 
 .mis-rutinas-list {

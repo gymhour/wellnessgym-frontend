@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
-import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import apiService from '../../../services/apiService';
@@ -9,6 +8,7 @@ import { toast } from 'react-toastify';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
 import { ArrowLeft } from 'lucide-react';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
+import '../UsuarioForm.css';
 
 const DAY_ORDER = {
   domingo: 0, lunes: 1, martes: 2, miercoles: 3, miércoles: 3,
@@ -306,69 +306,24 @@ const EditarUsuario = () => {
   };
 
   return (
-    <>
-      {/* Estilos para dos columnas en escritorio y una columna en mobile */}
-      <style>{`
-        .form-two {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          width: 100%;
-          max-width: 640px;
-          padding-top: 30px;
-        }
-        .form-field {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          width: calc(50% - 8px);
-        }
-        .form-field.full-width {
-          width: 100%;
-        }
-        .health-textarea {
-          width: 100%;
-          min-height: 130px;
-          padding: 10px;
-          border-radius: 12px;
-          border: 1.5px solid var(--border-color);
-          background: var(--background-color);
-          color: var(--text-color);
-          font: inherit;
-          font-weight: 400;
-          resize: vertical;
-          outline: none;
-        }
-        @media (max-width: 768px) {
-          .form-field {
-            width: 100%;
-          }
-        }
-        .button-container {
-          width: 100%;
-          display: flex;
-          justify-content: center;
-          margin-top: 16px;
-        }
-      `}</style>
-
       <div className="page-layout">
         {isLoading && <LoaderFullScreen />}
         <SidebarMenu isAdmin={true} />
         <div className="content-layout">
-          <SecondaryButton
-            text="Volver atrás"
-            linkTo="/admin/usuarios"
-            icon={ArrowLeft}
-            reversed={true}
-          />
-          <h2>Editar usuario</h2>
+          <div className="usuario-form-page">
+            <SecondaryButton
+              text="Volver atrás"
+              linkTo="/admin/usuarios"
+              icon={ArrowLeft}
+              reversed={true}
+            />
+            <h2>Editar usuario</h2>
           <form
             onSubmit={handleSubmit}
-            className="form-two"
+            className="usuario-form"
           >
-            <div className="form-field">
-              <label htmlFor="email">Email:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="email">Email</label>
               <CustomInput
                 type="email"
                 id="email"
@@ -381,8 +336,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="nombre">Nombre:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="nombre">Nombre</label>
               <CustomInput
                 type="text"
                 id="nombre"
@@ -394,8 +349,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="dni">DNI:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="dni">DNI</label>
               <CustomInput
                 type="text"
                 id="dni"
@@ -407,8 +362,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="apellido">Apellido:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="apellido">Apellido</label>
               <CustomInput
                 type="text"
                 id="apellido"
@@ -420,8 +375,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="tipo">Tipo de usuario:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="tipo">Tipo de usuario</label>
               <CustomDropdown
                 options={tipos}
                 value={formData.tipo}
@@ -432,8 +387,8 @@ const EditarUsuario = () => {
             </div>
 
             {formData.tipo === 'Cliente' && (
-              <div className="form-field">
-                <label htmlFor="plan">Plan:</label>
+              <div className="usuario-form-field usuario-form-field--full">
+                <label htmlFor="plan">Plan</label>
                 <CustomDropdown
                   options={planOptions.map(p => p.label)}
                   value={formData.plan}
@@ -449,7 +404,7 @@ const EditarUsuario = () => {
                   name="plan"
                   id="plan"
                 />
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', cursor: 'pointer' }}>
+                <label className="usuario-form-toggle">
                   <span className="toggle-switch">
                     <input
                       type="checkbox"
@@ -463,7 +418,7 @@ const EditarUsuario = () => {
                 </label>
 
                 {formData.usaTurnosFijos && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                  <div className="usuario-turnos-fijos">
                     {turnosFijos.map((item, index) => {
                       const clase = item.horarioId ? getClaseForHorario(item.horarioId) : null;
                       const horario = item.horarioId
@@ -477,7 +432,7 @@ const EditarUsuario = () => {
                         : null;
 
                       return (
-                        <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div key={index} className="usuario-turno-fijo-row">
                           {item.editing ? (
                             <>
                               <CustomDropdown
@@ -524,7 +479,7 @@ const EditarUsuario = () => {
                     <button type="button" className="turno-fijo-btn-add" onClick={addTurnoFijo} disabled={clasesWithAvailable.length === 0}>
                       + Agregar turno fijo
                     </button>
-                    <span style={{ fontSize: '13px', color: 'var(--text-color-distinct)' }}>
+                    <span className="usuario-form-help">
                       Máximo un turno fijo por día.
                     </span>
                   </div>
@@ -533,8 +488,8 @@ const EditarUsuario = () => {
             )}
 
             {formData.tipo === 'Entrenador' && (
-              <div className="form-field">
-                <label htmlFor="profesion">Profesión:</label>
+              <div className="usuario-form-field">
+                <label htmlFor="profesion">Profesión</label>
                 <CustomInput
                   type="text"
                   id="profesion"
@@ -547,8 +502,8 @@ const EditarUsuario = () => {
               </div>
             )}
 
-            <div className="form-field">
-              <label htmlFor="direc">Dirección:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="direc">Dirección</label>
               <CustomInput
                 type="text"
                 id="direc"
@@ -560,8 +515,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="tel">Teléfono:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="tel">Teléfono</label>
               <CustomInput
                 type="tel"
                 id="tel"
@@ -584,8 +539,8 @@ const EditarUsuario = () => {
               />
             </div> */}
 
-            <div className="form-field">
-              <label htmlFor="fechaCumple">Fecha de Nacimiento:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="fechaCumple">Fecha de nacimiento</label>
               <CustomInput
                 type="date"
                 id="fechaCumple"
@@ -596,8 +551,8 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="fichaMedicaUrl">Ficha médica:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="fichaMedicaUrl">Ficha médica</label>
               <CustomInput
                 type="text"
                 id="fichaMedicaUrl"
@@ -609,21 +564,21 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field full-width">
-              <label htmlFor="observacionesSalud">Observaciones de Salud:</label>
+            <div className="usuario-form-field usuario-form-field--full">
+              <label htmlFor="observacionesSalud">Observaciones de salud</label>
               <textarea
                 id="observacionesSalud"
                 name="observacionesSalud"
                 value={formData.observacionesSalud}
                 onChange={handleChange}
                 placeholder="Observaciones de salud"
-                className="health-textarea"
+                className="usuario-form-textarea"
                 rows={5}
               />
             </div>
 
-            <div className="form-field">
-              <label htmlFor="avatar">Avatar:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="avatar">Avatar</label>
               <input
                 type="file"
                 id="avatar"
@@ -633,13 +588,15 @@ const EditarUsuario = () => {
               />
             </div>
 
-            <div className="form-field full-width button-container">
-              <PrimaryButton text="Actualizar usuario" type="submit" onClick={handleSubmit} />
+            <div className="usuario-form-actions">
+              <button type="submit" className="primary-button" disabled={isLoading}>
+                Actualizar usuario
+              </button>
             </div>
           </form>
+          </div>
         </div>
       </div>
-    </>
   );
 };
 

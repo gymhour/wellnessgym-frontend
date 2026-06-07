@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import apiClient from '../../../axiosConfig';
 import { toast } from 'react-toastify';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { X, Upload, FileSpreadsheet } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 
 const COLUMNAS_ESPERADAS = ['email', 'dni', 'nombre', 'apellido', 'tel', 'direc', 'profesion', 'fechaCumple', 'plan'];
 
@@ -13,6 +13,13 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState(null);
+
+  const clearFile = () => {
+    setUsuarios([]);
+    setFileName('');
+    setErrors(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -76,137 +83,131 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay import-users-overlay" onClick={onClose}>
       <div
-        className="modal-content"
-        style={{ maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+        className="modal-content import-users-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Upload size={20} />
-            Importar usuarios desde Excel
-          </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-color)' }}>
-            <X size={24} />
+        <div className="import-users-header">
+          <div>
+            {/* <span className="import-users-eyebrow">Carga masiva</span> */}
+            <h3>
+              <Upload size={19} />
+              Importar usuarios
+            </h3>
+          </div>
+          <button className="import-users-close" onClick={onClose} aria-label="Cerrar modal">
+            <X size={20} />
           </button>
         </div>
 
-        <div style={{ marginBottom: '16px', fontSize: '14px', color: 'var(--text-color-distinct)' }}>
-          <p style={{ margin: '0 0 8px' }}>Seleccione un archivo <code>.xlsx</code> con las siguientes columnas:</p>
-          <code style={{ fontSize: '13px', background: 'var(--background-color-distinct)', padding: '8px 12px', borderRadius: '6px', display: 'inline-block' }}>
-            email, dni, nombre, apellido, tel, direc, profesion, fechaCumple, plan
-          </code>
-          <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
-            <li><strong>email</strong> y <strong>dni</strong> son obligatorios</li>
-            <li><strong>password</strong> se asigna por defecto con el <strong>DNI</strong> del usuario</li>
-            <li><strong>tipo</strong> se asigna por defecto: <code>Cliente</code></li>
-            <li><strong>plan</strong> debe coincidir con el nombre de un plan existente (opcional)</li>
-            <li><strong>fechaCumple</strong> formato: <code>dd/mm/yyyy</code></li>
+        <div className="import-users-info">
+          <p>Seleccione un archivo .xlsx con estas columnas:</p>
+          <code>{COLUMNAS_ESPERADAS.join(', ')}</code>
+          <ul>
+            <li>Email y DNI son obligatorios.</li>
+            <li>La password inicial se crea con el DNI del usuario.</li>
+            <li>El tipo de usuario se crea como Cliente.</li>
+            <li>El plan debe coincidir con el nombre de un plan existente.</li>
+            <li>La fecha de cumpleaños debe usar formato dd/mm/yyyy.</li>
           </ul>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
+        <div className="import-users-upload">
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"
             onChange={handleFile}
-            style={{ display: 'none' }}
+            className="import-users-file-input"
+            hidden
           />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '14px 16px', width: '100%',
-              border: '2px dashed var(--border-color)',
-              borderRadius: '8px', background: 'var(--background-color-distinct)',
-              cursor: 'pointer', fontSize: '14px', color: 'var(--text-color)',
-              fontFamily: 'inherit'
-            }}
+            className={`import-users-file-button${fileName ? ' has-file' : ''}`}
           >
             <FileSpreadsheet size={22} />
-            <span>{fileName || 'Haga clic para seleccionar archivo .xlsx'}</span>
+            <span className="import-users-file-copy">
+              <span>{fileName || 'Seleccionar archivo .xlsx'}</span>
+              <small>{fileName ? `${usuarios.length} registros detectados` : 'Formato admitido: .xlsx o .xls'}</small>
+            </span>
             {fileName && (
-              <>
-                <span style={{ marginLeft: 'auto', color: 'var(--text-color-distinct)' }}>
-                  ({usuarios.length} registro(s))
-                </span>
-                <span
-                  onClick={(e) => { e.stopPropagation(); setUsuarios([]); setFileName(''); setErrors(null); }}
-                  style={{ cursor: 'pointer', color: 'var(--text-color-distinct)', marginLeft: '8px' }}
-                >
-                  <X size={18} />
-                </span>
-              </>
+              <span
+                className="import-users-clear-file"
+                onClick={(e) => { e.stopPropagation(); clearFile(); }}
+                role="button"
+                tabIndex={0}
+                aria-label="Quitar archivo"
+              >
+                <X size={17} />
+              </span>
             )}
           </button>
         </div>
 
         {usuarios.length > 0 && (
-          <>
-            <div style={{ marginBottom: '8px', fontWeight: 500 }}>
-              {usuarios.length} registro(s) encontrado(s) — Vista previa:
+          <div className="import-users-preview">
+            <div className="import-users-preview-title">
+              <span>Vista previa</span>
+              <small>{usuarios.length} registros encontrados</small>
             </div>
-            <div style={{ overflowX: 'auto', maxHeight: '300px', overflowY: 'auto', marginBottom: '16px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div className="import-users-table-wrap">
+              <table className="import-users-table">
                 <thead>
-                  <tr style={{ background: 'var(--background-color-distinct)', position: 'sticky', top: 0 }}>
-                    <th style={thStyle}>#</th>
-                    <th style={thStyle}>Email</th>
-                    <th style={thStyle}>DNI</th>
-                    <th style={thStyle}>Nombre</th>
-                    <th style={thStyle}>Apellido</th>
-                    <th style={thStyle}>Plan</th>
+                  <tr>
+                    <th>#</th>
+                    <th>Email</th>
+                    <th>DNI</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Plan</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usuarios.slice(0, 50).map((u, i) => (
-                    <tr key={i} style={{ background: i % 2 === 0 ? 'var(--background-color)' : 'var(--background-color-distinct)' }}>
-                      <td style={tdStyle}>{u._fila}</td>
-                      <td style={{ ...tdStyle, color: u.email ? 'inherit' : 'var(--danger-color)' }}>{u.email || '(vacío)'}</td>
-                      <td style={{ ...tdStyle, color: u.dni ? 'inherit' : 'var(--danger-color)' }}>{u.dni || '(vacío)'}</td>
-                      <td style={tdStyle}>{u.nombre || '-'}</td>
-                      <td style={tdStyle}>{u.apellido || '-'}</td>
-                      <td style={tdStyle}>{u.plan || '-'}</td>
+                    <tr key={i}>
+                      <td>{u._fila}</td>
+                      <td className={!u.email ? 'is-empty' : ''}>{u.email || 'Vacio'}</td>
+                      <td className={!u.dni ? 'is-empty' : ''}>{u.dni || 'Vacio'}</td>
+                      <td>{u.nombre || '-'}</td>
+                      <td>{u.apellido || '-'}</td>
+                      <td>{u.plan || '-'}</td>
                     </tr>
                   ))}
                   {usuarios.length > 50 && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '8px', color: 'var(--text-color-distinct)' }}>... y {usuarios.length - 50} más</td></tr>
+                    <tr>
+                      <td colSpan={6} className="import-users-more-row">
+                        Y {usuarios.length - 50} registros mas
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
 
         {errors && (
-          <div style={{ marginBottom: '16px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '13px' }}>
-            <strong>Errores encontrados (no se importó ningún usuario):</strong>
-            <ul style={{ margin: '8px 0 0', paddingLeft: '20px' }}>
+          <div className="import-users-errors">
+            <div className="import-users-errors-title">
+              <AlertCircle size={17} />
+              <span>No se importó ningún usuario</span>
+            </div>
+            <ul>
               {errors.map((e, i) => (
-                <li key={i}>Fila {e.fila} — <strong>{e.campo}</strong>: {e.error}</li>
+                <li key={i}>Fila {e.fila}: {e.campo} - {e.error}</li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="modal-actions">
+        <div className="import-users-actions">
           <SecondaryButton text="Cancelar" onClick={onClose} />
           <button
             onClick={handleImport}
-            style={{
-              padding: '10px 16px',
-              background: 'var(--primary-color)',
-              color: '#FAFAFA',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: usuarios.length === 0 || loading ? 'default' : 'pointer',
-              opacity: usuarios.length === 0 || loading ? 0.5 : 1
-            }}
+            className="primary-button import-users-submit"
+            disabled={usuarios.length === 0 || loading}
           >
             {loading ? 'Importando...' : 'Importar'}
           </button>
@@ -214,20 +215,6 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
       </div>
     </div>
   );
-};
-
-const thStyle = {
-  padding: '8px 12px',
-  textAlign: 'left',
-  borderBottom: '1px solid var(--border-color)',
-  fontWeight: 600,
-  whiteSpace: 'nowrap'
-};
-
-const tdStyle = {
-  padding: '6px 12px',
-  borderBottom: '1px solid var(--border-color)',
-  whiteSpace: 'nowrap'
 };
 
 export default ImportUsuariosModal;

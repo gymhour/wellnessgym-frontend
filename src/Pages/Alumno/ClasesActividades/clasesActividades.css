@@ -9,7 +9,7 @@
 .clase-item {
     padding: 20px;
     width: 280px;
-    max-width: 300px;
+    /* max-width: 300px; */
     height: fit-content;
     min-height: 300px;
     background-position: center;

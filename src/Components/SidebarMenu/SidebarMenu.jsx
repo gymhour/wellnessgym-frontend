@@ -184,7 +184,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                   >
                     <li className="menu-item">
                       <Activity className="icon" />{" "}
-                      Clases y actividades
+                      Clases y Actividades
                     </li>
                   </Link>
                   <Link
@@ -208,7 +208,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                   >
                     <li className="menu-item">
                       <UserCog className="icon" />{" "}
-                      Grupos de usuarios
+                      Grupos de Usuarios
                     </li>
                   </Link>
                   <Link
@@ -250,7 +250,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                   >
                     <li className="menu-item">
                       <Notebook className="icon" />{" "}
-                      Rutinas recomendadas
+                      Rutinas Recomendadas
                     </li>
                   </Link>
                   <Link

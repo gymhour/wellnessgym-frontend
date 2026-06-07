@@ -3,8 +3,7 @@ import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu'
 import apiService from '../../../services/apiService'
 import './PlanesAdmin.css'
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton'
-import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, X } from 'lucide-react'
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput'
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown'
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen'
@@ -171,72 +170,95 @@ const PlanesAdmin = () => {
 
         {/* Modal de crear/editar */}
         {showModal && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <h2 style={{ marginBottom: '20px' }}> {editingPlan ? 'Editar Plan' : 'Nuevo Plan'}</h2>
+          <div
+            className="plan-modal-overlay"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) handleClose()
+            }}
+          >
+            <div className="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-modal-title">
               <form onSubmit={handleSubmit} className="plan-form">
-                <div className="plan-form-input-container">
-                  <label>Nombre</label>
-                  <CustomInput
-                    type="text"
-                    value={nuevoNombre}
-                    onChange={(e) => setNuevoNombre(e.target.value)}
-                    required
-                  />
+                <div className="plan-modal-header">
+                  <div>
+                    <h2 id="plan-modal-title">{editingPlan ? 'Editar plan' : 'Nuevo plan'}</h2>
+                    <span>{editingPlan ? 'Actualizá los datos del plan seleccionado.' : 'Definí el nombre, precio y condiciones del plan.'}</span>
+                  </div>
+                  <button type="button" className="plan-modal-close" onClick={handleClose} aria-label="Cerrar modal">
+                    <X size={18} />
+                  </button>
                 </div>
-                <div className="plan-form-input-container">
-                  <label>Precio</label>
-                  <CustomInput
-                    type="number"
-                    value={nuevoPrecio}
-                    onChange={(e) => setNuevoPrecio(e.target.value)}
-                    required
-                  />
+
+                <div className="plan-form-grid">
+                  <div className="plan-form-input-container">
+                    <label>Nombre</label>
+                    <CustomInput
+                      type="text"
+                      value={nuevoNombre}
+                      onChange={(e) => setNuevoNombre(e.target.value)}
+                      required
+                      width="100%"
+                    />
+                  </div>
+                  <div className="plan-form-input-container">
+                    <label>Precio</label>
+                    <CustomInput
+                      type="number"
+                      value={nuevoPrecio}
+                      onChange={(e) => setNuevoPrecio(e.target.value)}
+                      required
+                      width="100%"
+                    />
+                  </div>
+                  <div className="plan-form-input-container plan-form-field-wide">
+                    <label>Descripción</label>
+                    <CustomInput
+                      placeholder="Descripción (opcional)"
+                      value={nuevaDesc}
+                      onChange={(e) => setNuevaDesc(e.target.value)}
+                      width="100%"
+                    />
+                  </div>
+                  <div className="plan-form-input-container">
+                    <label>Duración</label>
+                    <CustomDropdown
+                      options={[
+                        { value: 'SEMANAL', label: 'Semanal' },
+                        { value: 'MENSUAL', label: 'Mensual' },
+                        { value: 'TRIMESTRAL', label: 'Trimestral' },
+                        { value: 'SEMESTRAL', label: 'Semestral' },
+                        { value: 'ANUAL', label: 'Anual' },
+                      ]}
+                      value={duracion}
+                      onChange={(e) => setDuracion(e.target.value)}
+                      placeholderOption={null}
+                      name="duracion"
+                      id="duracion"
+                    />
+                  </div>
+                  <div className="plan-form-input-container">
+                    <label>Sesiones totales</label>
+                    <CustomInput
+                      type="number"
+                      min="0"
+                      value={sesionesTotales}
+                      onChange={(e) => setSesionesTotales(e.target.value)}
+                      width="100%"
+                    />
+                  </div>
+                  <div className="plan-form-input-container">
+                    <label>Sesiones de gracia</label>
+                    <CustomInput
+                      type="number"
+                      min="0"
+                      value={sesionesGracia}
+                      onChange={(e) => setSesionesGracia(e.target.value)}
+                      width="100%"
+                    />
+                  </div>
                 </div>
-                <div className="plan-form-input-container">
-                  <label>Descripción</label>
-                  <CustomInput
-                    placeholder="Descripción (opcional)"
-                    value={nuevaDesc}
-                    onChange={(e) => setNuevaDesc(e.target.value)}
-                  />
-                </div>
-                <div className="plan-form-input-container">
-                  <label>Duración</label>
-                  <CustomDropdown
-                    options={[
-                      { value: 'SEMANAL', label: 'Semanal' },
-                      { value: 'MENSUAL', label: 'Mensual' },
-                      { value: 'TRIMESTRAL', label: 'Trimestral' },
-                      { value: 'SEMESTRAL', label: 'Semestral' },
-                      { value: 'ANUAL', label: 'Anual' },
-                    ]}
-                    value={duracion}
-                    onChange={(e) => setDuracion(e.target.value)}
-                    placeholderOption={null}
-                    name="duracion"
-                    id="duracion"
-                  />
-                </div>
-                <div className="plan-form-input-container">
-                  <label>Sesiones totales</label>
-                  <CustomInput
-                    type="number"
-                    min="0"
-                    value={sesionesTotales}
-                    onChange={(e) => setSesionesTotales(e.target.value)}
-                  />
-                </div>
-                <div className="plan-form-input-container">
-                  <label>Sesiones de gracia</label>
-                  <CustomInput
-                    type="number"
-                    min="0"
-                    value={sesionesGracia}
-                    onChange={(e) => setSesionesGracia(e.target.value)}
-                  />
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+
+                <label className="plan-toggle-row">
                   <span className="toggle-switch">
                     <input
                       type="checkbox"
@@ -245,11 +267,16 @@ const PlanesAdmin = () => {
                     />
                     <span className="toggle-slider"></span>
                   </span>
-                  Requiere turno para asistir
+                  <span>Requiere turno para asistir</span>
                 </label>
-                <div className="modal-actions">
-                  <SecondaryButton text="Cancelar" onClick={handleClose} />
-                  <PrimaryButton text={editingPlan ? 'Actualizar' : 'Crear'} onClick={handleSubmit} />
+
+                <div className="plan-modal-actions">
+                  <button type="button" className="plan-secondary-button" onClick={handleClose}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="primary-button">
+                    {editingPlan ? 'Actualizar' : 'Crear'}
+                  </button>
                 </div>
               </form>
             </div>

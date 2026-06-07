@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
-import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
 import apiClient from '../../../axiosConfig';
 import apiService from '../../../services/apiService';
@@ -8,6 +7,9 @@ import { toast } from 'react-toastify';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { useNavigate } from 'react-router-dom';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
+import '../UsuarioForm.css';
+import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
+import { ArrowLeft } from 'lucide-react';
 
 const DAY_ORDER = {
   domingo: 0, lunes: 1, martes: 2, miercoles: 3, miércoles: 3,
@@ -262,68 +264,79 @@ const CrearUsuario = () => {
       {isLoading && <LoaderFullScreen />}
       <SidebarMenu isAdmin={true} />
       <div className="content-layout">
-        <h2>Crear usuario</h2>
-
-        <form
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            width: '320px',
-            paddingTop: '30px',
-          }}
-        >
-          <label htmlFor="email">Email:</label>
-          <CustomInput
-            type="email" id="email" name="email"
-            value={formData.email} onChange={handleChange}
-            required placeholder="Ingresa tu email"
+        <div className="usuario-form-page">
+          <SecondaryButton
+            text="Volver atrás"
+            linkTo="/admin/usuarios"
+            icon={ArrowLeft}
+            reversed={true}
           />
+          <h2>Crear usuario</h2>
 
-          <label htmlFor="password">Contraseña:</label>
-          <CustomInput
-            type="password" id="password" name="password"
-            value={formData.password} onChange={handleChange}
-            required placeholder="Ingresa tu contraseña"
-          />
+          <form className="usuario-form" onSubmit={handleSubmit}>
+            <div className="usuario-form-field">
+              <label htmlFor="email">Email</label>
+              <CustomInput
+                type="email" id="email" name="email"
+                value={formData.email} onChange={handleChange}
+                required placeholder="Ingresa tu email" width="100%"
+              />
+            </div>
 
-          <label htmlFor="dni">DNI:</label>
-          <CustomInput
-            type="text" id="dni" name="dni"
-            value={formData.dni} onChange={handleChange}
-            placeholder="Ingresa el DNI"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="password">Contraseña</label>
+              <CustomInput
+                type="password" id="password" name="password"
+                value={formData.password} onChange={handleChange}
+                required placeholder="Ingresa tu contraseña" width="100%"
+              />
+            </div>
 
-          <label htmlFor="nombre">Nombre:</label>
-          <CustomInput
-            type="text" id="nombre" name="nombre"
-            value={formData.nombre} onChange={handleChange}
-            placeholder="Ingresa el nombre"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="dni">DNI</label>
+              <CustomInput
+                type="text" id="dni" name="dni"
+                value={formData.dni} onChange={handleChange}
+                placeholder="Ingresa el DNI" width="100%"
+              />
+            </div>
 
-          <label htmlFor="apellido">Apellido:</label>
-          <CustomInput
-            type="text" id="apellido" name="apellido"
-            value={formData.apellido} onChange={handleChange}
-            placeholder="Ingresa el apellido"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="nombre">Nombre</label>
+              <CustomInput
+                type="text" id="nombre" name="nombre"
+                value={formData.nombre} onChange={handleChange}
+                placeholder="Ingresa el nombre" width="100%"
+              />
+            </div>
 
-          <label htmlFor="tipo">Tipo de usuario:</label>
-          <CustomDropdown
-            options={tipos}
-            value={formData.tipo}
-            onChange={(val) =>
-              setFormData(f => ({
-                ...f,
-                tipo: typeof val === 'string' ? val : val.target.value,
-              }))
-            }
-            name="tipo" id="tipo"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="apellido">Apellido</label>
+              <CustomInput
+                type="text" id="apellido" name="apellido"
+                value={formData.apellido} onChange={handleChange}
+                placeholder="Ingresa el apellido" width="100%"
+              />
+            </div>
+
+            <div className="usuario-form-field">
+              <label htmlFor="tipo">Tipo de usuario</label>
+              <CustomDropdown
+                options={tipos}
+                value={formData.tipo}
+                onChange={(val) =>
+                  setFormData(f => ({
+                    ...f,
+                    tipo: typeof val === 'string' ? val : val.target.value,
+                  }))
+                }
+                name="tipo" id="tipo"
+              />
+            </div>
 
           {formData.tipo === 'Cliente' && (
-            <>
-              <label htmlFor="plan">Plan:</label>
+            <div className="usuario-form-field usuario-form-field--full">
+              <label htmlFor="plan">Plan</label>
               <CustomDropdown
                 options={planOptions.map(p => p.label)}
                 value={formData.plan}
@@ -335,7 +348,7 @@ const CrearUsuario = () => {
                 }}
                 name="plan" id="plan"
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <label className="usuario-form-toggle">
                   <span className="toggle-switch">
                     <input
                       type="checkbox"
@@ -349,7 +362,7 @@ const CrearUsuario = () => {
                 </label>
 
               {formData.usaTurnosFijos && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="usuario-turnos-fijos">
                   {turnosFijos.map((item, index) => {
                     const clase = item.horarioId ? getClaseForHorario(item.horarioId) : null;
                     const horario = item.horarioId
@@ -363,7 +376,7 @@ const CrearUsuario = () => {
                       : null;
 
                     return (
-                      <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div key={index} className="usuario-turno-fijo-row">
                         {item.editing ? (
                           <>
                             <CustomDropdown
@@ -410,83 +423,84 @@ const CrearUsuario = () => {
                   <button type="button" className="turno-fijo-btn-add" onClick={addTurnoFijo} disabled={clasesWithAvailable.length === 0}>
                     + Agregar turno fijo
                   </button>
-                  <span style={{ fontSize: '13px', color: 'var(--text-color-distinct)' }}>
+                  <span className="usuario-form-help">
                     Máximo un turno fijo por día.
                   </span>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {formData.tipo === 'Entrenador' && (
-            <>
-              <label htmlFor="profesion">Profesión:</label>
+            <div className="usuario-form-field">
+              <label htmlFor="profesion">Profesión</label>
               <CustomInput
                 type="text" id="profesion" name="profesion"
                 value={formData.profesion} onChange={handleChange}
-                placeholder="Ingresa la profesión"
+                placeholder="Ingresa la profesión" width="100%"
               />
-            </>
+            </div>
           )}
 
-          <label htmlFor="direc">Dirección:</label>
-          <CustomInput
-            type="text" id="direc" name="direc"
-            value={formData.direc} onChange={handleChange}
-            placeholder="Ingresa la dirección"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="direc">Dirección</label>
+              <CustomInput
+                type="text" id="direc" name="direc"
+                value={formData.direc} onChange={handleChange}
+                placeholder="Ingresa la dirección" width="100%"
+              />
+            </div>
 
-          <label htmlFor="tel">Teléfono:</label>
-          <CustomInput
-            type="tel" id="tel" name="tel"
-            value={formData.tel} onChange={handleChange}
-            placeholder="Ingresa el teléfono"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="tel">Teléfono</label>
+              <CustomInput
+                type="tel" id="tel" name="tel"
+                value={formData.tel} onChange={handleChange}
+                placeholder="Ingresa el teléfono" width="100%"
+              />
+            </div>
 
-          <label htmlFor="fechaCumple">Fecha de Nacimiento:</label>
-          <CustomInput
-            type="date" id="fechaCumple" name="fechaCumple"
-            value={formData.fechaCumple} onChange={handleChange}
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="fechaCumple">Fecha de nacimiento</label>
+              <CustomInput
+                type="date" id="fechaCumple" name="fechaCumple"
+                value={formData.fechaCumple} onChange={handleChange}
+                width="100%"
+              />
+            </div>
 
-          <label htmlFor="fichaMedicaUrl">Ficha médica:</label>
-          <CustomInput
-            type="text" id="fichaMedicaUrl" name="fichaMedicaUrl"
-            value={formData.fichaMedicaUrl} onChange={handleChange}
-            placeholder="URL de la ficha médica"
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="fichaMedicaUrl">Ficha médica</label>
+              <CustomInput
+                type="text" id="fichaMedicaUrl" name="fichaMedicaUrl"
+                value={formData.fichaMedicaUrl} onChange={handleChange}
+                placeholder="URL de la ficha médica" width="100%"
+              />
+            </div>
 
-          <label htmlFor="observacionesSalud">Observaciones de Salud:</label>
-          <textarea
-            id="observacionesSalud"
-            name="observacionesSalud"
-            value={formData.observacionesSalud}
-            onChange={handleChange}
-            placeholder="Observaciones de salud"
-            rows={5}
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '10px',
-              borderRadius: '12px',
-              border: '1.5px solid var(--border-color)',
-              background: 'var(--background-color)',
-              color: 'var(--text-color)',
-              font: 'inherit',
-              fontWeight: 400,
-              resize: 'vertical',
-              outline: 'none',
-            }}
-          />
+            <div className="usuario-form-field usuario-form-field--full">
+              <label htmlFor="observacionesSalud">Observaciones de salud</label>
+              <textarea
+                id="observacionesSalud"
+                name="observacionesSalud"
+                value={formData.observacionesSalud}
+                onChange={handleChange}
+                placeholder="Observaciones de salud"
+                rows={5}
+                className="usuario-form-textarea"
+              />
+            </div>
 
-          <label htmlFor="avatar">Avatar:</label>
-          <input
-            type="file" id="avatar" name="avatar"
-            accept="image/*" onChange={handleFileChange}
-          />
+            <div className="usuario-form-field">
+              <label htmlFor="avatar">Avatar</label>
+              <input
+                type="file" id="avatar" name="avatar"
+                accept="image/*" onChange={handleFileChange}
+              />
+            </div>
 
           {avatarPreview && (
-            <div className="preview-container">
+            <div className="preview-container usuario-form-preview">
               <img
                 src={avatarPreview} alt="Preview clase"
                 className="preview-img" width={300}
@@ -494,9 +508,13 @@ const CrearUsuario = () => {
             </div>
           )}
 
-          {/* El botón solo como submit, el onClick ya no hace falta */}
-          <PrimaryButton text={isLoading ? "Creando..." : "Crear usuario"} type="submit" disabled={isLoading} onClick={handleSubmit} />
-        </form>
+            <div className="usuario-form-actions">
+              <button type="submit" className="primary-button" disabled={isLoading}>
+                {isLoading ? "Creando..." : "Crear usuario"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

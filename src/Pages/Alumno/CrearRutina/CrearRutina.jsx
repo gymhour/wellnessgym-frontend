@@ -10,11 +10,16 @@ import { toast } from "react-toastify";
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import { X } from 'lucide-react';
+import { Dumbbell, Table2, X } from 'lucide-react';
 import SecondaryButton from "../../../Components/utils/SecondaryButton/SecondaryButton.jsx";
 
 /* ================= Helpers ================= */
 const customStyles = {
+  container: (provided) => ({
+    ...provided,
+    width: '100%',
+    minWidth: 0,
+  }),
   option: (provided, state) => ({
     ...provided,
     backgroundColor: state.isSelected
@@ -28,23 +33,53 @@ const customStyles = {
       backgroundColor: 'var(--background-hover-color)',
     },
   }),
-  control: (provided) => ({
+  control: (provided, state) => ({
     ...provided,
     backgroundColor: 'var(--background-color-distinct)',
-    borderColor: 'transparent', // CustomDropdown has no visible border usually or matches style
-    borderRadius: '12px',
-    padding: '6px',
+    borderColor: 'var(--border-color)',
+    borderRadius: '10px',
+    borderWidth: '1px',
+    minHeight: '44px',
+    padding: '0 4px',
     boxShadow: 'none',
     color: 'var(--text-color)',
+    transition: 'border-color 150ms ease, box-shadow 150ms ease',
+    ':hover': {
+      borderColor: 'var(--border-color)',
+    },
   }),
   singleValue: (provided) => ({
     ...provided,
     color: 'var(--text-color)',
   }),
+  valueContainer: (provided) => ({
+    ...provided,
+    padding: '4px 8px',
+    gap: '4px',
+  }),
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    minHeight: '42px',
+  }),
+  dropdownIndicator: (provided) => ({
+    ...provided,
+    padding: '6px',
+    color: 'var(--text-color-distinct)',
+  }),
+  clearIndicator: (provided) => ({
+    ...provided,
+    padding: '6px',
+    color: 'var(--text-color-distinct)',
+  }),
+  indicatorSeparator: () => ({
+    display: 'none',
+  }),
   menu: (provided) => ({
     ...provided,
     backgroundColor: 'var(--background-color)',
     border: '1px solid var(--border-color)',
+    borderRadius: '10px',
+    overflow: 'hidden',
     zIndex: 100
   }),
   input: (provided) => ({
@@ -54,6 +89,28 @@ const customStyles = {
   placeholder: (provided) => ({
     ...provided,
     color: 'var(--text-color-distinct)',
+  }),
+  multiValue: (provided) => ({
+    ...provided,
+    backgroundColor: 'var(--background-color)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '7px',
+    margin: '2px',
+  }),
+  multiValueLabel: (provided) => ({
+    ...provided,
+    color: 'var(--text-color)',
+    fontSize: '12px',
+    padding: '2px 6px',
+  }),
+  multiValueRemove: (provided) => ({
+    ...provided,
+    color: 'var(--text-color-distinct)',
+    borderRadius: '7px',
+    ':hover': {
+      backgroundColor: 'var(--background-hover-color)',
+      color: 'var(--text-color)',
+    },
   })
 };
 
@@ -394,6 +451,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [userMetrics, setUserMetrics] = useState(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [selectedInfoUserId, setSelectedInfoUserId] = useState(null);
 
   // Días
   const [days, setDays] = useState([
@@ -504,6 +562,40 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     return Array.from(optionsById.values());
   }, [selectedUserOptions, userOptions]);
 
+  const assignedInfoUserOptions = useMemo(() => {
+    const optionsById = new Map();
+
+    selectedUserOptions.forEach(option => {
+      if (option?.value) optionsById.set(Number(option.value), option);
+    });
+
+    selectedGroupOptions.forEach(groupOption => {
+      const group = gruposUsuarios.find(g => Number(g.ID_GrupoUsuario) === Number(groupOption.value));
+      const members = group?.miembros || group?.usuarios || group?.Usuarios || [];
+
+      members.forEach(member => {
+        const usuario = member?.usuario || member?.Usuario || member;
+        const id = Number(usuario?.ID_Usuario || usuario?.id || usuario?.value);
+        if (!id || optionsById.has(id)) return;
+        optionsById.set(id, usuarioToOption({ ...usuario, ID_Usuario: id }));
+      });
+    });
+
+    return Array.from(optionsById.values());
+  }, [gruposUsuarios, selectedGroupOptions, selectedUserOptions]);
+
+  useEffect(() => {
+    if (!canAssign) return;
+
+    const selectedStillAvailable = assignedInfoUserOptions.some(
+      option => Number(option.value) === Number(selectedInfoUserId)
+    );
+
+    if (!selectedStillAvailable) {
+      setSelectedInfoUserId(assignedInfoUserOptions[0]?.value ?? null);
+    }
+  }, [assignedInfoUserOptions, canAssign, selectedInfoUserId]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.exercise-cell')) {
@@ -526,8 +618,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   /* Restoring selectedUserId for JSX usage */
   const selectedUserId = useMemo(() => {
     if (!canAssign) return Number(localStorage.getItem("usuarioId"));
-    return selectedUserOptions?.[0]?.value ?? null;
-  }, [canAssign, selectedUserOptions]);
+    return selectedInfoUserId ?? assignedInfoUserOptions?.[0]?.value ?? null;
+  }, [assignedInfoUserOptions, canAssign, selectedInfoUserId]);
 
   useEffect(() => {
     if (!canAssign) return;
@@ -538,6 +630,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     (async () => {
       try {
         setLoadingMetrics(true);
+        setUserMetrics(null);
         const resp = await apiService.getEjerciciosResultadosUsuario(uid);
         const normalized = normalizeUserMetrics(resp);
         setUserMetrics(normalized);
@@ -1560,8 +1653,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   const selectedUser = useMemo(() => {
     if (!canAssign) return null;
-    return selectedUserOptions.find(option => option.value === selectedUserId)?.usuario || null;
-  }, [canAssign, selectedUserOptions, selectedUserId]);
+    return assignedInfoUserOptions.find(option => Number(option.value) === Number(selectedUserId))?.usuario || null;
+  }, [assignedInfoUserOptions, canAssign, selectedUserId]);
 
   /* ================= Render ================= */
   return (
@@ -1572,10 +1665,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         isEntrenador={fromEntrenador}
       />
 
-      <div
-        className='content-layout mi-rutina-ctn layout-with-info'
-        style={{ display: 'flex', gap: 16 }}
-      >
+      <div className='content-layout mi-rutina-ctn layout-with-info crear-rutina-layout'>
         {/* FAB abrir info en mobile y desktop cuando cerrado */}
         {canAssign && step === 2 && !infoOpen && (
           <button
@@ -1591,19 +1681,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         )}
 
         {/* Columna principal */}
-        <div
-          className="main-col"
-          style={{ flex: '1 1 auto', minWidth: 0 }}
-        >
-          <div
-            className="mi-rutina-title header-row"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8
-            }}
-          >
+        <div className="main-col crear-rutina-main">
+          <div className="mi-rutina-title header-row crear-rutina-header">
             <h2>
               {isEditing ? 'Editar Rutina' : 'Crear Rutina'}
             </h2>
@@ -1633,6 +1712,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
           {step === 1 && (
             <div className="crear-rutina-step1">
               <div className="crear-rutina-step-1-form">
+                <h3 className="crear-rutina-section-title">Información de la rutina</h3>
+
                 <CustomInput
                   placeholder="Nombre de la rutina"
                   value={formData.nombre}
@@ -1680,15 +1761,17 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 />
 
                 {/* Selector de Tipo de Rutina */}
+                <h3 className="crear-rutina-section-title">Tipo de carga de entrenamiento</h3>
+
                 <div className="tipo-rutina-selector-container">
-                  <label className="tipo-rutina-label">Tipo de entrenamiento</label>
+                  {/* <label className="tipo-rutina-label">Tipo de entrenamiento</label> */}
                   <div className="tipo-rutina-selector">
                     <button
                       type="button"
                       className={`tipo-rutina-btn ${tipoRutina === 'clasica' ? 'active' : ''}`}
                       onClick={() => setTipoRutina('clasica')}
                     >
-                      <span className="icon">🏋️</span>
+                      <Dumbbell className="icon" aria-hidden="true" />
                       <div className="text-wrapper">
                         <span className="title">Clásica</span>
                         <span className="subtitle">Bloques estructurados</span>
@@ -1699,7 +1782,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                       className={`tipo-rutina-btn ${tipoRutina === 'simple' ? 'active' : ''}`}
                       onClick={() => setTipoRutina('simple')}
                     >
-                      <span className="icon">📊</span>
+                      <Table2 className="icon" aria-hidden="true" />
                       <div className="text-wrapper">
                         <span className="title">Planilla Digital</span>
                         <span className="subtitle">Google Sheets</span>
@@ -1725,6 +1808,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
                 {canAssign && (
                   <>
+                    <h3 className="crear-rutina-section-title">Asignación de usuario/s</h3>
+
                     <Select
                       options={mergedUserOptions}
                       value={selectedUserOptions}
@@ -3331,6 +3416,21 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 {infoTab ===
                   'usuario' && (
                     <div>
+                      <div className="info-user-select">
+                        <label className="info-user-select__label">
+                          Usuario para consultar
+                        </label>
+                        <Select
+                          options={assignedInfoUserOptions}
+                          value={assignedInfoUserOptions.find(option => Number(option.value) === Number(selectedUserId)) || null}
+                          onChange={option => setSelectedInfoUserId(option?.value ?? null)}
+                          placeholder="Seleccionar usuario"
+                          noOptionsMessage={() => 'No hay usuarios asignados'}
+                          isSearchable
+                          styles={customStyles}
+                        />
+                      </div>
+
                       <div className="user-meta">
                         <div className="user-meta__line">
                           <b>
@@ -3348,9 +3448,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                           Para ver
                           mediciones, primero
                           seleccioná un
-                          usuario en el
-                          desplegable de la
-                          izquierda.
+                          usuario asignado.
                         </p>
                       )}
 

@@ -534,6 +534,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
                 <CustomInput
                   id="nombre"
                   type="text"
+                  width="100%"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required={true}
@@ -541,7 +542,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Descripción */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="descripcion">Descripción:</label>
                 <textarea
                   id="descripcion"
@@ -552,7 +553,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Imagen */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="imagen">Imagen:</label>
                 <input type="file" id="imagen" onChange={handleImageChange} />
                 {imagePreview && (
@@ -568,7 +569,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Entrenadores */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="entrenadores">Entrenadores:</label>
                 <CustomDropdown
                   id="entrenadores"

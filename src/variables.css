@@ -92,8 +92,8 @@
     --text-color: #101010;
     --text-color-distinct: #444444;
     --background-color: #fff;
-    --background-color-distinct: #ececec78;
-    --border-color: rgba(0, 0, 0, 0.2);
+    --background-color-distinct: #ffffff49;
+    --border-color: rgba(0, 0, 0, 0.05);
     --login-overlay: rgba(255, 255, 255, 0.6);
     --login-card-bg: #ffffff;
     --login-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);

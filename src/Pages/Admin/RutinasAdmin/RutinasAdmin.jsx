@@ -5,7 +5,6 @@ import '../../../App.css';
 import './RutinasAdmin.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu.jsx';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton.jsx';
-import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton.jsx';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
 import apiService from '../../../services/apiService.js';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
@@ -275,8 +274,8 @@ const RutinasAdmin = () => {
     <div className='page-layout'>
       <SidebarMenu isAdmin={true} />
       <div className='content-layout mi-rutina-ctn'>
-        <div className="mi-rutina-title">
-          <h2>Rutinas recomendadas</h2>
+        <div className="rutinas-admin-page-header">
+          <h1>Rutinas recomendadas</h1>
           <PrimaryButton text="Crear rutina" linkTo="/admin/crear-rutina" />
         </div>
 

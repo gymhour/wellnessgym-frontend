@@ -11,15 +11,55 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
 
+const cuotasSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    width: '100%',
+    minHeight: 44,
+    borderRadius: 8,
+    borderColor: state.isFocused ? 'rgba(218, 70, 50, 0.48)' : 'var(--border-color)',
+    backgroundColor: 'var(--background-color-distinct)',
+    boxShadow: state.isFocused ? '0 0 0 3px rgba(218, 70, 50, 0.12)' : 'none',
+    color: 'var(--text-color)',
+    fontSize: 14,
+    ':hover': {
+      borderColor: 'rgba(218, 70, 50, 0.48)'
+    }
+  }),
+  menu: (base) => ({
+    ...base,
+    zIndex: 1001,
+    overflow: 'hidden',
+    border: '1px solid var(--border-color)',
+    borderRadius: 8,
+    backgroundColor: 'var(--background-color)',
+    boxShadow: '0 18px 40px rgba(0, 0, 0, 0.12)'
+  }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? 'var(--background-hover-color)' : 'var(--background-color)',
+    color: 'var(--text-color)',
+    fontSize: 14
+  }),
+  singleValue: (base) => ({ ...base, color: 'var(--text-color)' }),
+  input: (base) => ({ ...base, color: 'var(--text-color)' }),
+  placeholder: (base) => ({ ...base, color: 'var(--text-color-distinct)' })
+};
+
+const usuarioToOption = (usuario) => ({
+  value: usuario.ID_Usuario,
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
+});
+
 const CuotasUsuarios = () => {
   // — Estados de datos y carga —
   const [cuotas, setCuotas] = useState([]);
-  const [users, setUsers] = useState([]);
   const [planOptions, setPlanOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -33,6 +73,9 @@ const CuotasUsuarios = () => {
 
   // — Estados del formulario “Nueva cuota” —
   const [selectedUserOpt, setSelectedUserOpt] = useState(null);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLoading, setUsersLoading] = useState(false);
   const [mesDate, setMesDate] = useState(null);
   const [importe, setImporte] = useState('');
   const [venceDate, setVenceDate] = useState(null);
@@ -83,57 +126,6 @@ const CuotasUsuarios = () => {
     return `${year}-${month < 10 ? '0' + month : month}`;
   };
 
-  const fetchUsuarios = async () => {
-    try {
-      // 1) Pedimos la primera página para saber cuántas hay
-      const first = await apiClient.get('/usuarios', { params: { page: 1 } });
-      const totalPages = Number(first?.data?.meta?.totalPages || 1);
-
-      let all = Array.isArray(first?.data?.data) ? first.data.data : [];
-
-      // 2) Si hay más páginas, las pedimos en paralelo
-      if (totalPages > 1) {
-        const reqs = [];
-        for (let p = 2; p <= totalPages; p++) {
-          reqs.push(apiClient.get('/usuarios', { params: { page: p } }));
-        }
-        const results = await Promise.allSettled(reqs);
-        results.forEach(r => {
-          if (r.status === 'fulfilled') {
-            const chunk = Array.isArray(r.value?.data?.data) ? r.value.data.data : [];
-            all = all.concat(chunk);
-          }
-        });
-      }
-
-      // 3) Dedup por ID_Usuario
-      const byId = new Map();
-      all.forEach(u => {
-        if (u && typeof u.ID_Usuario !== 'undefined' && !byId.has(u.ID_Usuario)) {
-          byId.set(u.ID_Usuario, u);
-        }
-      });
-
-      // 4) Filtrado robusto: solo clientes activos
-      const normTipo = t => String(t ?? '').trim().toLowerCase();
-      const activos = Array.from(byId.values())
-        .filter(u => u?.estado === true && normTipo(u?.tipo) === 'cliente');
-
-      // 5) Orden alfabético
-      activos.sort((a, b) =>
-        `${a?.nombre || ''} ${a?.apellido || ''}`.localeCompare(
-          `${b?.nombre || ''} ${b?.apellido || ''}`,
-          'es',
-          { sensitivity: 'base' }
-        )
-      );
-
-      setUsers(activos);
-    } catch (err) {
-      console.error('Error obteniendo usuarios (paginado):', err);
-    }
-  };
-
   const fetchPlanes = async () => {
     try {
       const planesRes = await apiService.getPlanes();
@@ -181,9 +173,51 @@ const CuotasUsuarios = () => {
   };
 
   useEffect(() => {
-    fetchUsuarios();
     fetchPlanes();
   }, []);
+
+  useEffect(() => {
+    const term = userSearch.trim();
+    let isCurrentRequest = true;
+
+    if (!showModal || term.length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsersLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUserOptions(options);
+      } catch (err) {
+        if (isCurrentRequest) {
+          setUserOptions([]);
+          console.error('Error buscando usuarios:', err);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [showModal, userSearch]);
 
   useEffect(() => {
     fetchCuotas();
@@ -296,7 +330,7 @@ const CuotasUsuarios = () => {
       const venceIso = toIsoUtcEndOfDay(bulkVenceDate);
 
       const payload = { mes: mesString, vence: venceIso };
-      const resp = await apiService.postCuotasMasivas(payload);
+      await apiService.postCuotasMasivas(payload);
       setPage(1);
       fetchCuotas();
       toast.success("Las cuotas se generaron correctamente con todos los turnos fijos.");
@@ -351,12 +385,13 @@ const CuotasUsuarios = () => {
 
   const datePickerClass = 'custom-datepicker custom-datepicker-mes';
 
-  const userOptions = useMemo(() => {
-    return users.map(u => ({
-      value: u.ID_Usuario,
-      label: `${u.nombre} ${u.apellido} (${u.email})`,
-    }));
-  }, [users]);
+  const mergedUserOptions = useMemo(() => {
+    const optionsById = new Map();
+    [selectedUserOpt, ...userOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [selectedUserOpt, userOptions]);
 
   return (
     <div className="page-layout">
@@ -529,57 +564,92 @@ const CuotasUsuarios = () => {
 
       {/* — Modal Nueva cuota — */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Nueva cuota</h3>
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowModal(false);
+          }}
+        >
+          <div className="cuotas-modal" role="dialog" aria-modal="true" aria-labelledby="cuotas-modal-title">
             <form onSubmit={handleSubmit} className="modal-form">
-              <label>Usuario</label>
-              <Select
-                options={userOptions}
-                value={selectedUserOpt}
-                onChange={setSelectedUserOpt}
-                placeholder="Seleccioná un usuario"
-                isClearable
-                isSearchable
-                menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-              />
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="cuotas-modal-title">Nueva cuota</h3>
+                  <span>Cargá una cuota individual para un usuario activo.</span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={() => setShowModal(false)} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
 
-              <label>Mes</label>
-              <ReactDatePicker
-                selected={mesDate}
-                onChange={date => setMesDate(date)}
-                dateFormat="MM/yyyy"
-                showMonthYearPicker
-                placeholderText="Seleccioná mes y año"
-                className={datePickerClass}
-                required
-              />
+              <div className="cuotas-modal-grid">
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Usuario</label>
+                  <Select
+                    className="cuotas-select"
+                    classNamePrefix="cuotas-select"
+                    options={mergedUserOptions}
+                    value={selectedUserOpt}
+                    onChange={setSelectedUserOpt}
+                    onInputChange={(value, meta) => {
+                      if (meta.action === 'input-change') setUserSearch(value);
+                    }}
+                    placeholder="Seleccioná un usuario"
+                    noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+                    loadingMessage={() => 'Buscando usuarios...'}
+                    isClearable
+                    isSearchable
+                    isLoading={usersLoading}
+                    filterOption={null}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    styles={cuotasSelectStyles}
+                  />
+                </div>
 
-              <label>Vence</label>
-              <ReactDatePicker
-                selected={venceDate}
-                onChange={date => setVenceDate(date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="Seleccioná fecha de vencimiento"
-                className="custom-datepicker"
-                required
-              />
+                <div className="cuotas-modal-field">
+                  <label>Mes</label>
+                  <ReactDatePicker
+                    selected={mesDate}
+                    onChange={date => setMesDate(date)}
+                    dateFormat="MM/yyyy"
+                    showMonthYearPicker
+                    placeholderText="Seleccioná mes y año"
+                    className={datePickerClass}
+                    required
+                  />
+                </div>
 
-              <label>Importe</label>
-              <CustomInput
-                type="number"
-                placeholder="50000"
-                value={importe}
-                onChange={e => setImporte(e.target.value)}
-                required
-              />
+                <div className="cuotas-modal-field">
+                  <label>Vence</label>
+                  <ReactDatePicker
+                    selected={venceDate}
+                    onChange={date => setVenceDate(date)}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Seleccioná fecha de vencimiento"
+                    className="custom-datepicker"
+                    required
+                  />
+                </div>
 
-              <div className="modal-actions">
-                <button type="button" className="modal-secondary-button" onClick={() => setShowModal(false)}>
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Importe</label>
+                  <CustomInput
+                    type="number"
+                    placeholder="50000"
+                    value={importe}
+                    onChange={e => setImporte(e.target.value)}
+                    required
+                    width="100%"
+                  />
+                </div>
+              </div>
+
+              <div className="cuotas-modal-actions">
+                <button type="button" className="cuotas-modal-secondary-button" onClick={() => setShowModal(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="modal-primary-button">
+                <button type="submit" className="cuotas-modal-primary-button">
                   Crear
                 </button>
               </div>
@@ -590,32 +660,54 @@ const CuotasUsuarios = () => {
 
       {/* — Modal Cuotas masivas — */}
       {showBulkModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Generar cuotas masivas</h3>
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowBulkModal(false);
+          }}
+        >
+          <div className="cuotas-modal cuotas-modal-small" role="dialog" aria-modal="true" aria-labelledby="cuotas-bulk-modal-title">
             <div className="modal-form">
-              <label>Mes</label>
-              <ReactDatePicker
-                selected={bulkMesDate}
-                onChange={date => setBulkMesDate(date)}
-                dateFormat="MM/yyyy"
-                showMonthYearPicker
-                placeholderText="MM/AAAA"
-                className={datePickerClass}
-              />
-              <label>Vence</label>
-              <ReactDatePicker
-                selected={bulkVenceDate}
-                onChange={date => setBulkVenceDate(date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="Seleccione fecha de vencimiento"
-                className="custom-datepicker"
-              />
-              <div className="modal-actions">
-                <button type="button" className="modal-secondary-button" onClick={() => setShowBulkModal(false)}>
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="cuotas-bulk-modal-title">Generar cuotas masivas</h3>
+                  <span>Creá las cuotas del período para usuarios con turnos fijos.</span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={() => setShowBulkModal(false)} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="cuotas-modal-grid">
+                <div className="cuotas-modal-field">
+                  <label>Mes</label>
+                  <ReactDatePicker
+                    selected={bulkMesDate}
+                    onChange={date => setBulkMesDate(date)}
+                    dateFormat="MM/yyyy"
+                    showMonthYearPicker
+                    placeholderText="MM/AAAA"
+                    className={datePickerClass}
+                  />
+                </div>
+                <div className="cuotas-modal-field">
+                  <label>Vence</label>
+                  <ReactDatePicker
+                    selected={bulkVenceDate}
+                    onChange={date => setBulkVenceDate(date)}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Seleccione fecha de vencimiento"
+                    className="custom-datepicker"
+                  />
+                </div>
+              </div>
+
+              <div className="cuotas-modal-actions">
+                <button type="button" className="cuotas-modal-secondary-button" onClick={() => setShowBulkModal(false)}>
                   Cancelar
                 </button>
-                <button type="button" className="modal-primary-button" onClick={handleBulkGenerate}>
+                <button type="button" className="cuotas-modal-primary-button" onClick={handleBulkGenerate}>
                   Generar
                 </button>
               </div>
@@ -649,30 +741,44 @@ const CuotasUsuarios = () => {
       </ConfirmationPopup>
 
       {validationResult && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <h3>Problemas de turnos fijos detectados</h3>
-            <p>
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setValidationResult(null);
+          }}
+        >
+          <div className="cuotas-modal validation-modal" role="dialog" aria-modal="true" aria-labelledby="cuotas-validation-modal-title">
+            <div className="cuotas-modal-header">
+              <div>
+                <h3 id="cuotas-validation-modal-title">Problemas de turnos fijos detectados</h3>
+                <span>Corregí estos casos antes de volver a generar cuotas.</span>
+              </div>
+              <button type="button" className="cuotas-modal-close" onClick={() => setValidationResult(null)} aria-label="Cerrar modal">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="validation-summary">
               Se encontraron <strong>{validationResult.usuariosConProblemas.length}</strong> usuario(s) con problemas en sus turnos fijos.
               Corregí los siguientes casos y volvé a intentar:
             </p>
-            <div style={{ maxHeight: '350px', overflowY: 'auto', marginTop: '12px' }}>
+            <div className="validation-problems-list">
               {validationResult.usuariosConProblemas.map(u => (
-                <div key={u.usuarioId} style={{ marginBottom: '16px', padding: '10px', background: '#fef2f2', borderRadius: '6px' }}>
-                  <strong style={{ color: '#b91c1c' }}>{u.usuario}</strong>
-                  <span style={{ fontSize: '13px', color: '#666' }}> ({u.cantidadProblemas} problema(s))</span>
-                  <ul style={{ marginTop: '6px', paddingLeft: '20px', fontSize: '14px' }}>
+                <div key={u.usuarioId} className="validation-problem-card">
+                  <strong>{u.usuario}</strong>
+                  <span>{u.cantidadProblemas} problema(s)</span>
+                  <ul>
                     {u.problemas.map((p, i) => (
-                      <li key={i} style={{ marginBottom: '4px' }}>{p.descripcion}</li>
+                      <li key={i}>{p.descripcion}</li>
                     ))}
                   </ul>
                 </div>
               ))}
             </div>
-            <div className="modal-actions" style={{ marginTop: '16px' }}>
+            <div className="cuotas-modal-actions">
               <button
                 type="button"
-                className="modal-primary-button"
+                className="cuotas-modal-primary-button"
                 onClick={() => setValidationResult(null)}
               >
                 Entendido

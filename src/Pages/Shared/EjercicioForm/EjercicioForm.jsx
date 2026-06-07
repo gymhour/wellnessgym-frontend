@@ -155,12 +155,15 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       {loading && <LoaderFullScreen />}
       <div className='content-layout'>
-        <h2 className='ejercicio-form-title'>
-          {isEditing ? 'Editar Ejercicio' : 'Nuevo Ejercicio'}
-        </h2>
+        <div className='ejercicio-form-page'>
+          <div className='ejercicio-form-header'>
+            <h2 className='ejercicio-form-title'>
+              {isEditing ? 'Editar Ejercicio' : 'Nuevo Ejercicio'}
+            </h2>
+          </div>
 
-        <form className='exercise-form' encType="multipart/form-data">
-          <div className='form-input-ctn'>
+          <form className='exercise-form' encType="multipart/form-data" onSubmit={handleSubmit}>
+          <div className='form-input-ctn exercise-field'>
             <label>Nombre <span style={{ color: 'var(--danger)' }}>*</span></label>
             <CustomInput
               type='text'
@@ -172,7 +175,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             />
           </div>
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field'>
             <label>Descripción</label>
             <CustomInput
               type='text'
@@ -183,7 +186,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             />
           </div>
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field exercise-field-full'>
             <label>URL de YouTube</label>
             <CustomInput
               type='text'
@@ -198,7 +201,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
           </div>
 
           {youtubeId && (
-            <div className='youtube-preview'>
+            <div className='youtube-preview exercise-field-full'>
               <iframe
                 title='YouTube preview'
                 width='560'
@@ -211,7 +214,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             </div>
           )}
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field exercise-field-full'>
             <label>Instrucciones</label>
             <textarea
               value={instrucciones}
@@ -226,7 +229,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             <small className="field-hint">Sugerencia: una instrucción por línea, podés empezar con “- ”.</small>
           </div>
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field'>
             <label>Músculos trabajados</label>
             <textarea
               value={musculosText}
@@ -240,7 +243,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             <small className="field-hint">Una línea por músculo (se guardan como “- Músculo1 -Músculo2”).</small>
           </div>
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field'>
             <label>Equipamiento</label>
             <textarea
               value={equipamientoText}
@@ -254,7 +257,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             <small className="field-hint">Una línea por ítem (se guarda como “- Rack -Mancuernas”).</small>
           </div>
 
-          <div className='form-input-ctn'>
+          <div className='form-input-ctn exercise-field exercise-field-full'>
             <label>Imagen</label>
             <input
               type='file'
@@ -278,12 +281,13 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
             />
             <PrimaryButton
               type='submit'
-              text={isEditing ? 'Actualizar' : 'Crear'}
+              text={isEditing ? 'Actualizar ejercicio' : 'Crear ejercicio'}
               disabled={loading}
               onClick={handleSubmit}
             />
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

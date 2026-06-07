@@ -180,32 +180,38 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       {loading && <LoaderFullScreen />}
       <div className='content-layout'>
-        <h2>Turnos – Semana del {moment(weekStart).format('D [de] MMMM')} al {moment(weekEnd).format('D [de] MMMM YYYY')}</h2>
+        <div className="turnos-admin-header">
+          <div>
+            <h2>Turnos</h2>
+          </div>
+        </div>
 
         <div className='turnos-filters'>
-          <div className='turnos-filters-input-ctn'>
-            <label>Mes: </label>
-            <CustomDropdown
-              options={monthOptions}
-              value={String(selectedMonth ?? '')}
-              onChange={handleMonthChange}
-              name="month"
-              id="month"
-              placeholderOption={null}
-            />
-          </div>
+          <div className="turnos-filters-controls">
+            <div className='turnos-filters-input-ctn'>
+              <label>Mes</label>
+              <CustomDropdown
+                options={monthOptions}
+                value={String(selectedMonth ?? '')}
+                onChange={handleMonthChange}
+                name="month"
+                id="month"
+                placeholderOption={null}
+              />
+            </div>
 
-          <div className="turnos-filters-input-ctn">
-            <label>Clase: </label>
-            <CustomDropdown
-              options={classOptions}
-              value={selectedClass ?? ''}
-              onChange={e => setSelectedClass(e.target.value)}
-              name="class"
-              id="class"
-              placeholderOption="— Todas —"
-              placeholderDisabled={false}
-            />
+            <div className="turnos-filters-input-ctn">
+              <label>Clase</label>
+              <CustomDropdown
+                options={classOptions}
+                value={selectedClass ?? ''}
+                onChange={e => setSelectedClass(e.target.value)}
+                name="class"
+                id="class"
+                placeholderOption="Todas"
+                placeholderDisabled={false}
+              />
+            </div>
           </div>
         </div>
 
@@ -235,11 +241,23 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       {isModalOpen && selectedEvent && (
         <div className="ta-modal" onClick={closeModal}>
           <div className="ta-modal-content" onClick={e => e.stopPropagation()}>
-            <button className="ta-modal-close" onClick={closeModal}><X size={24} /></button>
-            <h4>Reservas para {selectedEvent.title}</h4>
-            <ul>
+            <button className="ta-modal-close" onClick={closeModal} aria-label="Cerrar modal"><X size={18} /></button>
+            <div className="ta-modal-header">
+              <span className="ta-modal-kicker">Reservas</span>
+              <h4>{selectedEvent.title}</h4>
+              <p>
+                {moment(selectedEvent.start).format('dddd D [de] MMMM, HH:mm')} - {moment(selectedEvent.end).format('HH:mm')}
+              </p>
+            </div>
+            <div className="ta-modal-count">
+              {selectedEvent.users.length} {selectedEvent.users.length === 1 ? 'usuario anotado' : 'usuarios anotados'}
+            </div>
+            <ul className="ta-modal-users">
               {selectedEvent.users.map((u, i) => (
-                <li key={i}>{u}</li>
+                <li key={i}>
+                  <span className="ta-modal-avatar">{u.trim().charAt(0).toUpperCase()}</span>
+                  <span>{u}</span>
+                </li>
               ))}
             </ul>
           </div>

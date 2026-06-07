@@ -3,30 +3,60 @@
 .create-clase-form {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 20px;
 }
 
-.clases-actividades-form-ctn,
-.create-clase-form .form-input-ctn {
-    width: 100%;
-    max-width: 650px;
+.clases-actividades-form-ctn {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
 }
 
-.create-clase-form form {
+.clases-actividades-form-title {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 30px;
-    margin-top: 20px;
+    gap: 18px;
+    margin-bottom: 26px;
+}
+
+.clases-actividades-form-title h2 {
+    color: var(--text-color);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+}
+
+.create-clase-form form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 22px 24px;
+    width: 100%;
 }
 
 .create-clase-form .form-input-ctn {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    max-width: 450px;
+    min-width: 0;
+}
+
+.create-clase-form .form-input-ctn--full,
+.form-input-horarios,
+.clase-actividad-form-guardar-btn {
+    grid-column: 1 / -1;
+}
+
+.create-clase-form label,
+.form-input-horarios>label {
+    color: var(--text-color-distinct);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
 }
 
 /* ========== Controles base ========== */
@@ -34,18 +64,27 @@
 .create-clase-form form input,
 .create-clase-form form textarea {
     background-color: var(--background-color);
-    border-radius: 12px;
+    border-radius: 8px;
     width: 100%;
-    padding: 16px 32px 16px 20px;
-    border: none;
+    min-height: 50px;
+    padding: 13px 14px;
     outline: none;
     color: var(--text-color);
-    font-size: 16px;
     border: 1px solid var(--border-color);
+    font-size: 14px;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.create-clase-form form input:focus,
+.create-clase-form form textarea:focus,
+.create-clase-form form select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--background-hover-color);
 }
 
 .create-clase-form form textarea {
-    min-height: 150px;
+    min-height: 140px;
+    resize: vertical;
     font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -54,15 +93,16 @@
     min-width: 0;
     min-height: 50px;
     background-color: var(--background-color);
-    border-radius: 12px;
+    border-radius: 8px;
     border: 1px solid var(--border-color);
     outline: none;
     color: var(--text-color);
-    font-size: 16px;
-    padding: 0 10px;
+    font-size: 14px;
+    padding: 0 14px;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
 }
 
 .create-clase-form form select::-ms-expand {
@@ -71,31 +111,42 @@
 
 .create-clase-form form .submit-btn {
     background-color: var(--primary-color);
-    padding: 12px 32px;
+    padding: 12px 18px;
     border: none;
     outline: none;
-    border-radius: 12px;
-    font-size: 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     color: white;
+    transition: background-color .18s ease, transform .18s ease;
+}
+
+.create-clase-form form .submit-btn:hover {
+    background-color: var(--primary-color-hover);
+    transform: translateY(-1px);
 }
 
 /* ========== Tags entrenadores ========== */
 
 .selected-tags {
-    width: 300px;
+    width: 100%;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    min-height: 36px;
 }
 
 .selected-tags .tag {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     border: 1px solid var(--border-color);
-    padding: 6px 8px;
+    padding: 7px 9px;
     border-radius: 8px;
+    color: var(--text-color);
+    font-size: 13px;
 }
 
 .tag-close {
@@ -105,22 +156,34 @@
 /* ========== Imagen ========== */
 
 .preview-container img {
-    border-radius: 6px;
-    padding-top: 20px;
+    width: 100%;
+    max-width: 360px;
+    height: 190px;
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    object-fit: cover;
 }
 
 /* ========== Horarios grid ========== */
 
 .form-input-horarios {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
 }
 
 .horario-item {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 0.8fr auto;
+    grid-template-columns: minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(130px, 1fr) minmax(90px, .7fr) auto;
     gap: 12px;
     align-items: end;
-    margin: 20px 0 10px;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
 }
 
 .form-input-ctn-horario {
@@ -148,6 +211,46 @@
     justify-content: center;
     align-items: center;
     gap: 8px;
+    min-height: 50px;
+}
+
+.row-actions .secondary-button,
+.clase-actividad-form-agg-horario-btn .secondary-button {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-weight: 500;
+}
+
+.row-actions .secondary-button:hover,
+.clase-actividad-form-agg-horario-btn .secondary-button:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: var(--background-hover-color);
+}
+
+.clase-actividad-form-agg-horario-btn {
+    margin-top: 2px;
+}
+
+.clase-actividad-form-guardar-btn {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.create-clase-form .custom-dropdown {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+    padding: 13px 34px 13px 14px;
+    font-size: 14px;
+}
+
+.create-clase-form .custom-dropdown:focus {
+    box-shadow: 0 0 0 3px var(--background-hover-color);
 }
 
 /* ========== Radios agrupados (si se usan fuera del modal) ========== */
@@ -170,6 +273,14 @@
 
 /* 900px: 2 columnas en horarios, X  absolutizada */
 @media (max-width: 900px) {
+    .clases-actividades-form-ctn {
+        width: 94%;
+    }
+
+    .create-clase-form form {
+        grid-template-columns: 1fr;
+    }
+
     .horario-item {
         grid-template-columns: 1fr 1fr;
         position: relative;
@@ -188,8 +299,12 @@
 
 /* 600px: 1 columna y centrados botones */
 @media (max-width: 600px) {
-    .create-clase-form .form-input-ctn {
-        max-width: 100%;
+    .clases-actividades-form-ctn {
+        width: 100%;
+    }
+
+    .clases-actividades-form-title h2 {
+        font-size: 26px;
     }
 
     .horario-item {
@@ -216,9 +331,14 @@
     .clase-actividad-form-guardar-btn {
         width: 100%;
         display: flex;
-        justify-content: center;
+        justify-content: stretch;
         align-items: center;
-        margin-top: 35px;
+        margin-top: 8px;
+    }
+
+    .clase-actividad-form-agg-horario-btn .secondary-button,
+    .clase-actividad-form-guardar-btn .submit-btn {
+        width: 100%;
     }
 }
 
