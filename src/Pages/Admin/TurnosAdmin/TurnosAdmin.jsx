@@ -15,11 +15,35 @@ moment.locale('es')
 
 const localizer = momentLocalizer(moment)
 
+const CANCELLED_STATUS = 'CANCELADO'
+
+const TURNO_STATUS_LABELS = {
+  ACTIVO: 'Activo',
+  ASISTIDO: 'Asistió',
+  AUSENTE: 'Ausente',
+  CANCELADO: 'Cancelado'
+}
+
+const normalizeTurnoStatus = status => String(status || '').toUpperCase()
+const isCancelledTurno = turno => normalizeTurnoStatus(turno.estado) === CANCELLED_STATUS
+const getTurnoStatusLabel = status => TURNO_STATUS_LABELS[normalizeTurnoStatus(status)] || status || 'Sin estado'
+
+const getTurnoUser = turno => {
+  const nombre = turno.User?.nombre || ''
+  const apellido = turno.User?.apellido || ''
+
+  return {
+    id: turno.id_turno || turno.ID_Turno || turno.id || `${nombre}-${apellido}-${turno.fecha}`,
+    name: `${nombre} ${apellido}`.trim() || 'Usuario sin nombre',
+    status: normalizeTurnoStatus(turno.estado)
+  }
+}
+
 // Contenido de cada recuadro de turno: nombre de la clase + turnos sacados / cupos totales.
 const EventContent = ({ event }) => (
   <div className="ta-event">
     <span className="ta-event-title">{event.title}</span>
-    <span className="ta-event-count">{event.users.length}/{event.cupos}</span>
+    <span className="ta-event-count">{event.activeUsers.length}/{event.cupos}</span>
   </div>
 )
 
@@ -130,10 +154,18 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           start,
           end,
           cupos: t.HorarioClase.cupos,
-          users: []
+          activeUsers: [],
+          cancelledUsers: []
         }
       }
-      acc[key].users.push(`${t.User.nombre} ${t.User.apellido}`)
+
+      const user = getTurnoUser(t)
+      if (isCancelledTurno(t)) {
+        acc[key].cancelledUsers.push(user)
+      } else {
+        acc[key].activeUsers.push(user)
+      }
+
       return acc
     }, {})
 
@@ -262,16 +294,51 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
               </p>
             </div>
             <div className="ta-modal-count">
-              <strong className="ta-modal-count-ratio">{selectedEvent.users.length}/{selectedEvent.cupos}</strong> cupos ocupados
+              <strong className="ta-modal-count-ratio">{selectedEvent.activeUsers.length}/{selectedEvent.cupos}</strong> cupos ocupados
             </div>
-            <ul className="ta-modal-users">
-              {selectedEvent.users.map((u, i) => (
-                <li key={i}>
-                  <span className="ta-modal-avatar">{u.trim().charAt(0).toUpperCase()}</span>
-                  <span>{u}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="ta-modal-reservation-section">
+              <div className="ta-modal-section-title">
+                <span>Con cupo</span>
+                <strong>{selectedEvent.activeUsers.length}</strong>
+              </div>
+              {selectedEvent.activeUsers.length > 0 ? (
+                <ul className="ta-modal-users">
+                  {selectedEvent.activeUsers.map((user, i) => (
+                    <li key={user.id || i}>
+                      <span className="ta-modal-avatar">{user.name.trim().charAt(0).toUpperCase()}</span>
+                      <span className="ta-modal-user-name">{user.name}</span>
+                      <span className={`ta-modal-status ta-modal-status-${user.status.toLowerCase()}`}>
+                        {getTurnoStatusLabel(user.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ta-modal-empty">No hay reservas activas.</p>
+              )}
+            </div>
+
+            <div className="ta-modal-reservation-section">
+              <div className="ta-modal-section-title">
+                <span>Cancelados</span>
+                <strong>{selectedEvent.cancelledUsers.length}</strong>
+              </div>
+              {selectedEvent.cancelledUsers.length > 0 ? (
+                <ul className="ta-modal-users ta-modal-users-cancelled">
+                  {selectedEvent.cancelledUsers.map((user, i) => (
+                    <li key={user.id || i}>
+                      <span className="ta-modal-avatar">{user.name.trim().charAt(0).toUpperCase()}</span>
+                      <span className="ta-modal-user-name">{user.name}</span>
+                      <span className="ta-modal-status ta-modal-status-cancelado">
+                        {getTurnoStatusLabel(user.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ta-modal-empty">No hay turnos cancelados.</p>
+              )}
+            </div>
           </div>
         </div>
       )}

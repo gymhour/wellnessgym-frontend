@@ -94,7 +94,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin: 12px 0 0;
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
 }
@@ -111,6 +111,11 @@
     font-size: 14px;
 }
 
+.ta-modal-users-cancelled li {
+    color: var(--text-color-distinct);
+    background-color: color-mix(in srgb, var(--border-color) 22%, transparent);
+}
+
 .ta-modal-avatar {
     display: inline-flex;
     align-items: center;
@@ -123,6 +128,72 @@
     color: var(--primary-color);
     font-size: 12px;
     font-weight: 600;
+}
+
+.ta-modal-user-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ta-modal-reservation-section {
+    margin-top: 18px;
+}
+
+.ta-modal-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ta-modal-section-title strong {
+    min-width: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background-color: var(--background-hover-color);
+    color: var(--primary-color);
+    text-align: center;
+    font-size: 12px;
+}
+
+.ta-modal-status {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background-color: var(--background-hover-color);
+    color: var(--primary-color);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ta-modal-status-asistido {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+.ta-modal-status-ausente {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+.ta-modal-status-cancelado {
+    background-color: rgba(107, 114, 128, 0.14);
+    color: #6b7280;
+}
+
+.ta-modal-empty {
+    margin: 10px 0 0;
+    padding: 10px;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color-distinct);
+    font-size: 13px;
 }
 
 /* CALENDARIO */
