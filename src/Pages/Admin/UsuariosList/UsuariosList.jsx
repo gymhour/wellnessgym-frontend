@@ -15,6 +15,20 @@ import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload,
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
 
+// Motivos de baja (debe coincidir con la whitelist del backend en user.Controller.ts)
+const MOTIVOS_BAJA = [
+  'Falta de pago / cobranza',
+  'Motivos económicos',
+  'Falta de tiempo',
+  'Mudanza',
+  'Lesión o problema de salud',
+  'Insatisfacción (servicio/instalaciones)',
+  'Se cambió a otro gimnasio',
+  'Objetivo cumplido',
+  'Desmotivación',
+  'Otros / Sin motivo',
+];
+
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
@@ -118,10 +132,12 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setPage(1);
   };
 
-  const updateUsuarioEstado = async (id, nuevoEstado) => {
+  const updateUsuarioEstado = async (id, nuevoEstado, motivoBaja) => {
     setLoading(true);
     try {
-      await apiClient.put(`/usuarios/estado/${id}`, { estado: nuevoEstado });
+      const body = { estado: nuevoEstado };
+      if (!nuevoEstado && motivoBaja) body.motivoBaja = motivoBaja;
+      await apiClient.put(`/usuarios/estado/${id}`, body);
       setUsuarios(prev =>
         prev.map(u =>
           u.ID_Usuario === id ? { ...u, estado: nuevoEstado } : u
@@ -143,9 +159,9 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setIsPopupOpen(false);
     setSelectedUserId(null);
   };
-  const handlePopupConfirm = estadoBool => {
+  const handlePopupConfirm = (estadoBool, motivoBaja) => {
     if (selectedUserId !== null) {
-      updateUsuarioEstado(selectedUserId, estadoBool);
+      updateUsuarioEstado(selectedUserId, estadoBool, motivoBaja);
     }
     closePopup();
   };
@@ -711,6 +727,10 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             message="¿Qué acción deseas realizar?"
             options={["Activar", "Desactivar"]}
             placeholderOption="Elige estado"
+            secondaryOptions={MOTIVOS_BAJA}
+            secondaryPlaceholder="Motivo de la baja"
+            secondaryVisibleFor="Desactivar"
+            secondaryRequired
           />
         )}
 

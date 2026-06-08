@@ -1,16 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../../../App.css';
 import './AdminInicio.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiService from '../../../services/apiService';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
-import { Users, DollarSign, Clock } from 'lucide-react';
+import { generateFinancialReportPdf } from '../../../utils/financialReportPdf';
+import logoBlack from '../../../assets/gymhour/logo_gymhour_black.png';
+import { Users, DollarSign, Clock, TrendingUp, TrendingDown, Wallet, UserPlus, UserMinus, Percent } from 'lucide-react';
 import {
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
   CartesianGrid,
   ResponsiveContainer
 } from 'recharts';
@@ -19,7 +24,10 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { toast } from 'react-toastify';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+
+const POSITIVE = '#22c55e';
+const NEGATIVE = '#e5484d';
 
 const AdminInicio = () => {
   const [loading, setLoading] = useState(false);
@@ -32,35 +40,43 @@ const AdminInicio = () => {
     totalAmountPendingThisMonth: 0,
     quotasOverdue: 0,
     totalAmountOverdue: 0,
+    gastosMes: 0,
+    gananciaNetaMes: 0,
+    tasaCobranzaMes: 0,
+    altasMes: 0,
+    reactivacionesMes: 0,
+    bajasMes: 0,
+    crecimientoNetoMes: 0,
   });
 
-  // historial completo desde API
-  const [history, setHistory] = useState([]);
+  // Series para gráficos
+  const [finance, setFinance] = useState([]);       // [{ mes, ingresos, gastos, ganancia }]
+  const [membership, setMembership] = useState([]); // [{ mes, altasNuevas, reactivaciones, altas, bajas, neto }]
+  const [bajasMotivo, setBajasMotivo] = useState([]); // [{ mes, motivo, cantidad }]
 
-  // nombre para saludo
   const [nombreUsuario, setNombreUsuario] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const [showFilters, setShowFilters] = useState(false)
+  // Refs para capturar cada gráfico en el PDF
+  const financeRef = useRef(null);
+  const membershipRef = useRef(null);
+  const motivoRef = useRef(null);
 
-  // --- Estados para los inputs de filtro de rango de fechas (mes/año) ---
-  const [inputStartDate, setInputStartDate] = useState(null); // Date
-  const [inputEndDate, setInputEndDate] = useState(null); // Date
+  // Filtros de rango (mes/año)
+  const [inputStartDate, setInputStartDate] = useState(null);
+  const [inputEndDate, setInputEndDate] = useState(null);
+  const [filterStartDate, setFilterStartDate] = useState(null);
+  const [filterEndDate, setFilterEndDate] = useState(null);
 
-  // --- Estados para rango de fechas aplicados (después de hacer clic en "Aplicar filtros") ---
-  const [filterStartDate, setFilterStartDate] = useState(null); // Date
-  const [filterEndDate, setFilterEndDate] = useState(null); // Date
-
-  // Función para solicitar KPIs y historial desde API
   const getKPIs = async () => {
     setLoading(true);
     try {
       const response = await apiService.getKPIs();
-      // merge para tolerar APIs viejas que no envían los nuevos campos
-      setKpi(prev => ({
-        ...prev,
-        ...(response?.kpi || {})
-      }));
-      setHistory(response.history || []);
+      setKpi(prev => ({ ...prev, ...(response?.kpi || {}) }));
+      setFinance(response?.financeHistory || []);
+      setMembership(response?.membershipHistory || []);
+      setBajasMotivo(response?.bajasPorMotivo || []);
     } catch (error) {
       console.error('Error al obtener los KPIs:', error);
       toast.error('Error al cargar KPIs');
@@ -69,16 +85,11 @@ const AdminInicio = () => {
     }
   };
 
-  // Función para obtener datos de usuario (para mostrar nombre)
   const getUser = async () => {
     setLoading(true);
     try {
       const response = await apiService.getUserById(localStorage.getItem("usuarioId"));
-      if (response.tipo === "admin") {
-        setNombreUsuario("Administrador");
-      } else {
-        setNombreUsuario(response.nombre || "");
-      }
+      setNombreUsuario(response.tipo === "admin" ? "Administrador" : (response.nombre || ""));
     } catch (error) {
       console.error('Error al obtener el usuario:', error);
       toast.error("Error al obtener el usuario");
@@ -87,56 +98,49 @@ const AdminInicio = () => {
     }
   };
 
-  // Cargar datos al montar
   useEffect(() => {
     getUser();
     getKPIs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Helper para formatear números como "$12.345"
-  const currencyFormatter = (value) =>
-    `$${Number(value || 0).toLocaleString('es-AR')}`;
+  const currencyFormatter = (value) => `$${Number(value || 0).toLocaleString('es-AR')}`;
 
-  // Helper: convierte "YYYY-MM" en un Date => primer día del mes
   const parseMesToDate = (mesString) => {
     const [year, month] = mesString.split('-').map(Number);
     return new Date(year, month - 1, 1);
   };
 
-  // Filtrar history en base a filterStartDate y filterEndDate
-  const filteredHistory = history.filter(item => {
-    if (!item.mes) return false;
-    const itemDate = parseMesToDate(item.mes);
-    if (filterStartDate && itemDate < filterStartDate) return false;
-    if (filterEndDate && itemDate > filterEndDate) return false;
+  const mesInRange = (mes) => {
+    if (!mes) return false;
+    const d = parseMesToDate(mes);
+    if (filterStartDate && d < filterStartDate) return false;
+    if (filterEndDate && d > filterEndDate) return false;
     return true;
+  };
+
+  const financeData = finance.filter(f => mesInRange(f.mes));
+  const membershipData = membership.filter(m => mesInRange(m.mes));
+
+  // Bajas por motivo agregadas sobre el rango activo
+  const motivoTotals = {};
+  bajasMotivo.forEach(b => {
+    if (mesInRange(b.mes)) motivoTotals[b.motivo] = (motivoTotals[b.motivo] || 0) + b.cantidad;
   });
+  const motivoData = Object.entries(motivoTotals)
+    .map(([motivo, cantidad]) => ({ motivo, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad);
 
-  // Mapear datos para el gráfico a partir de `filteredHistory`
-  const chartData = filteredHistory.map(item => ({
-    mes: item.mes,
-    totalPagado: item.totalPagado
-  }));
-
-  // Función que se dispara al hacer clic en "Aplicar filtros"
   const applyFilters = () => {
-    if (inputStartDate) {
-      setFilterStartDate(new Date(inputStartDate.getFullYear(), inputStartDate.getMonth(), 1));
-    } else {
-      setFilterStartDate(null);
-    }
+    setFilterStartDate(inputStartDate ? new Date(inputStartDate.getFullYear(), inputStartDate.getMonth(), 1) : null);
     if (inputEndDate) {
-      const y = inputEndDate.getFullYear();
-      const m = inputEndDate.getMonth();
-      const lastDay = new Date(y, m + 1, 0).getTime();
+      const lastDay = new Date(inputEndDate.getFullYear(), inputEndDate.getMonth() + 1, 0).getTime();
       setFilterEndDate(new Date(lastDay));
     } else {
       setFilterEndDate(null);
     }
   };
 
-  // Función para limpiar filtros
   const clearFilters = () => {
     setInputStartDate(null);
     setInputEndDate(null);
@@ -144,10 +148,46 @@ const AdminInicio = () => {
     setFilterEndDate(null);
   };
 
-  const currentMonthName = new Date().toLocaleDateString('es-ES', {
-    month: 'long',
-    year: 'numeric'
-  }).replace(' de', '');
+  const currentMonthName = new Date()
+    .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+    .replace(' de', '');
+
+  const fmtMes = (d) => d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : null;
+  const periodoLabel = (filterStartDate || filterEndDate)
+    ? `${fmtMes(filterStartDate) || 'inicio'} – ${fmtMes(filterEndDate) || 'hoy'}`
+    : 'Histórico completo';
+
+  const handleDownloadPdf = async () => {
+    setExporting(true);
+    try {
+      const charts = [];
+      if (financeData.length > 0) charts.push({ title: 'Ingresos vs Gastos · Ganancia neta', node: financeRef.current });
+      if (membershipData.length > 0) charts.push({ title: 'Crecimiento de socios', node: membershipRef.current });
+      if (motivoData.length > 0) charts.push({ title: 'Bajas por motivo', node: motivoRef.current });
+
+      await generateFinancialReportPdf({
+        kpi,
+        periodoLabel,
+        aclaracionKpis: `KPIs del mes corriente (${currentMonthName}) · Deuda vencida: acumulada · Clientes activos: total actual · Gráficos: ${periodoLabel}`,
+        charts,
+        logoSrc: logoBlack,
+      });
+    } catch (err) {
+      console.error('Error al generar el PDF:', err);
+      toast.error('No se pudo generar el PDF.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Estilos compartidos de tooltip recharts (tematizados)
+  const tooltipStyle = {
+    backgroundColor: "var(--background-color-distinct)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+  };
+  const axisTick = { fill: "var(--text-color)", fontSize: 12 };
 
   return (
     <div className='page-layout'>
@@ -155,97 +195,134 @@ const AdminInicio = () => {
       <SidebarMenu isAdmin={true} />
 
       <div className='content-layout'>
-        <div className="admin-inicio-header">
-          <h2>¡Hola, {nombreUsuario}!</h2>
+        <div className="admin-inicio-topbar">
+          <div className="admin-inicio-header">
+            <h2>¡Hola, {nombreUsuario}!</h2>
+          </div>
+          <button
+            type="button"
+            className="download-pdf-btn"
+            onClick={handleDownloadPdf}
+            disabled={exporting}
+          >
+            <Download size={18} />
+            {exporting ? 'Generando PDF…' : 'Descargar PDF'}
+          </button>
         </div>
 
+        {/* ===================== FINANZAS ===================== */}
+        <h3 className="dashboard-section-title">Finanzas <span className="month-label">({currentMonthName})</span></h3>
         <div className='admin-kpi-grid'>
           <div className='admin-kpi-card'>
             <div className='admin-kpi-card-header'>
-              <Users
-                size={20}
-                className="icon-soft-grey"
-              />
+              <DollarSign size={20} className="icon-soft-grey" />
+              <h3>Ingresos</h3>
+            </div>
+            <p className='value'>
+              {currencyFormatter(kpi.totalAmountPaidThisMonth)}
+              <span className="admin-kpi-count">({kpi.quotasPaidThisMonth})</span>
+            </p>
+          </div>
+
+          <div className='admin-kpi-card'>
+            <div className='admin-kpi-card-header'>
+              <Wallet size={20} className="icon-soft-grey" />
+              <h3>Gastos</h3>
+            </div>
+            <p className='value'>{currencyFormatter(kpi.gastosMes)}</p>
+          </div>
+
+          <div className='admin-kpi-card'>
+            <div className='admin-kpi-card-header'>
+              {kpi.gananciaNetaMes >= 0
+                ? <TrendingUp size={20} className="icon-soft-grey" />
+                : <TrendingDown size={20} className="icon-soft-grey" />}
+              <h3>Ganancia neta</h3>
+            </div>
+            <p className='value' style={{ color: kpi.gananciaNetaMes >= 0 ? POSITIVE : NEGATIVE }}>
+              {currencyFormatter(kpi.gananciaNetaMes)}
+            </p>
+          </div>
+
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
+              <Clock size={20} className="icon-soft-grey" />
+              <h3>Por cobrar</h3>
+            </div>
+            <p className='value'>
+              {currencyFormatter(kpi.totalAmountPendingThisMonth)}
+              <span className="admin-kpi-count">({kpi.quotasPendingThisMonth})</span>
+            </p>
+          </div>
+
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
+              <Percent size={20} className="icon-soft-grey" />
+              <h3>Tasa de cobranza</h3>
+            </div>
+            <p className='value'>{kpi.tasaCobranzaMes}%</p>
+          </div>
+
+          <div className='admin-kpi-card'>
+            <div className="admin-kpi-card-header">
+              <Clock size={20} className="icon-soft-grey" />
+              <h3>Deuda vencida <span className="month-label">(acumulada)</span></h3>
+            </div>
+            <p className='value'>
+              {currencyFormatter(kpi.totalAmountOverdue)}
+              <span className="admin-kpi-count">({kpi.quotasOverdue})</span>
+            </p>
+          </div>
+        </div>
+
+        {/* ===================== SOCIOS ===================== */}
+        <h3 className="dashboard-section-title">Socios <span className="month-label">({currentMonthName})</span></h3>
+        <div className='admin-kpi-grid'>
+          <div className='admin-kpi-card'>
+            <div className='admin-kpi-card-header'>
+              <Users size={20} className="icon-soft-grey" />
               <h3>Clientes activos</h3>
             </div>
             <p className='value'>{kpi.totalActiveUsers}</p>
           </div>
 
           <div className='admin-kpi-card'>
-            <div className="admin-kpi-card-header">
-              <DollarSign
-                size={20}
-                className="icon-soft-grey"
-              />
-              <h3>
-                Cobros recibidos
-                <span className="month-label">({currentMonthName})</span>
-              </h3>
+            <div className='admin-kpi-card-header'>
+              <UserPlus size={20} className="icon-soft-grey" />
+              <h3>Altas</h3>
             </div>
             <p className='value'>
-              {currencyFormatter(kpi.totalAmountPaidThisMonth)}
-              <span className="admin-kpi-count">
-                ({kpi.quotasPaidThisMonth})
-              </span>
+              {kpi.altasMes}
+              <span className="admin-kpi-count">({kpi.reactivacionesMes} react.)</span>
             </p>
           </div>
 
           <div className='admin-kpi-card'>
-            <div className="admin-kpi-card-header">
-              <Clock
-                size={20}
-                className="icon-soft-grey"
-              />
-              <h3>
-                Cobros pendientes
-                <span className="month-label">({currentMonthName})</span>
-              </h3>
+            <div className='admin-kpi-card-header'>
+              <UserMinus size={20} className="icon-soft-grey" />
+              <h3>Bajas</h3>
             </div>
-            <p className='value'>
-              {currencyFormatter(kpi.totalAmountPendingThisMonth)}
-              <span className="admin-kpi-count">
-                ({kpi.quotasPendingThisMonth})
-              </span>
-            </p>
+            <p className='value'>{kpi.bajasMes}</p>
           </div>
 
           <div className='admin-kpi-card'>
-            <div className="admin-kpi-card-header">
-              <Clock
-                size={20}
-                className="icon-soft-grey"
-              />
-              <h3>Monto en cuotas vencidas</h3>
+            <div className='admin-kpi-card-header'>
+              {kpi.crecimientoNetoMes >= 0
+                ? <TrendingUp size={20} className="icon-soft-grey" />
+                : <TrendingDown size={20} className="icon-soft-grey" />}
+              <h3>Crecimiento neto</h3>
             </div>
-            <p className='value'>
-              {currencyFormatter(kpi.totalAmountOverdue)}
-            </p>
-          </div>
-
-          <div className='admin-kpi-card'>
-            <div className="admin-kpi-card-header">
-              <Clock
-                size={20}
-                className="icon-soft-grey"
-              />
-              <h3>Cant. cuotas vencidas </h3>
-            </div>
-            <p className='value'>
-              {kpi.quotasOverdue}
+            <p className='value' style={{ color: kpi.crecimientoNetoMes >= 0 ? POSITIVE : NEGATIVE }}>
+              {kpi.crecimientoNetoMes > 0 ? '+' : ''}{kpi.crecimientoNetoMes}
             </p>
           </div>
         </div>
 
-        {/* === Sección del gráfico de barras === */}
+        {/* ===================== TENDENCIAS ===================== */}
         <div className='chart-section'>
           <div className="chart-section-header">
-            <div>
-              <h3>Ingresos mensuales</h3>
-            </div>
-            <button
-              className='toggle-filters-button'
-              onClick={() => setShowFilters(prev => !prev)}
-            >
+            <h3>Tendencias</h3>
+            <button className='toggle-filters-button' onClick={() => setShowFilters(prev => !prev)}>
               Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
             </button>
           </div>
@@ -275,72 +352,74 @@ const AdminInicio = () => {
                 />
               </div>
               <div className='admin-inicio-filtros-btns-ctn'>
-                <PrimaryButton
-                  onClick={applyFilters}
-                  text="Aplicar filtros"
-                />
-                <SecondaryButton
-                  onClick={clearFilters}
-                  text="Limpiar filtros"
-                />
+                <PrimaryButton onClick={applyFilters} text="Aplicar filtros" />
+                <SecondaryButton onClick={clearFilters} text="Limpiar filtros" />
               </div>
             </div>
           )}
 
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary-color)" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="var(--primary-color)" stopOpacity={0.2} />
-                  </linearGradient>
-                </defs>
-
+          {/* --- Ingresos vs Gastos + Ganancia --- */}
+          <h4 className="chart-subtitle">Ingresos vs Gastos · Ganancia neta</h4>
+          {financeData.length > 0 ? (
+            <div ref={financeRef} className="chart-capture">
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={financeData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="var(--border-color)" strokeDasharray="3 3" />
+                <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={axisTick} />
+                <YAxis axisLine={false} tickLine={false} tick={axisTick} tickFormatter={currencyFormatter} width={80} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "var(--text-color)", fontWeight: "bold" }}
+                  formatter={(value, name) => [currencyFormatter(value), name]} cursor={{ fill: "var(--background-hover-color)" }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="ingresos" name="Ingresos" fill="var(--primary-color)" radius={[6, 6, 0, 0]} barSize={28} />
+                <Bar dataKey="gastos" name="Gastos" fill={NEGATIVE} radius={[6, 6, 0, 0]} barSize={28} />
+                <Line type="monotone" dataKey="ganancia" name="Ganancia neta" stroke={POSITIVE} strokeWidth={3} dot={{ r: 3 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            </div>
+          ) : (
+            <p>No hay datos financieros para el período.</p>
+          )}
 
-                <XAxis
-                  dataKey="mes"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--text-color)", fontSize: 12 }}
-                />
+          {/* --- Crecimiento de socios --- */}
+          <h4 className="chart-subtitle">Crecimiento de socios (altas / bajas)</h4>
+          {membershipData.length > 0 ? (
+            <div ref={membershipRef} className="chart-capture">
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={membershipData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--border-color)" strokeDasharray="3 3" />
+                <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={axisTick} />
+                <YAxis axisLine={false} tickLine={false} tick={axisTick} allowDecimals={false} width={40} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "var(--text-color)", fontWeight: "bold" }}
+                  cursor={{ fill: "var(--background-hover-color)" }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="altasNuevas" name="Altas nuevas" stackId="altas" fill={POSITIVE} radius={[0, 0, 0, 0]} barSize={28} />
+                <Bar dataKey="reactivaciones" name="Reactivaciones" stackId="altas" fill="#86efac" radius={[6, 6, 0, 0]} barSize={28} />
+                <Bar dataKey="bajas" name="Bajas" fill={NEGATIVE} radius={[6, 6, 0, 0]} barSize={28} />
+                <Line type="monotone" dataKey="neto" name="Crecimiento neto" stroke="var(--primary-color)" strokeWidth={3} dot={{ r: 3 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            </div>
+          ) : (
+            <p>No hay datos de socios para el período.</p>
+          )}
 
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "var(--text-color)", fontSize: 12 }}
-                  tickFormatter={currencyFormatter}
-                />
-
-                <Tooltip
-                  cursor={{ fill: "var(--background-hover-color)" }}
-                  contentStyle={{
-                    backgroundColor: "var(--background-color-distinct)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                  }}
-                  labelStyle={{ color: "var(--text-color)", fontSize: 12, fontWeight: "bold" }}
-                  itemStyle={{ color: "var(--text-color)", fontSize: 12 }}
-                  formatter={(value, name) => [currencyFormatter(value), name]}
-                />
-
-                <Bar
-                  dataKey="totalPagado"
-                  name="Ingresos"
-                  fill="url(#barGradient)"
-                  radius={[6, 6, 0, 0]}
-                  barSize={75}
-                  animationDuration={800}
-                />
+          {/* --- Bajas por motivo --- */}
+          <h4 className="chart-subtitle">Bajas por motivo</h4>
+          {motivoData.length > 0 ? (
+            <div ref={motivoRef} className="chart-capture">
+            <ResponsiveContainer width="100%" height={Math.max(220, motivoData.length * 44)}>
+              <BarChart data={motivoData} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+                <CartesianGrid horizontal={false} stroke="var(--border-color)" strokeDasharray="3 3" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={axisTick} allowDecimals={false} />
+                <YAxis type="category" dataKey="motivo" axisLine={false} tickLine={false} tick={axisTick} width={190} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "var(--text-color)", fontWeight: "bold" }}
+                  cursor={{ fill: "var(--background-hover-color)" }} formatter={(value) => [value, 'Bajas']} />
+                <Bar dataKey="cantidad" name="Bajas" fill={NEGATIVE} radius={[0, 6, 6, 0]} barSize={22} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           ) : (
-            <p>No hay datos de historial.</p>
+            <p>No hay bajas registradas para el período.</p>
           )}
         </div>
       </div>

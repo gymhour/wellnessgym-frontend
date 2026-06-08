@@ -10,12 +10,22 @@ const ConfirmationPopup = ({
   message,
   options = [],
   placeholderOption = "Selecciona una opción",
+  // Desplegable secundario opcional (ej: motivo de baja) que aparece sólo cuando
+  // la opción primaria seleccionada coincide con `secondaryVisibleFor`.
+  secondaryOptions = [],
+  secondaryPlaceholder = "Selecciona una opción",
+  secondaryVisibleFor = null,
+  secondaryRequired = false,
   children,
 }) => {
   const [selectedOption, setSelectedOption] = useState("");
+  const [selectedSecondary, setSelectedSecondary] = useState("");
 
   useEffect(() => {
-    if (!isOpen) setSelectedOption("");
+    if (!isOpen) {
+      setSelectedOption("");
+      setSelectedSecondary("");
+    }
   }, [isOpen]);
 
   // Cerrar con ESC
@@ -30,9 +40,14 @@ const ConfirmationPopup = ({
 
   if (!isOpen) return null;
 
+  const showSecondary =
+    secondaryOptions.length > 0 &&
+    secondaryVisibleFor !== null &&
+    selectedOption === secondaryVisibleFor;
+
   const handleConfirm = () => {
     const estadoBool = selectedOption === "Activar";
-    onConfirm?.(estadoBool);
+    onConfirm?.(estadoBool, showSecondary ? selectedSecondary : undefined);
   };
 
   const handleOverlayClick = (e) => {
@@ -57,6 +72,17 @@ const ConfirmationPopup = ({
           </div>
         )}
 
+        {showSecondary && (
+          <div className="confirmation-popup-dropdown" style={{ margin: "16px 0px" }}>
+            <CustomDropdown
+              options={secondaryOptions}
+              value={selectedSecondary}
+              onChange={(e) => setSelectedSecondary(e.target.value)}
+              placeholderOption={secondaryPlaceholder}
+            />
+          </div>
+        )}
+
         {children}
 
         <div className="confirmation-popup-buttons">
@@ -67,7 +93,10 @@ const ConfirmationPopup = ({
             <button
               onClick={handleConfirm}
               className="popup-confirm-button"
-              disabled={options.length > 0 && !selectedOption}
+              disabled={
+                (options.length > 0 && !selectedOption) ||
+                (showSecondary && secondaryRequired && !selectedSecondary)
+              }
             >
               Confirmar
             </button>

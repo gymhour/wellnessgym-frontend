@@ -1,9 +1,49 @@
 @import url("../../../variables.css");
 
+.admin-inicio-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .admin-inicio-header {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.download-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.download-pdf-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+}
+
+.download-pdf-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Contenedor de captura de cada gráfico para el PDF */
+.chart-capture {
+  background: var(--background-color);
 }
 
 .admin-inicio-header h2 {
@@ -259,4 +299,27 @@
 
 .icon-soft-grey {
   color: var(--text-color-distinct);
+}
+
+/* Títulos de sección del dashboard (Finanzas / Socios) */
+.dashboard-section-title {
+  margin: 42px 0 4px;
+  color: var(--text-color);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+
+.dashboard-section-title .month-label {
+  display: inline;
+  margin-left: 6px;
+  font-size: 13px;
+}
+
+/* Subtítulo de cada gráfico dentro de Tendencias */
+.chart-subtitle {
+  margin: 34px 0 10px;
+  color: var(--text-color-distinct);
+  font-size: 15px;
+  font-weight: 600;
 }
