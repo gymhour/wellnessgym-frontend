@@ -46,6 +46,7 @@ import GruposUsuarios from './Pages/Admin/GruposUsuarios/GruposUsuarios';
 import AdminAttendancePage from './Pages/Admin/Attendances/AdminAttendancePage';
 import AdminCheckInPage from './Pages/Admin/CheckIn/AdminCheckInPage';
 import ChurnRiskPage from './Pages/Admin/ChurnRisk/ChurnRiskPage';
+import Gastos from './Pages/Admin/Gastos/Gastos';
 import UserMyAttendancesPage from './Pages/Alumno/MisAsistencias/UserMyAttendancesPage';
 import PublicCheckInPage from './Pages/Public/CheckIn/PublicCheckInPage';
 import React, { useState, useEffect } from 'react';
@@ -267,6 +268,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ChurnRiskPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/salidas-dinero"
+          element={
+            <ProtectedRoute>
+              <Gastos />
             </ProtectedRoute>
           }
         />

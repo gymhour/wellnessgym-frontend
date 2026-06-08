@@ -82,26 +82,77 @@
 
 .acciones-cell {
   display: flex;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
+/* Botones de tabla (estilo similar a la sección de Usuarios) */
 .accion-button {
-  background-color: var(--background-color-distinct);
-  border: none;
-  outline: none;
-  cursor: pointer;
-  color: #62BD66;
-  padding: 6px 8px;
+  min-height: 38px;
+  padding: 8px 14px;
   border-radius: 8px;
+  border: 1px solid var(--border-color);
+  outline: none;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .accion-button {
+  background: rgba(30, 41, 59, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.accion-button:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+  transform: translateY(-1.5px);
+}
+
+.accion-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .accion-button:disabled {
-  color: #445345;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
+/* Acción principal (Pagar / Editar) */
+.accion-button.primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fafafa;
+}
+
+.accion-button.primary:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+  color: #fafafa;
+}
+
+/* Acción destructiva (Eliminar) */
 .accion-button.delete {
-  color: rgb(255, 50, 50);
+  color: #e5484d;
+}
+
+.accion-button.delete:hover:not(:disabled) {
+  border-color: #e5484d;
+  background-color: #e5484d;
+  color: #fff;
+  transform: translateY(-1.5px);
+}
+
+/* Filtros estilo Usuarios (grid): que el datepicker ocupe todo el ancho de la celda */
+.filtros-form .usuarios-filtros-form-inputs-ctn .react-datepicker-wrapper,
+.filtros-form .usuarios-filtros-form-inputs-ctn .react-datepicker-wrapper input {
+  width: 100%;
 }
 
 /* Header */

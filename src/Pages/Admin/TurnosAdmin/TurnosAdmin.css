@@ -84,6 +84,12 @@
     font-weight: 500;
 }
 
+.ta-modal-count-ratio {
+    color: var(--primary-color);
+    font-size: 16px;
+    font-weight: 700;
+}
+
 .ta-modal-users {
     display: flex;
     flex-direction: column;
@@ -440,6 +446,32 @@
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Recuadro de turno: nombre de la clase + turnos sacados / cupos totales */
+.turnos-admin .ta-event {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    line-height: 1.1;
+}
+
+.turnos-admin .ta-event-title {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.turnos-admin .ta-event-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary-color);
 }
 
 .turnos-admin .rbc-day-slot .rbc-event,

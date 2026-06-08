@@ -417,8 +417,8 @@ const CuotasUsuarios = () => {
         </div>
 
         {showFilters && (
-          <div className="filtros-section" style={{ margin: '20px 0', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          <div className="filtros-form">
+            <div className="usuarios-filtros-form-inputs-ctn">
               <label htmlFor="inputEmail">Email:</label>
               <CustomInput
                 id="inputEmail"
@@ -426,11 +426,10 @@ const CuotasUsuarios = () => {
                 placeholder="Ej: valen2@example.com"
                 value={inputEmail}
                 onChange={e => setInputEmail(e.target.value)}
-                width='300px'
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="usuarios-filtros-form-inputs-ctn">
               <label htmlFor="inputDni">DNI:</label>
               <CustomInput
                 id="inputDni"
@@ -438,11 +437,10 @@ const CuotasUsuarios = () => {
                 placeholder="Ej: 38444555"
                 value={inputDni}
                 onChange={e => setInputDni(e.target.value)}
-                width='300px'
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="usuarios-filtros-form-inputs-ctn">
               <label htmlFor="inputEstado">Estado:</label>
               <CustomDropdown
                 id="inputEstado"
@@ -452,7 +450,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="usuarios-filtros-form-inputs-ctn">
               <label>Mes:</label>
               <ReactDatePicker
                 selected={inputMesDate}
@@ -464,7 +462,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="usuarios-filtros-form-inputs-ctn">
               <label htmlFor="inputPlan">Plan:</label>
               <CustomDropdown
                 id="inputPlan"
@@ -475,7 +473,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="usuarios-filtros-form-ctn">
               <PrimaryButton onClick={applyFilters} text="Aplicar filtros" />
               <SecondaryButton onClick={clearFilters} text="Limpiar filtros" />
             </div>
@@ -526,7 +524,7 @@ const CuotasUsuarios = () => {
                     <td data-label="Fecha Pago">{formatDate(c.fechaPago)}</td>
                     <td data-label="Acciones" className="acciones-cell">
                       <button
-                        className="accion-button"
+                        className="accion-button primary"
                         onClick={() => openConfirmation('pay', c)}
                         disabled={c.pagada}
                         aria-label={`Pagar cuota ${c.ID_Cuota}`}

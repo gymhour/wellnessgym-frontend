@@ -27,7 +27,8 @@ import {
   FilePenLine,
   ClipboardCheck,
   ScanLine,
-  AlertTriangle
+  AlertTriangle,
+  TrendingDown
 } from 'lucide-react';
 
 
@@ -275,6 +276,18 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     <li className="menu-item">
                       <DollarSign className="icon" />{" "}
                       Cuotas
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/salidas-dinero"
+                    className={`menu-link ${location.pathname === "/admin/salidas-dinero"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <TrendingDown className="icon" />{" "}
+                      Salidas de dinero
                     </li>
                   </Link>
                   <Link

@@ -557,6 +557,52 @@ const getCuotasReminder = async (idUsuario) => {
     }
 }
 
+// Gastos (Salidas de dinero)
+const getGastos = async ({ page = 1, categoria, mes, fechaDesde, fechaHasta } = {}) => {
+    try {
+        const params = { page };
+        if (categoria) params.categoria = categoria;
+        if (mes) params.mes = mes;
+        if (fechaDesde) params.fechaDesde = fechaDesde;
+        if (fechaHasta) params.fechaHasta = fechaHasta;
+        const response = await apiClient.get('/gastos', { params });
+        return response.data; // { meta, data }
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar los gastos.');
+    }
+}
+
+const createGasto = async (payload) => {
+    try {
+        const response = await apiClient.post('/gastos', payload);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo crear el gasto.');
+    }
+}
+
+const updateGasto = async (id, payload) => {
+    try {
+        const response = await apiClient.put(`/gastos/${id}`, payload);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo actualizar el gasto.');
+    }
+}
+
+const deleteGasto = async (id) => {
+    try {
+        const response = await apiClient.delete(`/gastos/${id}`);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo eliminar el gasto.');
+    }
+}
+
 // Asistencias
 const registerAttendance = async ({ dni, method = 'DNI' }) => {
     try {
@@ -767,6 +813,11 @@ export default {
     postValidarTurnosFijos,
     regenerateTurnosFijosUsuario,
     getCuotasReminder,
+    // Gastos
+    getGastos,
+    createGasto,
+    updateGasto,
+    deleteGasto,
     // Asistencias
     registerAttendance,
     getAttendances,

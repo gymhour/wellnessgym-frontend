@@ -15,6 +15,16 @@ moment.locale('es')
 
 const localizer = momentLocalizer(moment)
 
+// Contenido de cada recuadro de turno: nombre de la clase + turnos sacados / cupos totales.
+const EventContent = ({ event }) => (
+  <div className="ta-event">
+    <span className="ta-event-title">{event.title}</span>
+    <span className="ta-event-count">{event.users.length}/{event.cupos}</span>
+  </div>
+)
+
+const CALENDAR_COMPONENTS = { event: EventContent }
+
 const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const [rawTurnos, setRawTurnos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -119,6 +129,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           title: t.HorarioClase.Clase.nombre,
           start,
           end,
+          cupos: t.HorarioClase.cupos,
           users: []
         }
       }
@@ -232,6 +243,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
             onSelectEvent={handleSelectEvent}
             scrollToTime={new Date(1970, 1, 1, 6)}
             messages={messages}
+            components={CALENDAR_COMPONENTS}
           />
         </div>
 
@@ -250,7 +262,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
               </p>
             </div>
             <div className="ta-modal-count">
-              {selectedEvent.users.length} {selectedEvent.users.length === 1 ? 'usuario anotado' : 'usuarios anotados'}
+              <strong className="ta-modal-count-ratio">{selectedEvent.users.length}/{selectedEvent.cupos}</strong> cupos ocupados
             </div>
             <ul className="ta-modal-users">
               {selectedEvent.users.map((u, i) => (
