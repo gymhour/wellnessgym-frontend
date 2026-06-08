@@ -3,10 +3,10 @@
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  gap: 5px;
   color: var(--text-color-distinct);
   font-size: 13px;
   line-height: 1.35;
@@ -15,6 +15,18 @@
 .rutina-asignada strong {
   color: var(--text-color);
   font-weight: 500;
+}
+
+.rutina-asignada-row {
+  min-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rutina-asignada-row.empty {
+  visibility: hidden;
+  display: none;
 }
 
 .asignado-img-usuario {

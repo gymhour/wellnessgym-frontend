@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiService from '../../../services/apiService';
 import './RutinaDetail.css';
@@ -21,6 +21,20 @@ const TYPE_LABELS = {
 
 const pretty = (v, fallback = '—') =>
   v === null || v === undefined || v === '' ? fallback : v;
+
+const formatNombreCompleto = (persona) =>
+  `${persona?.nombre || ''} ${persona?.apellido || ''}`.trim();
+
+const getUsuariosAsignados = (rutina) => {
+  if (Array.isArray(rutina?.asignacionesUsuarios)) {
+    return rutina.asignacionesUsuarios;
+  }
+
+  return rutina?.alumno ? [rutina.alumno] : [];
+};
+
+const getGruposAsignados = (rutina) =>
+  Array.isArray(rutina?.asignacionesGrupos) ? rutina.asignacionesGrupos : [];
 
 /* ===================== DÍAS ===================== */
 // Normaliza y ordena dia1, dia2, ...
@@ -344,10 +358,12 @@ const safeFileName = (titulo, alumnoObj) => {
  * ========================= */
 const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [rutina, setRutina] = useState(null);
   const [activeDiaKey, setActiveDiaKey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAsignadosModal, setShowAsignadosModal] = useState(false);
 
   const [activeSemanaId, setActiveSemanaId] = useState(null);
 
@@ -385,6 +401,10 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   const dias = useMemo(() => normalizeDias(rutina?.dias), [rutina]);
   const semanas = useMemo(() => rutina?.semanas || [], [rutina]);
+  const usuariosAsignados = useMemo(() => getUsuariosAsignados(rutina), [rutina]);
+  const gruposAsignados = useMemo(() => getGruposAsignados(rutina), [rutina]);
+  const asignadosCount = usuariosAsignados.length + gruposAsignados.length;
+  const hasMultipleAsignados = asignadosCount > 1;
 
   const headerSubtitle = useMemo(() => {
     if (!rutina) return '';
@@ -676,6 +696,14 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
             >
               <div className="rutina-detail-headerbar">
                 <div style={{ display: 'grid', gap: 6 }}>
+                  <button
+                    type="button"
+                    className="rutina-detail-back-btn"
+                    onClick={() => navigate(-1)}
+                  >
+                    <span aria-hidden="true">←</span>
+                    Volver
+                  </button>
                   <h2
                     className="gh-title"
                     style={{ margin: 0 }}
@@ -702,18 +730,26 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
               <div className="rutina-detail-datos">
                 <div className="gh-surface">
-                  <div className="gh-label xs">Alumno</div>
-                  <div className="gh-text">
-                    {pretty(
-                      rutina?.alumno
-                        ? `${pretty(
-                          rutina.alumno.nombre,
-                          ''
-                        )} ${pretty(
-                          rutina.alumno.apellido,
-                          ''
-                        )}`.trim()
-                        : ''
+                  <div className="gh-label xs">Asignados</div>
+                  <div className="rutina-asignados-preview">
+                    {hasMultipleAsignados ? (
+                      <button
+                        type="button"
+                        className="rutina-asignados-modal-btn"
+                        onClick={() => setShowAsignadosModal(true)}
+                      >
+                        Ver personas y grupos asignados
+                      </button>
+                    ) : usuariosAsignados.length === 1 ? (
+                      <div className="gh-text">
+                        <strong>Usuario:</strong> {formatNombreCompleto(usuariosAsignados[0]) || 'Sin nombre'}
+                      </div>
+                    ) : gruposAsignados.length === 1 ? (
+                      <div className="gh-text">
+                        <strong>Grupo:</strong> {gruposAsignados[0]?.nombre || 'Sin nombre'}
+                      </div>
+                    ) : (
+                      <div className="gh-text">Sin asignados</div>
                     )}
                   </div>
                 </div>
@@ -759,54 +795,96 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
               )}
             </div>
 
-            {/* Google Sheets Premium View */}
-            {rutina.urlPlanificacion && (
-              <div className="premium-sheets-wrapper" style={{ marginTop: '20px', display: 'grid', gap: '20px' }}>
-                <div className="rutina-card-premium" style={{ width: '100%', maxWidth: 'none', margin: '0' }}>
-                  <div className="premium-badge">
-                    <span className="sparkle-icon">✨</span>
-                    PLAN DE ENTRENAMIENTO PREMIUM
-                  </div>
-                  <div className="premium-action-zone" style={{ borderStyle: 'solid', background: 'var(--background-color-distinct)' }}>
-                    <div className="sheets-icon-container">
-                      <svg className="sheets-svg-icon" viewBox="0 0 24 24" width="48" height="48">
-                        <path fill="#0F9D58" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
-                        <path fill="#FFF" d="M13 9h5v2h-5V9zm0 4h5v2h-5v-2zm-9 3v2h5v-2H4zm9 1h5v2h-5v-2zM4 12v2h5v-2H4zm0-4v2h5V8H4z"/>
-                        <path fill="#E0E0E0" d="M14 2L20 8h-6V2z"/>
-                      </svg>
+            {showAsignadosModal && (
+              <div
+                className="rutina-asignados-modal-overlay"
+                onClick={() => setShowAsignadosModal(false)}
+              >
+                <div
+                  className="rutina-asignados-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="rutina-asignados-modal-title"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="rutina-asignados-modal-header">
+                    <div>
+                      <span className="gh-label xs">Rutina</span>
+                      <h3 id="rutina-asignados-modal-title">Asignados</h3>
                     </div>
-                    <div className="premium-action-text">
-                      <h4>Planilla de Google Sheets Asignada</h4>
-                      <p>Hacé click abajo para abrir e interactuar con la planilla completa en una nueva pestaña.</p>
+                    <button
+                      type="button"
+                      className="rutina-asignados-modal-close"
+                      onClick={() => setShowAsignadosModal(false)}
+                      aria-label="Cerrar listado de asignados"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="rutina-asignados-modal-content">
+                    <section>
+                      <h4>Usuarios</h4>
+                      {usuariosAsignados.length > 0 ? (
+                        <ul>
+                          {usuariosAsignados.map((usuario, index) => (
+                            <li key={usuario?.ID_Usuario || index}>
+                              {formatNombreCompleto(usuario) || 'Sin nombre'}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No hay usuarios asignados.</p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h4>Grupos</h4>
+                      {gruposAsignados.length > 0 ? (
+                        <ul>
+                          {gruposAsignados.map((grupo, index) => (
+                            <li key={grupo?.ID_GrupoUsuario || index}>
+                              {grupo?.nombre || 'Sin nombre'}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No hay grupos asignados.</p>
+                      )}
+                    </section>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Google Sheets View */}
+            {rutina.urlPlanificacion && (
+              <div className="sheets-detail-wrapper">
+                <section className="sheets-detail-card">
+                  <div className="sheets-detail-header">
+                    <div>
+                      <div className="gh-label xs">Planilla digital</div>
+                      <h3>Google Sheets</h3>
                     </div>
                     <a 
                       href={rutina.urlPlanificacion} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="premium-cta-btn"
-                      style={{ maxWidth: '380px' }}
+                      className="primary-button sheets-detail-link"
                     >
-                      <span>Abrir Planilla de Google Sheets</span>
-                      <span className="arrow-icon">→</span>
+                      Abrir planilla
                     </a>
                   </div>
-                  
-                  <div className="iframe-collapsible-section">
-                    <details className="iframe-details" open>
-                      <summary className="iframe-summary" style={{ display: 'none' }}>
-                        <span>Visualizar Planilla Embebida</span>
-                      </summary>
-                      <div className="iframe-wrapper" style={{ aspectRatio: '16/9' }}>
-                        <iframe 
-                          src={rutina.urlPlanificacion.replace('/edit', '/preview').replace('?usp=sharing', '')} 
-                          title="Plan de Entrenamiento"
-                          className="premium-iframe"
-                          allowFullScreen
-                        />
-                      </div>
-                    </details>
+
+                  <div className="sheets-detail-frame">
+                    <iframe
+                      src={rutina.urlPlanificacion.replace('/edit', '/preview').replace('?usp=sharing', '')}
+                      title="Plan de Entrenamiento"
+                      className="sheets-detail-iframe"
+                      allowFullScreen
+                    />
                   </div>
-                </div>
+                </section>
               </div>
             )}
 

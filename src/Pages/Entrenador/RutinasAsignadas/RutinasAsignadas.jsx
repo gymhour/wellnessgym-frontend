@@ -362,6 +362,31 @@ const customStyles = {
   })
 };
 
+const formatNombreCompleto = (persona) =>
+  `${persona?.nombre || ''} ${persona?.apellido || ''}`.trim();
+
+const resumenAsignaciones = (items, formatter, limit = 2) => {
+  const values = (Array.isArray(items) ? items : [])
+    .map(formatter)
+    .filter(Boolean);
+
+  if (!values.length) {
+    return {
+      hasItems: false,
+      text: '',
+      fullText: '',
+      isTruncated: false
+    };
+  }
+
+  return {
+    hasItems: true,
+    text: values.length > limit ? `${values.slice(0, limit).join(', ')}, ...` : values.join(', '),
+    fullText: values.join(', '),
+    isTruncated: values.length > limit
+  };
+};
+
 const RutinasAsignadas = () => {
   const [loading, setLoading] = useState(false);
   const [rutinas, setRutinas] = useState([]);
@@ -688,6 +713,15 @@ const RutinasAsignadas = () => {
             <p>No tienes rutinas asignadas en este momento.</p>
           ) : rutinas.map(rutina => {
             const dias = normalizeDias(rutina);
+            const usuariosResumen = resumenAsignaciones(
+              Array.isArray(rutina?.asignacionesUsuarios)
+                ? rutina.asignacionesUsuarios
+                : rutina?.alumno
+                  ? [rutina.alumno]
+                  : [],
+              formatNombreCompleto
+            );
+            const gruposResumen = resumenAsignaciones(rutina?.asignacionesGrupos, g => g?.nombre);
 
             return (
               <div key={rutina.ID_Rutina} className='rutina-card'>
@@ -804,19 +838,29 @@ const RutinasAsignadas = () => {
                 )}
 
                 <div className="rutina-asignada">
-                  <strong>Usuarios:</strong>{' '}
-                  {Array.isArray(rutina?.asignacionesUsuarios) && rutina.asignacionesUsuarios.length > 0
-                    ? rutina.asignacionesUsuarios.map(u => `${u.nombre || ''} ${u.apellido || ''}`.trim()).join(', ')
-                    : `${rutina?.alumno?.nombre || ''} ${rutina?.alumno?.apellido || ''}`.trim() || '—'}
-
-                  <div>
-                    <strong>Grupos:</strong>{' '}
-                    {Array.isArray(rutina?.asignacionesGrupos) && rutina.asignacionesGrupos.length > 0
-                      ? rutina.asignacionesGrupos.map(g => g.nombre).join(', ')
-                      : '—'}
+                  <div
+                    className={`rutina-asignada-row ${!usuariosResumen.hasItems ? 'empty' : ''}`}
+                    title={usuariosResumen.isTruncated ? usuariosResumen.fullText : undefined}
+                  >
+                    {usuariosResumen.hasItems && (
+                      <>
+                        <strong>Usuarios:</strong> {usuariosResumen.text}
+                      </>
+                    )}
                   </div>
 
-                  <div>
+                  <div
+                    className={`rutina-asignada-row ${!gruposResumen.hasItems ? 'empty' : ''}`}
+                    title={gruposResumen.isTruncated ? gruposResumen.fullText : undefined}
+                  >
+                    {gruposResumen.hasItems && (
+                      <>
+                        <strong>Grupos:</strong> {gruposResumen.text}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="rutina-asignada-row">
                     <strong>Por:</strong> {`${rutina?.entrenador?.nombre || ''} ${rutina?.entrenador?.apellido || ''}`.trim() || '—'}
                   </div>
                 </div>

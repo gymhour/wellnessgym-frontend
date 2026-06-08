@@ -21,6 +21,27 @@
     gap: 16px;
 }
 
+.rutina-detail-back-btn {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gh-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.rutina-detail-back-btn:hover {
+    color: var(--gh-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 .page-layout .content-layout .gh-title {
     font-size: 28px;
     font-weight: 500;
@@ -281,6 +302,120 @@
     margin-bottom: 8px;
 }
 
+.rutina-asignados-preview {
+    display: grid;
+    gap: 6px;
+}
+
+.rutina-asignados-preview strong {
+    font-weight: 600;
+}
+
+.rutina-asignados-modal-btn {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--gh-text);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 400;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--gh-text) 35%, transparent);
+    text-underline-offset: 3px;
+}
+
+.rutina-asignados-modal-btn:hover {
+    text-decoration-color: currentColor;
+}
+
+.rutina-asignados-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, .5);
+}
+
+.rutina-asignados-modal {
+    width: min(560px, 100%);
+    max-height: min(680px, calc(100vh - 40px));
+    overflow: hidden;
+    border: 1px solid var(--gh-border);
+    border-radius: 8px;
+    background: var(--gh-surface);
+    color: var(--gh-text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+}
+
+.rutina-asignados-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--gh-border);
+}
+
+.rutina-asignados-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.rutina-asignados-modal-close {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--gh-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gh-text);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.rutina-asignados-modal-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    max-height: calc(100vh - 150px);
+    overflow: auto;
+    padding: 18px 20px 22px;
+}
+
+.rutina-asignados-modal-content h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rutina-asignados-modal-content ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rutina-asignados-modal-content li {
+    padding: 9px 10px;
+    border: 1px solid var(--gh-border);
+    border-radius: 8px;
+    background: var(--gh-surface-2);
+}
+
+.rutina-asignados-modal-content p {
+    margin: 0;
+    color: var(--gh-muted);
+}
+
 @media screen and (max-width: 500px) {
     .header-rutina {
         padding: 10px 16px;
@@ -293,6 +428,10 @@
     .rutina-detail-headerbar {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .rutina-asignados-modal-content {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -405,182 +544,75 @@
     overflow: hidden;
 }
 
-/* ==========================================
-   Premium Training Plan Styles (Antigravity)
-   ========================================== */
-.premium-sheets-wrapper {
-    padding: 0 40px 30px 40px;
+.sheets-detail-wrapper {
+    padding: 0 40px 30px;
 }
 
-@media screen and (max-width: 500px) {
-    .premium-sheets-wrapper {
-        padding: 0 16px 20px 16px;
-    }
-}
-
-.rutina-card-premium {
-    position: relative;
+.sheets-detail-card {
     width: 100%;
-    background: linear-gradient(135deg, var(--background-color-distinct) 0%, var(--background-color) 100%);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
-    padding: 24px;
-    border-radius: 16px;
-}
-
-[data-theme="dark"] .rutina-card-premium {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-}
-
-/* Premium Badge */
-.premium-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #10B981;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    padding: 4px 10px;
-    border-radius: 9999px;
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* Premium Action Zone */
-.premium-action-zone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px dashed var(--border-color);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
-}
-
-.sheets-icon-container {
-    background: rgba(15, 157, 88, 0.1);
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-    transition: transform 0.3s ease;
-}
-
-.premium-action-zone:hover .sheets-icon-container {
-    transform: scale(1.1) rotate(5deg);
-}
-
-.premium-action-text h4 {
-    font-size: 1.15rem;
-    margin: 0 0 6px 0;
-    color: var(--text-color);
-}
-
-.premium-action-text p {
-    font-size: 0.9rem;
-    color: var(--text-color-distinct);
-    margin: 0 0 20px 0;
-    line-height: 1.4;
-}
-
-/* Premium CTA Button */
-.premium-cta-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: linear-gradient(135deg, #0F9D58 0%, #0B8043 100%);
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 0.95rem;
-    text-decoration: none !important;
-    padding: 12px 24px;
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--gh-border);
     border-radius: 8px;
-    width: 100%;
-    box-shadow: 0 4px 12px rgba(15, 157, 88, 0.3);
-    transition: all 0.2s ease;
+    background: var(--gh-surface);
 }
 
-.premium-cta-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(15, 157, 88, 0.5);
-    background: linear-gradient(135deg, #13b367 0%, #0c914e 100%);
-}
-
-.premium-cta-btn .arrow-icon {
-    font-size: 1.1rem;
-    transition: transform 0.2s ease;
-}
-
-.premium-cta-btn:hover .arrow-icon {
-    transform: translateX(4px);
-}
-
-/* Iframe Section */
-.iframe-collapsible-section {
-    margin-top: 16px;
-    width: 100%;
-}
-
-.iframe-details {
-    width: 100%;
-    border-top: 1px solid var(--border-color);
-    padding-top: 16px;
-}
-
-.iframe-summary {
-    list-style: none;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--primary-color);
-    font-weight: 600;
+.sheets-detail-header {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    outline: none;
-    user-select: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-.iframe-summary::-webkit-details-marker {
-    display: none;
+.sheets-detail-header h3 {
+    margin: 0;
+    color: var(--gh-text);
+    font-size: 20px;
+    font-weight: 500;
 }
 
-.iframe-summary:hover {
-    color: var(--text-color);
+.sheets-detail-link {
+    white-space: nowrap;
 }
 
-.iframe-wrapper {
-    margin-top: 16px;
-    border-radius: 12px;
+.sheets-detail-frame {
+    width: 100%;
+    min-height: 420px;
+    aspect-ratio: 16 / 10;
     overflow: hidden;
-    border: 1px solid var(--border-color);
-    background: #000;
-    aspect-ratio: 16/10;
-    width: 100%;
-}
-
-.premium-iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
+    border: 1px solid var(--gh-border);
+    border-radius: 8px;
     background: #ffffff;
 }
 
-@media screen and (max-width: 768px) {
-    .iframe-collapsible-section {
-        display: none; /* Hide interactive iframe on mobile because Google Sheets needs wide desktop displays */
+.sheets-detail-iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #ffffff;
+}
+
+@media screen and (max-width: 640px) {
+    .sheets-detail-wrapper {
+        padding: 0 16px 20px;
+    }
+
+    .sheets-detail-card {
+        padding: 14px;
+    }
+
+    .sheets-detail-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sheets-detail-link {
+        width: fit-content;
+    }
+
+    .sheets-detail-frame {
+        min-height: 520px;
+        aspect-ratio: auto;
     }
 }

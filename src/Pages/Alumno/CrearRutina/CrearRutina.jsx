@@ -677,7 +677,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       }
 
       if (canAssign) {
-        const asignacionesUsuarios = Array.isArray(r?.asignacionesUsuarios) && r.asignacionesUsuarios.length
+        const asignacionesUsuarios = Array.isArray(r?.asignacionesUsuarios)
           ? r.asignacionesUsuarios
           : (r?.alumno ? [r.alumno] : []);
         const selectedUsers = asignacionesUsuarios
