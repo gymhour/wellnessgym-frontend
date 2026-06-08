@@ -1,20 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Search, ShieldCheck, TrendingDown, Users } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, ShieldCheck, SlidersHorizontal, TrendingDown, Users } from 'lucide-react';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
+import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import apiService from '../../../services/apiService';
 import './ChurnRiskPage.css';
 
 const RISK_OPTIONS = [
-  { value: '', label: 'Todos los riesgos' },
   { value: 'MEDIO_ALTO', label: 'Medio/alto' },
+  { value: '', label: 'Todos los riesgos' },
   { value: 'ALTO', label: 'Alto' },
   { value: 'MEDIO', label: 'Medio' },
   { value: 'BAJO', label: 'Bajo' },
 ];
 
 const PAGE_SIZE = 20;
-const DEFAULT_RISK_LEVEL = '';
+const DEFAULT_RISK_LEVEL = 'MEDIO_ALTO';
 
 const formatDate = value => {
   if (!value) return 'Sin asistencias';
@@ -70,8 +71,9 @@ const buildWhatsappLink = tel => {
 };
 
 const ChurnRiskPage = () => {
-  const [searchInput, setSearchInput] = useState('');
   const [filters, setFilters] = useState({ search: '', riskLevel: DEFAULT_RISK_LEVEL });
+  const [draftFilters, setDraftFilters] = useState({ search: '', riskLevel: DEFAULT_RISK_LEVEL });
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -139,21 +141,29 @@ const ChurnRiskPage = () => {
   const applyFilters = event => {
     event.preventDefault();
     setPage(1);
-    setFilters(prev => ({ ...prev, search: searchInput.trim() }));
+    setFilters({
+      search: draftFilters.search.trim(),
+      riskLevel: draftFilters.riskLevel,
+    });
   };
 
-  const changeRiskFilter = event => {
-    setPage(1);
-    setFilters(prev => ({ ...prev, riskLevel: event.target.value }));
+  const changeDraftFilter = event => {
+    const { name, value } = event.target;
+    setDraftFilters(prev => ({ ...prev, [name]: value }));
   };
 
   const clearFilters = () => {
-    setSearchInput('');
+    const nextFilters = { search: '', riskLevel: DEFAULT_RISK_LEVEL };
+    setDraftFilters(nextFilters);
     setPage(1);
-    setFilters({ search: '', riskLevel: DEFAULT_RISK_LEVEL });
+    setFilters(nextFilters);
   };
 
   const totalPages = Math.max(1, Number(report.pagination?.totalPages || 1));
+  const activeFiltersCount = [
+    filters.search,
+    filters.riskLevel && filters.riskLevel !== DEFAULT_RISK_LEVEL ? filters.riskLevel : '',
+  ].filter(Boolean).length;
 
   return (
     <div className="page-layout">
@@ -180,34 +190,58 @@ const ChurnRiskPage = () => {
           ))}
         </section>
 
-        <section className="churn-risk-filters">
-          <form onSubmit={applyFilters} className="churn-risk-search">
-            <label htmlFor="churn-search">Buscar alumno</label>
-            <div className="churn-risk-search-row">
-              <Search size={18} />
-              <input
+        <div className="churn-risk-filters-toggle-row">
+          <button
+            type="button"
+            className="churn-risk-filters-toggle"
+            onClick={() => setShowFilters(prev => !prev)}
+            aria-expanded={showFilters}
+          >
+            <SlidersHorizontal />
+            <span>Filtros</span>
+            {activeFiltersCount > 0 && (
+              <span className="churn-risk-filters-count">{activeFiltersCount}</span>
+            )}
+            {showFilters ? <ChevronUp /> : <ChevronDown />}
+          </button>
+        </div>
+
+        {showFilters && (
+          <form onSubmit={applyFilters} className="churn-risk-filters">
+            <div className="churn-risk-filter-field churn-risk-search">
+              <label htmlFor="churn-search">Buscar alumno</label>
+              <CustomInput
                 id="churn-search"
-                value={searchInput}
-                onChange={event => setSearchInput(event.target.value)}
+                name="search"
+                value={draftFilters.search}
+                onChange={changeDraftFilter}
                 placeholder="Nombre, apellido o DNI"
+                width="100%"
               />
-              <button type="submit">Buscar</button>
+            </div>
+
+            <div className="churn-risk-filter-field">
+              <label htmlFor="risk-level">Riesgo</label>
+              <select
+                id="risk-level"
+                name="riskLevel"
+                value={draftFilters.riskLevel}
+                onChange={changeDraftFilter}
+              >
+                {RISK_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="churn-risk-filter-actions">
+              <button type="submit" className="churn-risk-apply">Aplicar filtros</button>
+              <button type="button" className="churn-risk-clear" onClick={clearFilters}>
+                Limpiar filtros
+              </button>
             </div>
           </form>
-
-          <div className="churn-risk-filter-field">
-            <label htmlFor="risk-level">Riesgo</label>
-            <select id="risk-level" value={filters.riskLevel} onChange={changeRiskFilter}>
-              {RISK_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <button type="button" className="churn-risk-clear" onClick={clearFilters}>
-            Limpiar filtros
-          </button>
-        </section>
+        )}
 
         {error ? (
           <div className="churn-risk-state">
@@ -226,7 +260,6 @@ const ChurnRiskPage = () => {
                 <thead>
                   <tr>
                     <th>Alumno</th>
-                    <th>Plan</th>
                     <th>Riesgo</th>
                     <th>Score</th>
                     <th>Última asistencia</th>
@@ -248,7 +281,6 @@ const ChurnRiskPage = () => {
                           <span>DNI {item.user?.dni || '-'}</span>
                         </div>
                       </td>
-                      <td data-label="Plan">{item.plan?.nombre || '-'}</td>
                       <td data-label="Riesgo">
                         <span className={`churn-risk-badge ${String(item.riskLevel || '').toLowerCase()}`}>
                           {getRiskLabel(item.riskLevel)}
@@ -266,7 +298,7 @@ const ChurnRiskPage = () => {
                       <td data-label="Prom. reciente">{formatNumber(item.metrics?.recentWeeklyAverage)} / sem.</td>
                       <td data-label="Prom. base">{formatNumber(item.metrics?.baselineWeeklyAverage)} / sem.</td>
                       <td data-label="Consistencia">{item.metrics?.activeWeeksLast4 || 0}/4 sem.</td>
-                      <td data-label="Motivo">{item.mainReason}</td>
+                      <td data-label="Motivo" title={item.mainReason || ''}>{item.mainReason}</td>
                       <td data-label="Contactar">
                         {waLink ? (
                           <a

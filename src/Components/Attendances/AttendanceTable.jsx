@@ -25,27 +25,28 @@ const AttendanceTable = ({ attendances = [], emptyMessage = 'No hay asistencias 
           <tr>
             <th>Alumno</th>
             <th>DNI</th>
-            <th>Plan</th>
-            <th>Fecha</th>
-            <th>Hora</th>
+            <th>Fecha y hora</th>
             <th>Método</th>
             <th>Estado</th>
             <th>Motivo</th>
           </tr>
         </thead>
         <tbody>
-          {attendances.map(attendance => (
-            <tr key={attendance.id}>
-              <td data-label="Alumno">{attendance.student?.name || '-'}</td>
-              <td data-label="DNI">{attendance.student?.dni || '-'}</td>
-              <td data-label="Plan">{attendance.plan?.name || '-'}</td>
-              <td data-label="Fecha">{formatAttendanceDate(attendance.date)}</td>
-              <td data-label="Hora">{formatAttendanceTime(attendance.date)}</td>
-              <td data-label="Método">{getAttendanceMethodLabel(attendance.method)}</td>
-              <td data-label="Estado"><AttendanceStatusBadge status={attendance.status} /></td>
-              <td data-label="Motivo">{getRejectReasonLabel(attendance)}</td>
-            </tr>
-          ))}
+          {attendances.map(attendance => {
+            const reason = getRejectReasonLabel(attendance);
+            const dateTime = `${formatAttendanceDate(attendance.date)} · ${formatAttendanceTime(attendance.date)}`;
+
+            return (
+              <tr key={attendance.id}>
+                <td data-label="Alumno">{attendance.student?.name || '-'}</td>
+                <td data-label="DNI">{attendance.student?.dni || '-'}</td>
+                <td data-label="Fecha y hora">{dateTime}</td>
+                <td data-label="Método">{getAttendanceMethodLabel(attendance.method)}</td>
+                <td data-label="Estado"><AttendanceStatusBadge status={attendance.status} /></td>
+                <td data-label="Motivo" title={reason}>{reason}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

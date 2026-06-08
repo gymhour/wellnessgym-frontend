@@ -119,6 +119,118 @@
   gap: 16px;
 }
 
+.cuotas-filters-toggle-row {
+  margin: 0 0 16px;
+}
+
+.cuotas-filters-toggle-row .toggle-filters-button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.cuotas-filters-toggle-row .toggle-filters-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+}
+
+.cuotas-filtros-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.cuotas-filtros-form-inputs-ctn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cuotas-filtros-form-inputs-ctn label {
+  color: var(--text-color-distinct);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.cuotas-filtros-form-inputs-ctn .custom-input-wrapper,
+.cuotas-filtros-form-inputs-ctn .custom-dropdown,
+.cuotas-filtros-form-inputs-ctn .custom-datepicker,
+.cuotas-filtros-form-inputs-ctn .custom-datepicker-mes {
+  width: 100% !important;
+  min-width: 0;
+}
+
+.cuotas-filtros-form-inputs-ctn .custom-dropdown,
+.cuotas-filtros-form-inputs-ctn input {
+  min-height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.cuotas-filtros-form-inputs-ctn .custom-dropdown {
+  padding: 10px 34px 10px 12px;
+}
+
+.cuotas-filtros-form-inputs-ctn input {
+  padding: 10px 12px;
+}
+
+.cuotas-filtros-form-inputs-ctn .custom-dropdown:focus,
+.cuotas-filtros-form-inputs-ctn input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--background-hover-color);
+}
+
+.cuotas-filtros-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-self: flex-end;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.cuotas-filtros-form-actions .primary-button,
+.cuotas-filtros-form-actions .secondary-button {
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.cuotas-filtros-form-actions .primary-button {
+  border: none;
+}
+
+.cuotas-filtros-form-actions .secondary-button {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+}
+
+.cuotas-filtros-form-actions .secondary-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+}
+
 /* Modal overlay y contenido */
 .cuotas-modal-overlay {
   position: fixed;

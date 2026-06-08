@@ -13,6 +13,22 @@
     padding: 20px 40px;
 }
 
+.rutina-detail-headerbar {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.page-layout .content-layout .gh-title {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    color: var(--gh-text);
+}
+
 .tab-dias {
     padding: 0px 40px;
 }
@@ -22,7 +38,7 @@
     background: none;
     border: 1px solid var(--gh-border);
     color: var(--gh-text);
-    border-radius: 16px;
+    border-radius: 8px;
     box-shadow: none;
     padding: 16px;
 }
@@ -125,7 +141,7 @@
     gap: 12px;
     background: var(--gh-surface-2);
     border: 1px solid var(--gh-border);
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 12px;
     box-shadow: none;
 }
@@ -163,7 +179,7 @@
     min-width: 96px;
     height: 64px;
     position: relative;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     background: var(--gh-surface);
     border: 1px solid var(--gh-border);
@@ -181,14 +197,47 @@
 .page-layout .content-layout .gh-ej-thumb-placeholder {
     width: 96px;
     height: 64px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #1a1e23, #0f1113);
-    border: 1px dashed #30363d;
+    border-radius: 8px;
+    background:
+        radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--primary-color) 12%, transparent) 0 23%, transparent 24%),
+        linear-gradient(135deg, color-mix(in srgb, var(--gh-surface) 82%, var(--gh-text) 4%), var(--gh-surface-2));
+    border: 1px solid color-mix(in srgb, var(--gh-border) 72%, transparent);
     display: none;
+    place-items: center;
+    position: relative;
 }
 
 .page-layout .content-layout .gh-ej-thumb-placeholder.show {
-    display: block;
+    display: grid;
+}
+
+.page-layout .content-layout .gh-ej-placeholder-mark {
+    width: 22px;
+    height: 22px;
+    border: 1px solid color-mix(in srgb, var(--gh-muted) 38%, transparent);
+    border-radius: 50%;
+    position: relative;
+}
+
+.page-layout .content-layout .gh-ej-placeholder-mark::before,
+.page-layout .content-layout .gh-ej-placeholder-mark::after {
+    content: "";
+    position: absolute;
+    background: color-mix(in srgb, var(--gh-muted) 48%, transparent);
+}
+
+.page-layout .content-layout .gh-ej-placeholder-mark::before {
+    width: 8px;
+    height: 1px;
+    left: 6px;
+    top: 10px;
+}
+
+.page-layout .content-layout .gh-ej-placeholder-mark::after {
+    width: 1px;
+    height: 8px;
+    left: 10px;
+    top: 6px;
 }
 
 /* Video / YouTube */
@@ -196,7 +245,7 @@
 .page-layout .content-layout .gh-ej-media.video {
     width: 96px;
     height: 64px;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     background: #000;
 }
@@ -240,6 +289,11 @@
     .tab-dias {
         padding: 15px 16px;
     }
+
+    .rutina-detail-headerbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }
 
 /* Dentro de tu RutinaDetail.css */
@@ -248,7 +302,7 @@
     position: relative;
     width: 96px;
     height: 64px;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     border: 1px solid var(--gh-border);
     background: #000;
@@ -299,20 +353,18 @@
     }
 }
 
-/* 4) Miniatura más “clean”: sin borde duro, con sombra suave */
+/* 4) Miniatura más clean: sin borde duro ni sombra pesada */
 .page-layout .content-layout .gh-media-slot {
     width: 96px;
-    /* mantené tu tamaño actual */
     min-width: 96px;
     height: 64px;
 
     border: none;
-    /* <- clave: saca el borde que suma “bordes por todos lados” */
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
 
-    background: color-mix(in srgb, var(--gh-surface-2) 55%, transparent);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+    background: color-mix(in srgb, var(--gh-surface-2) 75%, var(--gh-text) 3%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gh-border) 55%, transparent);
 }
 
 /* 5) Imagen/video respetan el tamaño */
@@ -321,16 +373,18 @@
 .page-layout .content-layout .gh-ej-media.video {
     width: 96px;
     height: 64px;
-    border-radius: 12px;
+    border-radius: 8px;
 }
 
 /* 6) Placeholder más prolijo */
 .page-layout .content-layout .gh-ej-thumb-placeholder {
     width: 96px;
     height: 64px;
-    border-radius: 12px;
-    border: 1px dashed color-mix(in srgb, var(--gh-border) 80%, transparent);
-    background: linear-gradient(135deg, #1a1e23, #0f1113);
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--gh-border) 72%, transparent);
+    background:
+        linear-gradient(135deg, transparent 0 46%, color-mix(in srgb, var(--gh-border) 42%, transparent) 47% 53%, transparent 54%),
+        linear-gradient(180deg, color-mix(in srgb, var(--gh-surface) 92%, var(--gh-text) 3%), var(--gh-surface-2));
 }
 
 /* 7) Tipografía dentro del item (no cambia tus títulos globales) */
@@ -347,7 +401,7 @@
 /* 8) YouTube link mantiene estilo pero sin borde duro */
 .gh-media-slot .gh-ej-ytlink {
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
 }
 

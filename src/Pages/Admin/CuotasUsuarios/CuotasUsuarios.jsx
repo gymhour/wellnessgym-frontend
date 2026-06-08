@@ -407,7 +407,7 @@ const CuotasUsuarios = () => {
           </div>
         </div>
 
-        <div style={{ margin: '30px 0px' }}>
+        <div className="cuotas-filters-toggle-row">
           <button
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
@@ -417,20 +417,25 @@ const CuotasUsuarios = () => {
         </div>
 
         {showFilters && (
-          <div className="filtros-section" style={{ margin: '20px 0', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+          <form
+            className="cuotas-filtros-form"
+            onSubmit={event => {
+              event.preventDefault();
+              applyFilters();
+            }}
+          >
+            <div className="cuotas-filtros-form-inputs-ctn">
               <label htmlFor="inputEmail">Email:</label>
               <CustomInput
                 id="inputEmail"
                 type="text"
-                placeholder="Ej: valen2@example.com"
+                placeholder="Ej: valen@example.com"
                 value={inputEmail}
                 onChange={e => setInputEmail(e.target.value)}
-                width='300px'
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="cuotas-filtros-form-inputs-ctn">
               <label htmlFor="inputDni">DNI:</label>
               <CustomInput
                 id="inputDni"
@@ -438,11 +443,10 @@ const CuotasUsuarios = () => {
                 placeholder="Ej: 38444555"
                 value={inputDni}
                 onChange={e => setInputDni(e.target.value)}
-                width='300px'
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="cuotas-filtros-form-inputs-ctn">
               <label htmlFor="inputEstado">Estado:</label>
               <CustomDropdown
                 id="inputEstado"
@@ -452,7 +456,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="cuotas-filtros-form-inputs-ctn">
               <label>Mes:</label>
               <ReactDatePicker
                 selected={inputMesDate}
@@ -464,7 +468,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="cuotas-filtros-form-inputs-ctn">
               <label htmlFor="inputPlan">Plan:</label>
               <CustomDropdown
                 id="inputPlan"
@@ -475,11 +479,15 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <PrimaryButton onClick={applyFilters} text="Aplicar filtros" />
-              <SecondaryButton onClick={clearFilters} text="Limpiar filtros" />
+            <div className="cuotas-filtros-form-actions">
+              <button type="submit" className="primary-button">
+                Aplicar filtros
+              </button>
+              <button type="button" className="secondary-button" onClick={clearFilters}>
+                Limpiar filtros
+              </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* —— Tabla responsive —— */}

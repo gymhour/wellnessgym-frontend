@@ -4,13 +4,13 @@ import CustomInput from '../utils/CustomInput/CustomInput';
 import { ATTENDANCE_METHOD, ATTENDANCE_STATUS } from '../../types/attendanceTypes';
 import './AttendanceFilters.css';
 
-const AttendanceFilters = ({ filters, planOptions = [], onChange, onClear }) => {
+const AttendanceFilters = ({ filters, planOptions = [], onChange, onApply, onClear }) => {
   const updateFilter = (name, value) => {
     onChange({ ...filters, [name]: value });
   };
 
   return (
-    <section className="attendance-filters">
+    <form className="attendance-filters" onSubmit={onApply}>
       <div className="attendance-filter-field">
         <label>Desde</label>
         <CustomInput
@@ -86,11 +86,14 @@ const AttendanceFilters = ({ filters, planOptions = [], onChange, onClear }) => 
         />
       </div>
       <div className="attendance-filter-actions">
+        <button type="submit" className="attendance-primary-button">
+          Aplicar filtros
+        </button>
         <button type="button" className="attendance-secondary-button" onClick={onClear}>
           Limpiar filtros
         </button>
       </div>
-    </section>
+    </form>
   );
 };
 

@@ -736,7 +736,7 @@ const RutinasAsignadas = () => {
                   </div>
                 </div>
 
-                <div className='rutina-data'>
+                {/* <div className='rutina-data'>
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
                   {rutina.urlPlanificacion ? (
@@ -748,7 +748,7 @@ const RutinasAsignadas = () => {
                         : `Días totales: ${dias.length}`}
                     </p>
                   )}
-                </div>
+                </div> */}
 
                 {/* ===== SEMANAS o DÍAS ===== */}
                 {rutina.urlPlanificacion ? (

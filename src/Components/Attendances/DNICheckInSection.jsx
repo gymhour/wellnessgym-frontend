@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import CustomInput from '../utils/CustomInput/CustomInput';
 import './CheckInSections.css';
 
 const DNICheckInSection = ({ onCheckIn, loading }) => {
   const [dni, setDni] = useState('');
+  const dniInputRef = useRef(null);
 
-  const handleSubmit = event => {
+  const handleSubmit = async event => {
     event.preventDefault();
-    if (!dni.trim() || loading) return;
-    onCheckIn(dni);
+    const cleanDni = dni.trim();
+
+    if (!cleanDni || loading) return;
+
+    await onCheckIn(cleanDni);
+    setDni('');
+    dniInputRef.current?.focus();
   };
 
   return (
@@ -19,10 +25,15 @@ const DNICheckInSection = ({ onCheckIn, loading }) => {
       </div>
       <div className="dni-checkin-row">
         <CustomInput
+          ref={dniInputRef}
           value={dni}
           onChange={event => setDni(event.target.value.replace(/\D/g, ''))}
-          placeholder="Ej: 11111111"
+          placeholder="Ingresar DNI"
           inputMode="numeric"
+          autoComplete="off"
+          autoFocus
+          aria-label="DNI del alumno"
+          maxLength={10}
           width="100%"
           className="dni-checkin-input"
         />
