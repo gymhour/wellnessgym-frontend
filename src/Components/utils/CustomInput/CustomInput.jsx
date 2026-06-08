@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { forwardRef, useState } from 'react';
 import './customInput.css';
 import { Eye, EyeOff } from 'lucide-react';
 
-const CustomInput = ({
+const CustomInput = forwardRef(({
   type = 'text',
   placeholder,
   value,
   onChange,
   required = false,
   width = '300px',
+  className = '',
   ...rest
-}) => {
+}, ref) => {
   const [showPassword, setShowPassword] = useState(false);
 
   // Si el input es de tipo password, usamos el estado para alternar
@@ -26,12 +27,13 @@ const CustomInput = ({
     <div className="custom-input-wrapper" style={{ width }}>
       <input
         {...rest}
+        ref={ref}
         type={inputType}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         required={required}
-        className="custom-input"
+        className={['custom-input', className].filter(Boolean).join(' ')}
       />
       {type === 'password' && (
         <button
@@ -48,6 +50,6 @@ const CustomInput = ({
       )}
     </div>
   );
-};
+});
 
 export default CustomInput;

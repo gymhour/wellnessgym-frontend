@@ -407,7 +407,7 @@ const CuotasUsuarios = () => {
           </div>
         </div>
 
-        <div style={{ margin: '30px 0px' }}>
+        <div className="cuotas-filters-toggle-row">
           <button
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
@@ -417,19 +417,34 @@ const CuotasUsuarios = () => {
         </div>
 
         {showFilters && (
+<<<<<<< HEAD
           <div className="filtros-form">
             <div className="usuarios-filtros-form-inputs-ctn">
+=======
+          <form
+            className="cuotas-filtros-form"
+            onSubmit={event => {
+              event.preventDefault();
+              applyFilters();
+            }}
+          >
+            <div className="cuotas-filtros-form-inputs-ctn">
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputEmail">Email:</label>
               <CustomInput
                 id="inputEmail"
                 type="text"
-                placeholder="Ej: valen2@example.com"
+                placeholder="Ej: valen@example.com"
                 value={inputEmail}
                 onChange={e => setInputEmail(e.target.value)}
               />
             </div>
 
+<<<<<<< HEAD
             <div className="usuarios-filtros-form-inputs-ctn">
+=======
+            <div className="cuotas-filtros-form-inputs-ctn">
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputDni">DNI:</label>
               <CustomInput
                 id="inputDni"
@@ -440,7 +455,11 @@ const CuotasUsuarios = () => {
               />
             </div>
 
+<<<<<<< HEAD
             <div className="usuarios-filtros-form-inputs-ctn">
+=======
+            <div className="cuotas-filtros-form-inputs-ctn">
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputEstado">Estado:</label>
               <CustomDropdown
                 id="inputEstado"
@@ -450,7 +469,11 @@ const CuotasUsuarios = () => {
               />
             </div>
 
+<<<<<<< HEAD
             <div className="usuarios-filtros-form-inputs-ctn">
+=======
+            <div className="cuotas-filtros-form-inputs-ctn">
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label>Mes:</label>
               <ReactDatePicker
                 selected={inputMesDate}
@@ -462,7 +485,11 @@ const CuotasUsuarios = () => {
               />
             </div>
 
+<<<<<<< HEAD
             <div className="usuarios-filtros-form-inputs-ctn">
+=======
+            <div className="cuotas-filtros-form-inputs-ctn">
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputPlan">Plan:</label>
               <CustomDropdown
                 id="inputPlan"
@@ -473,11 +500,21 @@ const CuotasUsuarios = () => {
               />
             </div>
 
+<<<<<<< HEAD
             <div className="usuarios-filtros-form-ctn">
               <PrimaryButton onClick={applyFilters} text="Aplicar filtros" />
               <SecondaryButton onClick={clearFilters} text="Limpiar filtros" />
+=======
+            <div className="cuotas-filtros-form-actions">
+              <button type="submit" className="primary-button">
+                Aplicar filtros
+              </button>
+              <button type="button" className="secondary-button" onClick={clearFilters}>
+                Limpiar filtros
+              </button>
+>>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
             </div>
-          </div>
+          </form>
         )}
 
         {/* —— Tabla responsive —— */}

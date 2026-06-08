@@ -1,35 +1,94 @@
 .attendance-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  margin-top: 20px;
+  margin-top: 18px;
+  background: var(--background-color);
 }
 
 .attendance-table {
   width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-  background: var(--background-color);
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .attendance-table th,
 .attendance-table td {
-  padding: 14px 12px;
+  padding: 15px 12px;
   border-bottom: 1px solid var(--border-color);
   text-align: left;
   vertical-align: middle;
   font-size: 14px;
+  min-width: 0;
 }
 
 .attendance-table th {
   color: var(--text-color-distinct);
-  font-weight: 600;
-  background: var(--background-color-distinct);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  background: color-mix(in srgb, var(--background-color-distinct) 62%, transparent);
+  line-height: 1.25;
+}
+
+.attendance-table td {
+  color: var(--text-color);
+}
+
+.attendance-table tbody tr {
+  transition: background 150ms ease-in-out;
+}
+
+.attendance-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--background-color-distinct) 26%, transparent);
+}
+
+.attendance-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-color) 6%, transparent);
 }
 
 .attendance-table tr:last-child td {
   border-bottom: none;
+}
+
+.attendance-table th:nth-child(1),
+.attendance-table td:nth-child(1) {
+  width: 24%;
+}
+
+.attendance-table th:nth-child(2),
+.attendance-table td:nth-child(2) {
+  width: 12%;
+}
+
+.attendance-table th:nth-child(3),
+.attendance-table td:nth-child(3) {
+  width: 18%;
+}
+
+.attendance-table th:nth-child(4),
+.attendance-table td:nth-child(4) {
+  width: 9%;
+}
+
+.attendance-table th:nth-child(5),
+.attendance-table td:nth-child(5) {
+  width: 13%;
+}
+
+.attendance-table th:nth-child(6),
+.attendance-table td:nth-child(6) {
+  width: 24%;
+}
+
+.attendance-table td:nth-child(1),
+.attendance-table td:nth-child(6) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .attendance-empty-state,
@@ -37,7 +96,7 @@
   border: 1px dashed var(--border-color);
   border-radius: 8px;
   padding: 28px;
-  background: var(--background-color-distinct);
+  background: transparent;
   color: var(--text-color);
 }
 
@@ -56,6 +115,7 @@
   .attendance-table-wrapper {
     overflow: visible;
     border: none;
+    background: transparent;
   }
 
   .attendance-table {
@@ -73,8 +133,8 @@
     display: block;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background: var(--background-color-distinct);
-    padding: 10px;
+    background: transparent;
+    padding: 12px 14px;
   }
 
   .attendance-table td {
@@ -82,16 +142,24 @@
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--border-color);
-    padding: 10px 0;
+    padding: 11px 0;
   }
 
   .attendance-table td::before {
     content: attr(data-label);
     color: var(--text-color-distinct);
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
   }
 
   .attendance-table td:last-child {
     border-bottom: none;
+  }
+
+  .attendance-table td:nth-child(1),
+  .attendance-table td:nth-child(6) {
+    overflow: visible;
+    text-overflow: initial;
+    white-space: normal;
   }
 }

@@ -1,28 +1,34 @@
 .checkin-section {
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 18px;
-  background: var(--background-color-distinct);
+  padding: 24px;
+  background: transparent;
 }
 
 .checkin-section-header {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .checkin-section-header h3 {
-  font-size: 22px;
-  margin-bottom: 6px;
+  margin: 0 0 6px;
+  color: var(--text-color);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
 }
 
 .checkin-section-header p {
+  margin: 0;
   color: var(--text-color-distinct);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .dni-checkin-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -34,8 +40,22 @@
 }
 
 .dni-checkin-row input {
-  min-height: 58px;
-  font-size: 22px;
+  min-height: 56px;
+  border-color: var(--border-color);
+  background: var(--background-color);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dni-checkin-row input::placeholder {
+  color: var(--text-color-distinct);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.dni-checkin-row input:focus {
+  border-color: var(--primary-color);
 }
 
 .attendance-primary-action {
@@ -43,16 +63,16 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: none;
+  min-height: 40px;
   border: none;
   border-radius: 8px;
-  padding: 8px 16px;
+  padding: 8px 18px;
   background: var(--primary-color);
   color: #fafafa;
   cursor: pointer;
   font-size: 15px;
-  font-weight: 600;
-  transition: all 150ms ease-in-out;
+  font-weight: 500;
+  transition: background-color 150ms ease-in-out, opacity 150ms ease-in-out;
 }
 
 .attendance-primary-action:hover:not(:disabled) {
@@ -72,7 +92,7 @@
   margin-bottom: 16px;
   border: 1.5px dashed var(--border-color);
   border-radius: 8px;
-  background: var(--background-color);
+  background: var(--background-color-distinct);
 }
 
 .qr-code-panel svg {
@@ -90,7 +110,7 @@
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: var(--background-color);
+  background: transparent;
 }
 
 .qr-public-link span {
@@ -112,6 +132,10 @@
 }
 
 @media screen and (max-width: 760px) {
+  .checkin-section {
+    padding: 18px;
+  }
+
   .dni-checkin-row {
     grid-template-columns: 1fr;
   }

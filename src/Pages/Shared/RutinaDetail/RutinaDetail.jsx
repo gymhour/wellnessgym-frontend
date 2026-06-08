@@ -135,22 +135,31 @@ const RenderMedia = ({ ej }) => {
 
   if (ej?.mediaUrl) {
     return (
-      <img
-        className="gh-ej-thumb"
-        src={ej.mediaUrl}
-        alt={ej?.nombre || 'Ejercicio'}
-        onError={(ev) => {
-          ev.currentTarget.style.display = 'none';
-          const sib = ev.currentTarget.nextElementSibling;
-          if (sib && sib.classList.contains('gh-ej-thumb-placeholder')) {
-            sib.classList.add('show');
-          }
-        }}
-      />
+      <>
+        <img
+          className="gh-ej-thumb"
+          src={ej.mediaUrl}
+          alt={ej?.nombre || 'Ejercicio'}
+          onError={(ev) => {
+            ev.currentTarget.style.display = 'none';
+            const sib = ev.currentTarget.nextElementSibling;
+            if (sib && sib.classList.contains('gh-ej-thumb-placeholder')) {
+              sib.classList.add('show');
+            }
+          }}
+        />
+        <div className="gh-ej-thumb-placeholder" aria-label="Sin imagen o video">
+          <span className="gh-ej-placeholder-mark" aria-hidden="true" />
+        </div>
+      </>
     );
   }
 
-  return <div className="gh-ej-thumb-placeholder show" aria-hidden="true" />;
+  return (
+    <div className="gh-ej-thumb-placeholder show" aria-label="Sin imagen o video">
+      <span className="gh-ej-placeholder-mark" aria-hidden="true" />
+    </div>
+  );
 };
 
 /* ===================== DROPSET (COMPARTIDO) ===================== */
@@ -207,9 +216,6 @@ const DropSetDetail = ({ bloque }) => {
       <div className="gh-list-item gh-ej-row">
         <div className="gh-media-slot">
           <RenderMedia ej={ejFirst} />
-          {!ejFirst?.mediaUrl && (
-            <div className="gh-ej-thumb-placeholder show" />
-          )}
         </div>
 
         <div className="gh-ej-main">
@@ -663,42 +669,34 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
         {!loading && !error && rutina && (
           <>
-            {/* Acciones */}
-            {!rutina.urlPlanificacion && (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  marginBottom: 12,
-                }}
-              >
-                <PrimaryButton
-                  text="Exportar como PDF"
-                  type="button"
-                  onClick={handleExportPDF}
-                />
-              </div>
-            )}
-
             {/* Header rutina */}
             <div
               className="header-rutina"
               style={{ display: 'grid', gap: 12 }}
             >
-              <div style={{ display: 'grid', gap: 6 }}>
-                <h2
-                  className="gh-title"
-                  style={{ margin: 0 }}
-                >
-                  {pretty(rutina.nombre, 'Rutina sin nombre')}
-                </h2>
-                {headerSubtitle && (
-                  <p
-                    className="gh-muted sm"
+              <div className="rutina-detail-headerbar">
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <h2
+                    className="gh-title"
                     style={{ margin: 0 }}
                   >
-                    {headerSubtitle}
-                  </p>
+                    {pretty(rutina.nombre, 'Rutina sin nombre')}
+                  </h2>
+                  {headerSubtitle && (
+                    <p
+                      className="gh-muted sm"
+                      style={{ margin: 0 }}
+                    >
+                      {headerSubtitle}
+                    </p>
+                  )}
+                </div>
+
+                {!rutina.urlPlanificacion && (
+                  <PrimaryButton
+                    text="Exportar como PDF"
+                    onClick={handleExportPDF}
+                  />
                 )}
               </div>
 
@@ -1017,9 +1015,6 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                                                     ej
                                                   }
                                                 />
-                                                {!ej?.mediaUrl && (
-                                                  <div className="gh-ej-thumb-placeholder show" />
-                                                )}
                                               </div>
 
                                               <div className="gh-ej-main">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import AttendanceFilters from '../../../Components/Attendances/AttendanceFilters';
 import AttendanceTable from '../../../Components/Attendances/AttendanceTable';
@@ -18,6 +18,8 @@ const emptyFilters = {
 
 const AdminAttendancePage = () => {
   const [filters, setFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
+  const [showFilters, setShowFilters] = useState(false);
   const [attendances, setAttendances] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -44,19 +46,22 @@ const AdminAttendancePage = () => {
     loadAttendances(filters, page);
   }, [filters, page]);
 
-  // Al cambiar filtros se vuelve a la primera página (se batchea con setFilters)
-  const handleFiltersChange = next => {
+  const goPrevPage = () => setPage(prev => Math.max(1, prev - 1));
+  const goNextPage = () => setPage(prev => prev + 1);
+
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+
+  const applyFilters = event => {
+    event.preventDefault();
     setPage(1);
-    setFilters(next);
+    setFilters(draftFilters);
   };
 
-  const handleClearFilters = () => {
+  const clearFilters = () => {
+    setDraftFilters(emptyFilters);
     setPage(1);
     setFilters(emptyFilters);
   };
-
-  const goPrevPage = () => setPage(prev => Math.max(1, prev - 1));
-  const goNextPage = () => setPage(prev => prev + 1);
 
   return (
     <div className="page-layout">
@@ -70,11 +75,30 @@ const AdminAttendancePage = () => {
           </div>
         </div>
 
-        <AttendanceFilters
-          filters={filters}
-          onChange={handleFiltersChange}
-          onClear={handleClearFilters}
-        />
+        <div className="attendance-filters-toggle-row">
+          <button
+            type="button"
+            className="attendance-filters-toggle"
+            onClick={() => setShowFilters(prev => !prev)}
+            aria-expanded={showFilters}
+          >
+            <SlidersHorizontal />
+            <span>Filtros</span>
+            {activeFiltersCount > 0 && (
+              <span className="attendance-filters-count">{activeFiltersCount}</span>
+            )}
+            {showFilters ? <ChevronUp /> : <ChevronDown />}
+          </button>
+        </div>
+
+        {showFilters && (
+          <AttendanceFilters
+            filters={draftFilters}
+            onChange={setDraftFilters}
+            onApply={applyFilters}
+            onClear={clearFilters}
+          />
+        )}
 
         {error ? (
           <div className="attendance-error-state">
