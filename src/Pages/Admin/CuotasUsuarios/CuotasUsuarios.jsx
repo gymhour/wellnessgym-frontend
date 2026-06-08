@@ -417,10 +417,6 @@ const CuotasUsuarios = () => {
         </div>
 
         {showFilters && (
-<<<<<<< HEAD
-          <div className="filtros-form">
-            <div className="usuarios-filtros-form-inputs-ctn">
-=======
           <form
             className="cuotas-filtros-form"
             onSubmit={event => {
@@ -429,7 +425,6 @@ const CuotasUsuarios = () => {
             }}
           >
             <div className="cuotas-filtros-form-inputs-ctn">
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputEmail">Email:</label>
               <CustomInput
                 id="inputEmail"
@@ -440,11 +435,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-<<<<<<< HEAD
-            <div className="usuarios-filtros-form-inputs-ctn">
-=======
             <div className="cuotas-filtros-form-inputs-ctn">
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputDni">DNI:</label>
               <CustomInput
                 id="inputDni"
@@ -455,11 +446,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-<<<<<<< HEAD
-            <div className="usuarios-filtros-form-inputs-ctn">
-=======
             <div className="cuotas-filtros-form-inputs-ctn">
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputEstado">Estado:</label>
               <CustomDropdown
                 id="inputEstado"
@@ -469,11 +456,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-<<<<<<< HEAD
-            <div className="usuarios-filtros-form-inputs-ctn">
-=======
             <div className="cuotas-filtros-form-inputs-ctn">
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label>Mes:</label>
               <ReactDatePicker
                 selected={inputMesDate}
@@ -485,11 +468,7 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-<<<<<<< HEAD
-            <div className="usuarios-filtros-form-inputs-ctn">
-=======
             <div className="cuotas-filtros-form-inputs-ctn">
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
               <label htmlFor="inputPlan">Plan:</label>
               <CustomDropdown
                 id="inputPlan"
@@ -500,11 +479,6 @@ const CuotasUsuarios = () => {
               />
             </div>
 
-<<<<<<< HEAD
-            <div className="usuarios-filtros-form-ctn">
-              <PrimaryButton onClick={applyFilters} text="Aplicar filtros" />
-              <SecondaryButton onClick={clearFilters} text="Limpiar filtros" />
-=======
             <div className="cuotas-filtros-form-actions">
               <button type="submit" className="primary-button">
                 Aplicar filtros
@@ -512,7 +486,6 @@ const CuotasUsuarios = () => {
               <button type="button" className="secondary-button" onClick={clearFilters}>
                 Limpiar filtros
               </button>
->>>>>>> e6cbc113981d20c7d982364568775a9f26e1c53e
             </div>
           </form>
         )}
@@ -561,7 +534,7 @@ const CuotasUsuarios = () => {
                     <td data-label="Fecha Pago">{formatDate(c.fechaPago)}</td>
                     <td data-label="Acciones" className="acciones-cell">
                       <button
-                        className="accion-button primary"
+                        className="accion-button pay"
                         onClick={() => openConfirmation('pay', c)}
                         disabled={c.pagada}
                         aria-label={`Pagar cuota ${c.ID_Cuota}`}
