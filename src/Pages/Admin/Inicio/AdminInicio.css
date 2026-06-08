@@ -76,7 +76,7 @@
   border-radius: 8px;
   padding: 25px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)),
+    var(--admin-kpi-card-gradient),
     var(--background-color-distinct);
   box-shadow: inset 0 0 0 1px var(--border-color);
   color: var(--text-color);

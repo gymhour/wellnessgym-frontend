@@ -29,6 +29,15 @@ const MOTIVOS_BAJA = [
   'Otros / Sin motivo',
 ];
 
+const normalizeFilterValue = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+const normalizeTextFilters = (filters) => ({
+  ...filters,
+  nombre: normalizeFilterValue(filters.nombre),
+  apellido: normalizeFilterValue(filters.apellido),
+  email: normalizeFilterValue(filters.email),
+  dni: normalizeFilterValue(filters.dni),
+});
+
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
@@ -79,16 +88,17 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setLoading(true);
     try {
       const params = {};
-      if (filtros.tipo) params.tipo = filtros.tipo.toLowerCase(); // normalizo
-      if (filtros.nombre) params.nombre = filtros.nombre;
-      if (filtros.apellido) params.apellido = filtros.apellido;
-      if (filtros.email) params.email = filtros.email;
-      if (filtros.dni) params.dni = filtros.dni;
-      if (filtros.plan) params.planId = filtros.plan;
+      const activeFilters = normalizeTextFilters(filtros);
+      if (activeFilters.tipo) params.tipo = activeFilters.tipo.toLowerCase(); // normalizo
+      if (activeFilters.nombre) params.nombre = activeFilters.nombre;
+      if (activeFilters.apellido) params.apellido = activeFilters.apellido;
+      if (activeFilters.email) params.email = activeFilters.email;
+      if (activeFilters.dni) params.dni = activeFilters.dni;
+      if (activeFilters.plan) params.planId = activeFilters.plan;
 
       // ➜ enviar estado=true/false si corresponde
-      if (filtros.estado) {
-        const est = estadoToBool(filtros.estado);
+      if (activeFilters.estado) {
+        const est = estadoToBool(activeFilters.estado);
         if (typeof est === 'boolean') params.estado = est;
       }
 
@@ -122,7 +132,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const aplicarFiltros = (e) => {
     e.preventDefault();
     setPage(1);
-    setFiltros(draftFiltros);
+    setFiltros(normalizeTextFilters(draftFiltros));
   };
 
   const limpiarFiltros = () => {
@@ -481,6 +491,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         {showFilters && (
           <form
             className="filtros-form"
+            onSubmit={aplicarFiltros}
           >
             <div className='usuarios-filtros-form-inputs-ctn'>
               <label htmlFor="tipo">Tipo:</label>
@@ -567,7 +578,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             </div>
 
             <div className='usuarios-filtros-form-ctn'>
-              <button type="submit" className="primary-button" onClick={aplicarFiltros}>
+              <button type="submit" className="primary-button">
                 Aplicar filtros
               </button>
               <button type="button" className="secondary-button" onClick={limpiarFiltros}>

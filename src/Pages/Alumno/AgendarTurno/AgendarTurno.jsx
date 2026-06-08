@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../../../App.css';
 import './agendarTurno.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
+import { useLocation } from 'react-router-dom';
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
 import apiService from '../../../services/apiService';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
@@ -38,12 +39,52 @@ const diaIndex = (nombre) => {
   }
 };
 
+const getHorarioDateParts = (value) => {
+  if (!value) return { hours: 0, minutes: 0 };
+  const str = value.toString();
+
+  if (str.includes('T')) {
+    const date = new Date(str);
+    return {
+      hours: date.getUTCHours(),
+      minutes: date.getUTCMinutes(),
+    };
+  }
+
+  const [rawHours = '0', rawMinutes = '0'] = str.split(':');
+  return {
+    hours: Number(rawHours),
+    minutes: Number(rawMinutes),
+  };
+};
+
+const getNextDateForHorario = (horario) => {
+  const targetDay = diaIndex(horario?.diaSemana);
+  if (targetDay === null) return null;
+
+  const now = new Date();
+  const selected = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const offset = (targetDay - selected.getDay() + 7) % 7;
+  const { hours, minutes } = getHorarioDateParts(horario.horaIni);
+
+  selected.setDate(selected.getDate() + offset);
+  selected.setHours(hours, minutes, 0, 0);
+
+  if (selected <= now) {
+    selected.setDate(selected.getDate() + 7);
+  }
+
+  return selected;
+};
+
 const AgendarTurno = () => {
+  const location = useLocation();
   const [clases, setClases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedClase, setSelectedClase] = useState('');
   const [selectedDateTime, setSelectedDateTime] = useState(null);
   const [isAgendando, setIsAgendando] = useState(false);
+  const [preselectionApplied, setPreselectionApplied] = useState(false);
 
   useEffect(() => {
     const fetchClases = async () => {
@@ -60,6 +101,34 @@ const AgendarTurno = () => {
 
     fetchClases();
   }, []);
+
+  useEffect(() => {
+    if (preselectionApplied || clases.length === 0 || !location.state) return;
+
+    const { selectedClaseId, selectedClaseNombre, selectedHorarioId } = location.state;
+    const clasePreseleccionada = clases.find((clase) => {
+      const matchesId = selectedClaseId && Number(clase.ID_Clase) === Number(selectedClaseId);
+      const matchesName = selectedClaseNombre && clase.nombre === selectedClaseNombre;
+      return matchesId || matchesName;
+    });
+
+    if (!clasePreseleccionada) {
+      setPreselectionApplied(true);
+      return;
+    }
+
+    setSelectedClase(clasePreseleccionada.nombre);
+
+    const horarioPreseleccionado = (clasePreseleccionada.HorariosClase ?? []).find(
+      (horario) => Number(horario.ID_HorarioClase) === Number(selectedHorarioId)
+    );
+
+    if (horarioPreseleccionado) {
+      setSelectedDateTime(getNextDateForHorario(horarioPreseleccionado));
+    }
+
+    setPreselectionApplied(true);
+  }, [clases, location.state, preselectionApplied]);
 
   const clasesOptions = clases.map((clase) => clase.nombre);
 

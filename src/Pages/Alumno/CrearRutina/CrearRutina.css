@@ -435,7 +435,7 @@
 .day-tab {
     position: relative;
     flex: 0 0 auto;
-    padding: 8px 12px;
+    padding: 8px 20px;
     border-radius: 10px;
     background: var(--background-color-distinct);
     color: var(--text-color);
@@ -500,6 +500,40 @@
 }
 
 .day-tab .day-tab-close:focus-visible {
+    outline: 2px solid var(--primary-color);
+}
+
+/* Ícono para duplicar una tab */
+.day-tab .day-tab-action {
+    position: absolute;
+    top: -6px;
+    right: 16px;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: var(--border-color);
+    background: var(--background-color);
+    color: var(--text-color);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background .12s ease, transform .12s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.day-tab:hover .day-tab-action,
+.day-tab.active .day-tab-action {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.day-tab .day-tab-action:hover {
+    background: var(--background-color-distinct);
+    transform: scale(1.05);
+}
+
+.day-tab .day-tab-action:focus-visible {
     outline: 2px solid var(--primary-color);
 }
 

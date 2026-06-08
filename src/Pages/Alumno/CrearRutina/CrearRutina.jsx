@@ -10,7 +10,7 @@ import { toast } from "react-toastify";
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import { Dumbbell, Table2, X } from 'lucide-react';
+import { Copy, Dumbbell, Table2, X } from 'lucide-react';
 import SecondaryButton from "../../../Components/utils/SecondaryButton/SecondaryButton.jsx";
 
 /* ================= Helpers ================= */
@@ -828,6 +828,34 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     setActiveDayIndex(Math.max(0, idx - 1));
   };
 
+  const duplicateDay = (idx) => {
+    const original = days[idx];
+    if (!original) return;
+
+    const clonedBlocks = (original.blocks || []).map(block => ({
+      ...block,
+      id: cryptoRandomId(),
+      data: JSON.parse(JSON.stringify(block.data || {}))
+    }));
+
+    const duplicatedDay = {
+      ...original,
+      key: 'tmp',
+      nombre: original.nombre ? `${original.nombre} (copia)` : '',
+      descripcion: original.descripcion || '',
+      blocks: clonedBlocks
+    };
+
+    const newDays = [
+      ...days.slice(0, idx + 1),
+      duplicatedDay,
+      ...days.slice(idx + 1)
+    ].map((d, i) => ({ ...d, key: `dia${i + 1}` }));
+
+    handleSetDays(newDays);
+    setActiveDayIndex(idx + 1);
+  };
+
   const activeDay = days[activeDayIndex];
 
   const setActiveDayBlocks = (newBlocks) => {
@@ -1268,6 +1296,49 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       newActiveIndex -= 1;
     }
 
+    setActiveWeekIndex(newActiveIndex);
+    setDays(newWeeks[newActiveIndex].days);
+    setActiveDayIndex(0);
+  };
+
+  const duplicateWeek = (idx) => {
+    const original = weeks[idx];
+    if (!original) return;
+
+    const clonedDays = (original.days || []).map((day, dayIdx) => ({
+      ...day,
+      key: `dia${dayIdx + 1}`,
+      blocks: (day.blocks || []).map(block => ({
+        ...block,
+        id: cryptoRandomId(),
+        data: JSON.parse(JSON.stringify(block.data || {}))
+      }))
+    }));
+
+    const nextNum = weeks.length + 1;
+    const duplicatedWeek = {
+      key: `semana${Date.now()}`,
+      nombre: `Semana ${nextNum}`,
+      numero: nextNum,
+      days: clonedDays.length
+        ? clonedDays
+        : [{ key: 'dia1', nombre: '', descripcion: '', blocks: [] }]
+    };
+
+    const newWeeks = [
+      ...weeks.slice(0, idx + 1),
+      duplicatedWeek,
+      ...weeks.slice(idx + 1)
+    ].map((week, weekIdx) => ({
+      ...week,
+      numero: weekIdx + 1,
+      nombre: week.nombre.startsWith('Semana ')
+        ? `Semana ${weekIdx + 1}`
+        : week.nombre
+    }));
+
+    const newActiveIndex = idx + 1;
+    setWeeks(newWeeks);
     setActiveWeekIndex(newActiveIndex);
     setDays(newWeeks[newActiveIndex].days);
     setActiveDayIndex(0);
@@ -1928,6 +1999,18 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                             <span className="day-tab-label">{w.nombre}</span>
 
                             <button
+                              className="day-tab-action"
+                              title="Duplicar semana"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                duplicateWeek(idx);
+                              }}
+                            >
+                              <Copy width={13} height={13} />
+                            </button>
+
+                            <button
                               className="day-tab-close"
                               onClick={(e) => { e.stopPropagation(); removeWeek(idx); }}
                               type="button"
@@ -1996,6 +2079,18 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                           </button>
 
                           <span className="day-tab-label">{`Día ${idx + 1}`}</span>
+
+                          <button
+                            className="day-tab-action"
+                            title="Duplicar día"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateDay(idx);
+                            }}
+                          >
+                            <Copy width={13} height={13} />
+                          </button>
 
                           <button
                             className="day-tab-close"
