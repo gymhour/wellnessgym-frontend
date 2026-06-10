@@ -11,7 +11,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
@@ -412,7 +412,7 @@ const CuotasUsuarios = () => {
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
           >
-            Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
+            <SlidersHorizontal /> Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
           </button>
         </div>
 

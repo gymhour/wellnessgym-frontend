@@ -11,7 +11,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 
@@ -235,7 +235,7 @@ const Gastos = () => {
 
         <div style={{ margin: '30px 0px' }}>
           <button className="toggle-filters-button" onClick={() => setShowFilters(prev => !prev)}>
-            Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
+            <SlidersHorizontal /> Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
           </button>
         </div>
 

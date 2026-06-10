@@ -24,7 +24,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { toast } from 'react-toastify';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, SlidersHorizontal } from 'lucide-react';
 
 const POSITIVE = '#22c55e';
 const NEGATIVE = '#e5484d';
@@ -323,7 +323,7 @@ const AdminInicio = () => {
           <div className="chart-section-header">
             <h3>Tendencias</h3>
             <button className='toggle-filters-button' onClick={() => setShowFilters(prev => !prev)}>
-              Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
+              <SlidersHorizontal /> Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
             </button>
           </div>
 
@@ -370,9 +370,9 @@ const AdminInicio = () => {
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "var(--text-color)", fontWeight: "bold" }}
                   formatter={(value, name) => [currencyFormatter(value), name]} cursor={{ fill: "var(--background-hover-color)" }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="ingresos" name="Ingresos" fill="var(--primary-color)" radius={[6, 6, 0, 0]} barSize={28} />
+                <Bar dataKey="ingresos" name="Ingresos" fill={POSITIVE} radius={[6, 6, 0, 0]} barSize={28} />
                 <Bar dataKey="gastos" name="Gastos" fill={NEGATIVE} radius={[6, 6, 0, 0]} barSize={28} />
-                <Line type="monotone" dataKey="ganancia" name="Ganancia neta" stroke={POSITIVE} strokeWidth={3} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="ganancia" name="Ganancia neta" stroke="var(--primary-color)" strokeWidth={3} dot={{ r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
             </div>

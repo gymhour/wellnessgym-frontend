@@ -6,7 +6,7 @@ import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown.jsx';
 import apiService from '../../../services/apiService';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
-import { ChevronDown, ChevronUp, Video } from 'lucide-react';
+import { ChevronDown, ChevronUp, Video, SlidersHorizontal } from 'lucide-react';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp.jsx';
 import { toast } from 'react-toastify';
 import { useNavigate, Link } from 'react-router-dom';
@@ -442,7 +442,7 @@ const MiRutina = () => {
 
         <div style={{ margin: '30px 0px' }}>
           <button className='toggle-filters-button' onClick={() => setShowFilters(prev => !prev)}>
-            Filtros {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <SlidersHorizontal size={16} /> Filtros {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 

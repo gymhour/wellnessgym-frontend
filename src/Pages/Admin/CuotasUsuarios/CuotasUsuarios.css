@@ -27,6 +27,11 @@
   font-weight: 400;
 }
 
+/* Título de la columna Acciones centrado (Cuotas y Salidas de dinero) */
+.cuotas-table th:last-child {
+  text-align: center;
+}
+
 /* .cuotas-table th,
 .cuotas-table td {
   padding: 18px 8px;

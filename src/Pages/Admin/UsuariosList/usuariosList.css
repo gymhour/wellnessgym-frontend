@@ -100,6 +100,11 @@
   background-color: var(--background-color-distinct);
 }
 
+/* Título de la columna Acciones centrado */
+.usuarios-table th:last-child {
+  text-align: center;
+}
+
 .usuarios-table th,
 .usuarios-table td {
   padding: 15px 12px;
@@ -595,6 +600,128 @@
 
 .health-modal {
   width: min(94vw, 680px);
+}
+
+/* ─── Modal cambio de estado (baja / reactivación) ─── */
+.estado-modal {
+  width: min(92vw, 480px);
+}
+
+.estado-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.estado-modal-header h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+
+.estado-modal-header span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-color-distinct);
+  font-size: 13px;
+}
+
+.estado-modal-text {
+  margin: 16px 0 14px;
+  color: var(--text-color-distinct);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.estado-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.estado-modal-field label {
+  color: var(--text-color-distinct);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.estado-modal-field .custom-dropdown {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 34px 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--background-color-distinct);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.estado-modal-field .custom-dropdown:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--background-hover-color);
+}
+
+.estado-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.estado-modal-cancel,
+.estado-modal-confirm {
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.estado-modal-cancel {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+}
+
+.estado-modal-cancel:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+}
+
+.estado-modal-confirm {
+  border: 1px solid var(--primary-color);
+  background-color: var(--primary-color);
+  color: #fafafa;
+}
+
+.estado-modal-confirm:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+}
+
+.estado-modal-confirm.danger {
+  background-color: #e5484d;
+  border-color: #e5484d;
+}
+
+.estado-modal-confirm.danger:hover:not(:disabled) {
+  background-color: #c43a3f;
+  border-color: #c43a3f;
+}
+
+.estado-modal-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .health-modal-form {

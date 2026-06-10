@@ -11,7 +11,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal } from 'lucide-react';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
 
@@ -29,6 +29,20 @@ const MOTIVOS_BAJA = [
   'Otros / Sin motivo',
 ];
 
+// Motivos de alta / reactivación (debe coincidir con MOTIVOS_ALTA del backend)
+const MOTIVOS_ALTA = [
+  'Buenas instalaciones',
+  'Precio competitivo / promoción',
+  'Buena atención',
+  'Cercanía / ubicación',
+  'Recomendación de un conocido',
+  'Redes sociales / publicidad',
+  'Variedad de clases y horarios',
+  'Calidad de los entrenadores',
+  'Recomendación médica / salud',
+  'Otro / Sin motivo',
+];
+
 const normalizeFilterValue = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 const normalizeTextFilters = (filters) => ({
   ...filters,
@@ -43,7 +57,8 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [motivoSeleccionado, setMotivoSeleccionado] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
 
   // Historial de turnos modal
@@ -142,11 +157,12 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     setPage(1);
   };
 
-  const updateUsuarioEstado = async (id, nuevoEstado, motivoBaja) => {
+  const updateUsuarioEstado = async (id, nuevoEstado, motivo) => {
     setLoading(true);
     try {
       const body = { estado: nuevoEstado };
-      if (!nuevoEstado && motivoBaja) body.motivoBaja = motivoBaja;
+      if (!nuevoEstado && motivo) body.motivoBaja = motivo;
+      if (nuevoEstado && motivo) body.motivoReactivacion = motivo;
       await apiClient.put(`/usuarios/estado/${id}`, body);
       setUsuarios(prev =>
         prev.map(u =>
@@ -161,18 +177,20 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     }
   };
 
-  const openEstadoPopup = id => {
-    setSelectedUserId(id);
+  const openEstadoPopup = user => {
+    setSelectedUser(user);
+    setMotivoSeleccionado('');
     setIsPopupOpen(true);
   };
   const closePopup = () => {
     setIsPopupOpen(false);
-    setSelectedUserId(null);
+    setSelectedUser(null);
+    setMotivoSeleccionado('');
   };
-  const handlePopupConfirm = (estadoBool, motivoBaja) => {
-    if (selectedUserId !== null) {
-      updateUsuarioEstado(selectedUserId, estadoBool, motivoBaja);
-    }
+  const confirmEstadoChange = () => {
+    if (!selectedUser) return;
+    // Acción única según el estado actual: activo → baja; inactivo → reactivación.
+    updateUsuarioEstado(selectedUser.ID_Usuario, !selectedUser.estado, motivoSeleccionado);
     closePopup();
   };
 
@@ -484,7 +502,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
           >
-            Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
+            <SlidersHorizontal /> Filtros {showFilters ? <ChevronUp /> : <ChevronDown />}
           </button>
         </div>
 
@@ -684,7 +702,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                           {fromAdmin && u.tipo !== 'admin' && (
                             <SecondaryButton
                                 text="Cambiar estado"
-                                onClick={() => openEstadoPopup(u.ID_Usuario)}
+                                onClick={() => openEstadoPopup(u)}
                               />
                           )}
                         {fromAdmin && (
@@ -730,19 +748,61 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           </button>
         </div>
 
-        {fromAdmin && (
-          <ConfirmationPopup
-            isOpen={isPopupOpen}
-            onClose={closePopup}
-            onConfirm={handlePopupConfirm}
-            message="¿Qué acción deseas realizar?"
-            options={["Activar", "Desactivar"]}
-            placeholderOption="Elige estado"
-            secondaryOptions={MOTIVOS_BAJA}
-            secondaryPlaceholder="Motivo de la baja"
-            secondaryVisibleFor="Desactivar"
-            secondaryRequired
-          />
+        {/* ─── Modal cambio de estado (acción única según estado actual) ─── */}
+        {fromAdmin && isPopupOpen && selectedUser && (
+          <div className="modal-overlay" onClick={closePopup}>
+            <div className="modal-content estado-modal" onClick={e => e.stopPropagation()}>
+              <div className="estado-modal-header">
+                <div>
+                  <h3>{selectedUser.estado ? 'Desactivar usuario' : 'Reactivar usuario'}</h3>
+                  <span>
+                    {selectedUser.nombre} {selectedUser.apellido}{selectedUser.email ? ` · ${selectedUser.email}` : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="turnos-history-close"
+                  onClick={closePopup}
+                  aria-label="Cerrar"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className="estado-modal-text">
+                {selectedUser.estado
+                  ? 'El alumno quedará inactivo y no podrá registrar ingresos. Indicá el motivo de la baja:'
+                  : 'El alumno volverá a estar activo. Indicá el motivo de la reactivación:'}
+              </p>
+
+              <div className="estado-modal-field">
+                <label htmlFor="motivoEstado">
+                  {selectedUser.estado ? 'Motivo de la baja' : 'Motivo de reactivación'}
+                </label>
+                <CustomDropdown
+                  id="motivoEstado"
+                  options={selectedUser.estado ? MOTIVOS_BAJA : MOTIVOS_ALTA}
+                  value={motivoSeleccionado}
+                  onChange={e => setMotivoSeleccionado(e.target.value)}
+                  placeholderOption="Seleccioná un motivo"
+                />
+              </div>
+
+              <div className="estado-modal-actions">
+                <button type="button" className="estado-modal-cancel" onClick={closePopup}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={`estado-modal-confirm ${selectedUser.estado ? 'danger' : ''}`}
+                  disabled={!motivoSeleccionado}
+                  onClick={confirmEstadoChange}
+                >
+                  {selectedUser.estado ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ─── Modal historial de turnos ─── */}

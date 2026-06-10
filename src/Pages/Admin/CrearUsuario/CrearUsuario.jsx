@@ -26,6 +26,20 @@ const sortHorarios = (horarios) =>
     return formatHora(a.horaIni).localeCompare(formatHora(b.horaIni));
   });
 
+// Motivos de alta (debe coincidir con MOTIVOS_ALTA del backend en user.Controller.ts)
+const MOTIVOS_ALTA = [
+  'Buenas instalaciones',
+  'Precio competitivo / promoción',
+  'Buena atención',
+  'Cercanía / ubicación',
+  'Recomendación de un conocido',
+  'Redes sociales / publicidad',
+  'Variedad de clases y horarios',
+  'Calidad de los entrenadores',
+  'Recomendación médica / salud',
+  'Otro / Sin motivo',
+];
+
 const CrearUsuario = () => {
   const initialFormData = {
     email: '',
@@ -39,6 +53,7 @@ const CrearUsuario = () => {
     tipo: '',
     fechaCumple: '',
     plan: '',
+    motivoAlta: '',
     usaTurnosFijos: false,
     observacionesSalud: '',
     fichaMedicaUrl: '',
@@ -219,6 +234,7 @@ const CrearUsuario = () => {
       payload.append('fechaCumple', isoFecha);
       payload.append('observacionesSalud', formData.observacionesSalud.trim());
       payload.append('fichaMedicaUrl', formData.fichaMedicaUrl.trim());
+      if (formData.motivoAlta) payload.append('motivoAlta', formData.motivoAlta);
 
       if (idPlan) payload.append('ID_Plan', idPlan);
       payload.append('usaTurnosFijos', String(formData.usaTurnosFijos));
@@ -348,6 +364,17 @@ const CrearUsuario = () => {
                 }}
                 name="plan" id="plan"
               />
+
+              <label htmlFor="motivoAlta" style={{ marginTop: '12px' }}>Motivo de alta (opcional)</label>
+              <CustomDropdown
+                options={MOTIVOS_ALTA}
+                value={formData.motivoAlta}
+                onChange={handleChange}
+                name="motivoAlta" id="motivoAlta"
+                placeholderOption="— Seleccioná un motivo —"
+                placeholderDisabled={false}
+              />
+
               <label className="usuario-form-toggle">
                   <span className="toggle-switch">
                     <input
