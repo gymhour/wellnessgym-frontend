@@ -472,6 +472,16 @@ const getChurnRisk = async ({ page = 1, take = 20, riskLevel = '', search = '' }
     }
 }
 
+const sendChurnContactEmail = async ({ ID_Usuario, asunto, mensaje, plantilla }) => {
+    try {
+        const response = await apiClient.post("/admin/churn-risk/contact", { ID_Usuario, asunto, mensaje, plantilla });
+        return response.data;
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "No se pudo enviar el mail.");
+    }
+}
+
 // Admin planes
 const getPlanes = async () => {
     try {
@@ -802,6 +812,7 @@ export default {
     // Admin dashboard
     getKPIs,
     getChurnRisk,
+    sendChurnContactEmail,
     // Planes
     getPlanes,
     postPlanes,

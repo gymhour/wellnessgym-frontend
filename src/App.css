@@ -135,9 +135,17 @@
     .Toastify__toast-container--top-right {
       width: 70% !important;
       top: 12px;
-      right: 20px !important;    
-      left: auto !important;  
-      transform: none !important;  
+      right: 20px !important;
+      left: auto !important;
+      transform: none !important;
     }
   }
+
+/* Modo oscuro: el ícono nativo del calendario/reloj es negro y no se ve sobre fondo oscuro */
+[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
   

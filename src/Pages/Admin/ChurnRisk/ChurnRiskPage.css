@@ -352,6 +352,58 @@
   white-space: nowrap;
 }
 
+/* Celda Contactar: botones (WhatsApp + Mail) apilados + última fecha de contacto */
+.contact-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contact-cell-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.mail-btn-table {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-distinct);
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease;
+}
+
+.mail-btn-table:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--background-hover-color);
+}
+
+.contact-last {
+  color: var(--text-color-distinct);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.mail-retencion-textarea {
+  width: 100%;
+  min-height: 170px;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .churn-risk-user {
   display: flex;
   flex-direction: column;

@@ -53,6 +53,7 @@ const AdminInicio = () => {
   const [finance, setFinance] = useState([]);       // [{ mes, ingresos, gastos, ganancia }]
   const [membership, setMembership] = useState([]); // [{ mes, altasNuevas, reactivaciones, altas, bajas, neto }]
   const [bajasMotivo, setBajasMotivo] = useState([]); // [{ mes, motivo, cantidad }]
+  const [altasMotivo, setAltasMotivo] = useState([]); // [{ mes, motivo, cantidad }] (altas + reactivaciones)
 
   const [nombreUsuario, setNombreUsuario] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -62,6 +63,7 @@ const AdminInicio = () => {
   const financeRef = useRef(null);
   const membershipRef = useRef(null);
   const motivoRef = useRef(null);
+  const altasMotivoRef = useRef(null);
 
   // Filtros de rango (mes/año)
   const [inputStartDate, setInputStartDate] = useState(null);
@@ -77,6 +79,7 @@ const AdminInicio = () => {
       setFinance(response?.financeHistory || []);
       setMembership(response?.membershipHistory || []);
       setBajasMotivo(response?.bajasPorMotivo || []);
+      setAltasMotivo(response?.altasPorMotivo || []);
     } catch (error) {
       console.error('Error al obtener los KPIs:', error);
       toast.error('Error al cargar KPIs');
@@ -131,6 +134,15 @@ const AdminInicio = () => {
     .map(([motivo, cantidad]) => ({ motivo, cantidad }))
     .sort((a, b) => b.cantidad - a.cantidad);
 
+  // Altas (nuevas + reactivaciones) por motivo, agregadas sobre el rango activo
+  const altaMotivoTotals = {};
+  altasMotivo.forEach(a => {
+    if (mesInRange(a.mes)) altaMotivoTotals[a.motivo] = (altaMotivoTotals[a.motivo] || 0) + a.cantidad;
+  });
+  const altaMotivoData = Object.entries(altaMotivoTotals)
+    .map(([motivo, cantidad]) => ({ motivo, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad);
+
   const applyFilters = () => {
     setFilterStartDate(inputStartDate ? new Date(inputStartDate.getFullYear(), inputStartDate.getMonth(), 1) : null);
     if (inputEndDate) {
@@ -163,6 +175,7 @@ const AdminInicio = () => {
       const charts = [];
       if (financeData.length > 0) charts.push({ title: 'Ingresos vs Gastos · Ganancia neta', node: financeRef.current });
       if (membershipData.length > 0) charts.push({ title: 'Crecimiento de socios', node: membershipRef.current });
+      if (altaMotivoData.length > 0) charts.push({ title: 'Altas por motivo', node: altasMotivoRef.current });
       if (motivoData.length > 0) charts.push({ title: 'Bajas por motivo', node: motivoRef.current });
 
       await generateFinancialReportPdf({
@@ -401,6 +414,25 @@ const AdminInicio = () => {
             </div>
           ) : (
             <p>No hay datos de socios para el período.</p>
+          )}
+
+          {/* --- Altas por motivo --- */}
+          <h4 className="chart-subtitle">Altas por motivo (nuevas + reactivaciones)</h4>
+          {altaMotivoData.length > 0 ? (
+            <div ref={altasMotivoRef} className="chart-capture">
+            <ResponsiveContainer width="100%" height={Math.max(220, altaMotivoData.length * 44)}>
+              <BarChart data={altaMotivoData} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+                <CartesianGrid horizontal={false} stroke="var(--border-color)" strokeDasharray="3 3" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={axisTick} allowDecimals={false} />
+                <YAxis type="category" dataKey="motivo" axisLine={false} tickLine={false} tick={axisTick} width={190} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "var(--text-color)", fontWeight: "bold" }}
+                  cursor={{ fill: "var(--background-hover-color)" }} formatter={(value) => [value, 'Altas']} />
+                <Bar dataKey="cantidad" name="Altas" fill={POSITIVE} radius={[0, 6, 6, 0]} barSize={22} />
+              </BarChart>
+            </ResponsiveContainer>
+            </div>
+          ) : (
+            <p>No hay altas registradas para el período.</p>
           )}
 
           {/* --- Bajas por motivo --- */}

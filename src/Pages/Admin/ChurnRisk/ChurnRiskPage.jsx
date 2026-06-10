@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronUp, ShieldCheck, SlidersHorizontal, TrendingDown, Users } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Mail, ShieldCheck, SlidersHorizontal, TrendingDown, Users, X } from 'lucide-react';
+import { toast } from 'react-toastify';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
@@ -45,6 +46,29 @@ const getStudentName = user => (
   [user?.nombre, user?.apellido].filter(Boolean).join(' ') || user?.email || 'Alumno sin nombre'
 );
 
+// Plantilla de retención (extensible: agregar entradas y un dropdown cuando haya más de una)
+const PLANTILLA_TE_EXTRANAMOS = {
+  id: 'TE_EXTRANAMOS',
+  asunto: nombre => `¡Te extrañamos en el gimnasio${nombre ? `, ${nombre}` : ''}! ❤️`,
+  mensaje: nombre => (
+    `Hola${nombre ? ` ${nombre}` : ''}:\n\n` +
+    'Hace un tiempo que no te vemos por el gimnasio y queríamos saber cómo estás. ' +
+    'Sabemos que retomar cuesta, pero el primer paso es el más importante.\n\n' +
+    'Tu lugar te está esperando: reservá tu próximo turno y volvé a entrenar con todo.\n\n' +
+    '¡Te esperamos! 💪'
+  ),
+};
+
+const lastContactLabel = value => {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const days = Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+  if (days === 0) return 'Contactado hoy';
+  if (days === 1) return 'Contactado ayer';
+  return `Contactado hace ${days} días`;
+};
+
 // Normaliza un teléfono argentino al formato que espera wa.me: "54 9" + (área + abonado).
 // Contempla +54 / 0054, el código de país 54, el prefijo de larga distancia 0,
 // el "9" de móvil y el "15" heredado que queda entre el área y el número.
@@ -83,6 +107,10 @@ const ChurnRiskPage = () => {
     data: [],
   });
 
+  // Modal de mail de retención (precargado con la plantilla, editable)
+  const [mailModal, setMailModal] = useState(null); // { user, asunto, mensaje }
+  const [sendingMail, setSendingMail] = useState(false);
+
   const loadRiskReport = async () => {
     setLoading(true);
     setError('');
@@ -110,6 +138,41 @@ const ChurnRiskPage = () => {
     loadRiskReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, page]);
+
+  const openMailModal = user => {
+    const nombre = user?.nombre || '';
+    setMailModal({
+      user,
+      asunto: PLANTILLA_TE_EXTRANAMOS.asunto(nombre),
+      mensaje: PLANTILLA_TE_EXTRANAMOS.mensaje(nombre),
+    });
+  };
+
+  const closeMailModal = () => setMailModal(null);
+
+  const handleSendMail = async () => {
+    if (!mailModal?.user?.id) return;
+    if (!mailModal.asunto.trim() || !mailModal.mensaje.trim()) {
+      toast.error('Completá el asunto y el mensaje.');
+      return;
+    }
+    setSendingMail(true);
+    try {
+      const data = await apiService.sendChurnContactEmail({
+        ID_Usuario: mailModal.user.id,
+        asunto: mailModal.asunto.trim(),
+        mensaje: mailModal.mensaje.trim(),
+        plantilla: PLANTILLA_TE_EXTRANAMOS.id,
+      });
+      toast.success(`Mail enviado a ${getStudentName(mailModal.user)} (${data?.enviadoA || 'casilla del alumno'}).`);
+      closeMailModal();
+      loadRiskReport(); // refresca "último contacto"
+    } catch (err) {
+      toast.error(err.message || 'No se pudo enviar el mail.');
+    } finally {
+      setSendingMail(false);
+    }
+  };
 
   const cards = useMemo(() => ([
     {
@@ -300,6 +363,8 @@ const ChurnRiskPage = () => {
                       <td data-label="Consistencia">{item.metrics?.activeWeeksLast4 || 0}/4 sem.</td>
                       <td data-label="Motivo" title={item.mainReason || ''}>{item.mainReason}</td>
                       <td data-label="Contactar">
+                        <div className="contact-cell">
+                        <div className="contact-cell-buttons">
                         {waLink ? (
                           <a
                             href={waLink}
@@ -321,6 +386,20 @@ const ChurnRiskPage = () => {
                             <span>N/A</span>
                           </span>
                         )}
+                        <button
+                          type="button"
+                          className="mail-btn-table"
+                          onClick={() => openMailModal(item.user)}
+                          title={`Enviar mail a ${getStudentName(item.user)}`}
+                        >
+                          <Mail size={15} />
+                          <span>Mail</span>
+                        </button>
+                        </div>
+                        {lastContactLabel(item.lastContactAt) && (
+                          <span className="contact-last">{lastContactLabel(item.lastContactAt)}</span>
+                        )}
+                        </div>
                       </td>
                     </tr>
                     );
@@ -341,6 +420,65 @@ const ChurnRiskPage = () => {
           </>
         )}
       </main>
+
+      {/* ─── Modal mail de retención ─── */}
+      {mailModal && (
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) closeMailModal();
+          }}
+        >
+          <div className="cuotas-modal cuotas-modal-small" role="dialog" aria-modal="true" aria-labelledby="mail-retencion-title">
+            <div className="modal-form">
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="mail-retencion-title">Enviar mail a {getStudentName(mailModal.user)}</h3>
+                  <span>
+                    Se enviará a <strong>{mailModal.user?.email || '—'}</strong> · plantilla "Te extrañamos", editable antes de enviar.
+                  </span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={closeMailModal} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="cuotas-modal-grid">
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Asunto</label>
+                  <CustomInput
+                    value={mailModal.asunto}
+                    onChange={e => setMailModal(prev => ({ ...prev, asunto: e.target.value }))}
+                    maxLength={150}
+                    width="100%"
+                  />
+                </div>
+
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Mensaje</label>
+                  <textarea
+                    className="custom-input mail-retencion-textarea"
+                    rows={8}
+                    maxLength={2000}
+                    value={mailModal.mensaje}
+                    onChange={e => setMailModal(prev => ({ ...prev, mensaje: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="cuotas-modal-actions">
+                <button type="button" className="cuotas-modal-secondary-button" onClick={closeMailModal}>
+                  Cancelar
+                </button>
+                <button type="button" className="cuotas-modal-primary-button" onClick={handleSendMail} disabled={sendingMail}>
+                  {sendingMail ? 'Enviando…' : 'Enviar mail'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
