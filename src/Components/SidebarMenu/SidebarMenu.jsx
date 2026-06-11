@@ -3,7 +3,7 @@ import React, { useState } from "react";
 // Css
 import "./sidebarmenu.css";
 // Assets
-import ClientLogo from "../../assets/client/ag_entrenamiento.png";
+import ClientLogo from "../../assets/client/wellness_logo.png";
 import OurLogo from "../../assets/gymhour/logo_gymhour.png";
 import OurLogoBlack from "../../assets/gymhour/logo_gymhour_black.png";
 // Iconos sidebar
@@ -72,7 +72,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
     return () => observer.disconnect();
   }, []);
 
-  const logoSrc = currentTheme === 'light' ? OurLogoBlack : OurLogo;
+  const logoSrc = currentTheme === 'light' ? ClientLogo : ClientLogo;
 
   const handleLogoutClick = () => setIsPopupOpen(true);
   const handleLogoutConfirm = () => {
@@ -340,7 +340,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                         <Home className="icon" /> Inicio
                       </li>
                     </Link>
-                    <Link
+                    {/* <Link
                       to="/entrenador/turnos"
                       className={`menu-link ${location.pathname === "/entrenador/turnos"
                         ? "active"
@@ -349,6 +349,17 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     >
                       <li className="menu-item">
                         <CalendarCheck className="icon" /> Mis turnos
+                      </li>
+                    </Link> */}
+                    <Link
+                      to="/entrenador/turnos"
+                      className={`menu-link ${location.pathname === "/entrenador/turnos"
+                        ? "active"
+                        : ""
+                        }`}
+                    >
+                      <li className="menu-item">
+                        <CalendarCheck className="icon" /> Turnos
                       </li>
                     </Link>
                     <Link
@@ -382,6 +393,18 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       </li>
                     </Link>
                     <Link
+                      to="/entrenador/crear-usuario"
+                      className={`menu-link ${location.pathname === "/admin/crear-usuario"
+                        ? "active"
+                        : ""
+                        }`}
+                    >
+                      <li className="menu-item">
+                        <UserPlus className="icon" />{" "}
+                        Crear usuario
+                      </li>
+                    </Link>
+                    <Link
                       to="/entrenador/usuarios"
                       className={`menu-link ${location.pathname === "/entrenador/usuarios" ? "active" : ""
                         }`}
@@ -399,6 +422,18 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                         <Activity className="icon" /> Clases y actividades
                       </li>
                     </Link>
+                    <Link
+                    to="/entrenador/cuotas"
+                    className={`menu-link ${location.pathname === "/admin/cuotas"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <DollarSign className="icon" />{" "}
+                      Cuotas
+                    </li>
+                  </Link>
                   </>
                 )
                   // SIDEBAR ALUMNO

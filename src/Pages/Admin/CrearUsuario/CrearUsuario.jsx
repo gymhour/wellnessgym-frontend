@@ -40,7 +40,7 @@ const MOTIVOS_ALTA = [
   'Otro / Sin motivo',
 ];
 
-const CrearUsuario = () => {
+const CrearUsuario = ({fromAdmin, fromEntrenador}) => {
   const initialFormData = {
     email: '',
     password: '',
@@ -278,7 +278,7 @@ const CrearUsuario = () => {
   return (
     <div className="page-layout">
       {isLoading && <LoaderFullScreen />}
-      <SidebarMenu isAdmin={true} />
+      <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       <div className="content-layout">
         <div className="usuario-form-page">
           <SecondaryButton

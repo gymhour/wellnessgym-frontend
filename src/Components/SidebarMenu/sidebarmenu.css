@@ -175,8 +175,8 @@
   }
 
   .svg-icon {
-    color: red;
-    fill: red;
+    color: var(--primary-color);
+    fill: var(--primary-color);
   }
 
   .mobile-logo {

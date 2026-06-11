@@ -1510,7 +1510,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
               type,
               setsReps: block.data.setsReps[0]?.series || null,
               nombreEj: block.data.setsReps[0]?.exercise || null,
-              weight: (block.data.setsReps[0]?.weight || '').trim() || null,
+              weight:
+                (block.data.setsReps[0]?.weight || '').trim() || null,
               descansoRonda: block.data.descanso || null,
               bloqueEjercicios
             });

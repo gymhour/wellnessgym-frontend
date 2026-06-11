@@ -611,7 +611,17 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         ) : (
           <div className="table-responsive">
             <table className='usuarios-table'>
-<thead>
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '25%' }} />
+              </colgroup>
+              <thead>
                 <tr>
                   <th>Nombre y apellido</th>
                   <th>DNI</th>
@@ -619,8 +629,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                   <th>Plan</th>
                   <th>Registro</th>
                   <th>Estado</th>
-                  <th>WhatsApp</th>
-                  {(fromAdmin || fromEntrenador) && <th>Acciones</th>}
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -665,60 +674,19 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                       </span>
                     </td>
 
-                    <td data-label="WhatsApp">
-                      {u.tel ? (
-                        <a
-                          href={`https://wa.me/${u.tel.replace(/[^\d]/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="whatsapp-btn-table"
-                          title={`Enviar WhatsApp a ${u.nombre}`}
-                        >
-                          <svg className="whatsapp-svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.906-6.99C16.66 1.876 14.18 1.84 11.54 1.84c-5.436 0-9.86 4.42-9.864 9.864-.001 1.702.461 3.361 1.34 4.816l-.997 3.637 3.73-.978zm11.758-6.84c-.302-.15-1.782-.88-2.06-.98-.277-.1-.479-.15-.68.15-.2.3-.777.98-.952 1.18-.176.2-.351.225-.653.075-.302-.15-1.274-.47-2.427-1.498-.897-.8-1.502-1.79-1.678-2.09-.176-.3-.019-.462.132-.612.135-.135.302-.35.452-.525.15-.175.2-.299.3-.5.1-.2.05-.375-.025-.525-.075-.15-.68-1.64-.932-2.245-.246-.59-.497-.51-.68-.52-.176-.01-.377-.01-.578-.01-.2 0-.526.075-.802.375-.276.3-1.053 1.03-1.053 2.51 0 1.48 1.079 2.91 1.23 3.11.151.2 2.124 3.244 5.145 4.545.718.31 1.278.495 1.714.634.722.23 1.38.197 1.902.12.58-.085 1.782-.73 2.033-1.433.251-.703.251-1.305.176-1.433-.075-.127-.276-.202-.578-.352z"/>
-                          </svg>
-                          <span>Chat</span>
-                        </a>
-                      ) : (
-                        <span className="whatsapp-disabled" title="Sin número de teléfono">
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.906-6.99C16.66 1.876 14.18 1.84 11.54 1.84c-5.436 0-9.86 4.42-9.864 9.864-.001 1.702.461 3.361 1.34 4.816l-.997 3.637 3.73-.978zm11.758-6.84c-.302-.15-1.782-.88-2.06-.98-.277-.1-.479-.15-.68.15-.2.3-.777.98-.952 1.18-.176.2-.351.225-.653.075-.302-.15-1.274-.47-2.427-1.498-.897-.8-1.502-1.79-1.678-2.09-.176-.3-.019-.462.132-.612.135-.135.302-.35.452-.525.15-.175.2-.299.3-.5.1-.2.05-.375-.025-.525-.075-.15-.68-1.64-.932-2.245-.246-.59-.497-.51-.68-.52-.176-.01-.377-.01-.578-.01-.2 0-.526.075-.802.375-.276.3-1.053 1.03-1.053 2.51 0 1.48 1.079 2.91 1.23 3.11.151.2 2.124 3.244 5.145 4.545.718.31 1.278.495 1.714.634.722.23 1.38.197 1.902.12.58-.085 1.782-.73 2.033-1.433.251-.703.251-1.305.176-1.433-.075-.127-.276-.202-.578-.352z"/>
-                          </svg>
-                          <span>N/A</span>
-                        </span>
-                      )}
-                    </td>
-
-                    {(fromAdmin || fromEntrenador) && (
                       <td data-label="Acciones" className="usuarios-table-actions">
-                        {fromAdmin && (
-                          <>
-                            <SecondaryButton
-                              text="Ver turnos"
-                              onClick={() => fetchTurnosHistory(u)}
-                            />
-                          </>
-                        )}
-                          {fromAdmin && u.tipo !== 'admin' && (
-                            <SecondaryButton
-                                text="Cambiar estado"
-                                onClick={() => openEstadoPopup(u)}
-                              />
-                          )}
-                        {fromAdmin && (
-                          <PrimaryButton
-                            text="Editar"
-                            linkTo={`/admin/editar-usuario/${u.ID_Usuario}`}
-                          />
-                        )}
-                        {fromEntrenador && (
+                        <PrimaryButton
+                          text="Editar"
+                          linkTo={fromAdmin ? `/admin/editar-usuario/${u.ID_Usuario}` : `/entrenador/editar-usuario/${u.ID_Usuario}`}
+                        />
+
                           <SecondaryButton
                             text="Salud"
                             onClick={() => openHealthModal(u)}
                           />
-                        )}
+                        
                       </td>
-                    )}
+                    
                   </tr>
                 ))}
               </tbody>
@@ -748,283 +716,14 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           </button>
         </div>
 
-        {/* ─── Modal cambio de estado (acción única según estado actual) ─── */}
-        {fromAdmin && isPopupOpen && selectedUser && (
-          <div className="modal-overlay" onClick={closePopup}>
-            <div className="modal-content estado-modal" onClick={e => e.stopPropagation()}>
-              <div className="estado-modal-header">
-                <div>
-                  <h3>{selectedUser.estado ? 'Desactivar usuario' : 'Reactivar usuario'}</h3>
-                  <span>
-                    {selectedUser.nombre} {selectedUser.apellido}{selectedUser.email ? ` · ${selectedUser.email}` : ''}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="turnos-history-close"
-                  onClick={closePopup}
-                  aria-label="Cerrar"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <p className="estado-modal-text">
-                {selectedUser.estado
-                  ? 'El alumno quedará inactivo y no podrá registrar ingresos. Indicá el motivo de la baja:'
-                  : 'El alumno volverá a estar activo. Indicá el motivo de la reactivación:'}
-              </p>
-
-              <div className="estado-modal-field">
-                <label htmlFor="motivoEstado">
-                  {selectedUser.estado ? 'Motivo de la baja' : 'Motivo de reactivación'}
-                </label>
-                <CustomDropdown
-                  id="motivoEstado"
-                  options={selectedUser.estado ? MOTIVOS_BAJA : MOTIVOS_ALTA}
-                  value={motivoSeleccionado}
-                  onChange={e => setMotivoSeleccionado(e.target.value)}
-                  placeholderOption="Seleccioná un motivo"
-                />
-              </div>
-
-              <div className="estado-modal-actions">
-                <button type="button" className="estado-modal-cancel" onClick={closePopup}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className={`estado-modal-confirm ${selectedUser.estado ? 'danger' : ''}`}
-                  disabled={!motivoSeleccionado}
-                  onClick={confirmEstadoChange}
-                >
-                  {selectedUser.estado ? 'Desactivar' : 'Activar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Modal historial de turnos ─── */}
-        {showHistoryModal && (
-          <div className="modal-overlay" onClick={closeHistoryModal}>
-            <div
-              className="modal-content turnos-history-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="turnos-history-header">
-                <div>
-                  <h3 style={{ margin: 0 }}>Historial de turnos</h3>
-                  <span style={{ fontSize: '14px', color: 'var(--text-color-distinct)' }}>
-                    {historyUser?.nombre} {historyUser?.apellido} · {historyUser?.email}
-                  </span>
-                </div>
-                <button
-                  className="turnos-history-close"
-                  onClick={closeHistoryModal}
-                  aria-label="Cerrar historial de turnos"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {historyLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>Cargando turnos...</div>
-              ) : (
-                <>
-                  {/* ─── Resumen de asistencia ─── */}
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    {[
-                      { label: 'Total', value: stats.total, color: 'var(--text-color)' },
-                      { label: 'Asistidos', value: stats.asistidos, color: '#10b981', pct: stats.porcentaje },
-                      { label: 'Ausentes', value: stats.ausentes, color: '#ef4444' },
-                      { label: 'Próximos', value: stats.activos, color: '#3b82f6' },
-                      { label: 'Cancelados', value: stats.cancelados, color: '#6b7280' },
-                    ].map(s => (
-                      <div key={s.label} style={{
-                        flex: 1, minWidth: '80px', background: 'var(--background-color-distinct)',
-                        borderRadius: '10px', padding: '10px 14px', textAlign: 'center'
-                      }}>
-                        <div style={{ fontSize: '22px', fontWeight: 700, color: s.color }}>{s.value}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>{s.label}</div>
-                        {s.pct !== undefined && (
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: s.color }}>{s.pct}%</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* ─── Filtros ─── */}
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'end' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
-                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Estado</label>
-                      <select
-                        value={histFiltroEstado}
-                        onChange={(e) => setHistFiltroEstado(e.target.value)}
-                        style={{
-                          padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
-                        }}
-                      >
-                        <option value="">Todos</option>
-                        <option value="ASISTIDO">Asistidos</option>
-                        <option value="AUSENTE">Ausentes</option>
-                        <option value="ACTIVO">Activos</option>
-                        <option value="CANCELADO">Cancelados</option>
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Desde</label>
-                      <input
-                        type="date"
-                        value={histFechaDesde}
-                        onChange={(e) => setHistFechaDesde(e.target.value)}
-                        style={{
-                          padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <label style={{ fontSize: '12px', color: 'var(--text-color-distinct)' }}>Hasta</label>
-                      <input
-                        type="date"
-                        value={histFechaHasta}
-                        onChange={(e) => setHistFechaHasta(e.target.value)}
-                        style={{
-                          padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                          background: 'var(--background-color-distinct)', color: 'var(--text-color)', fontSize: '13px'
-                        }}
-                      />
-                    </div>
-                    {(histFiltroEstado || histFechaDesde || histFechaHasta) && (
-                      <button
-                        onClick={() => { setHistFiltroEstado(''); setHistFechaDesde(''); setHistFechaHasta(''); }}
-                        style={{
-                          padding: '7px 14px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                          background: 'transparent', color: 'var(--text-color-distinct)', cursor: 'pointer', fontSize: '13px'
-                        }}
-                      >
-                        Limpiar filtros
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="turnos-history-tabs" role="tablist" aria-label="Tipo de turnos">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={historyActiveTab === 'past'}
-                  className={`turnos-history-tab ${historyActiveTab === 'past' ? 'active' : ''}`}
-                  onClick={() => setHistoryActiveTab('past')}
-                >
-                  Turnos pasados
-                  <span>{historyTabCounts.past}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={historyActiveTab === 'pending'}
-                  className={`turnos-history-tab ${historyActiveTab === 'pending' ? 'active' : ''}`}
-                  onClick={() => setHistoryActiveTab('pending')}
-                >
-                  Turnos pendientes
-                  <span>{historyTabCounts.pending}</span>
-                </button>
-              </div>
-
-                  {historyActiveTab === 'pending' && (
-                    <div className="turnos-history-bulk-actions">
-                      <button
-                        type="button"
-                        className="turnos-history-regenerate-fixed"
-                        onClick={() => setShowRegenerateFixedPopup(true)}
-                        disabled={regenerateFixedLoading}
-                      >
-                        {regenerateFixedLoading ? 'Regenerando...' : 'Regenerar turnos fijos'}
-                      </button>
-                      <button
-                        type="button"
-                        className="turnos-history-cancel-all"
-                        onClick={() => setShowCancelPendingPopup(true)}
-                        disabled={pendingTurnos.length === 0 || cancelPendingLoading}
-                      >
-                        {cancelPendingLoading ? 'Cancelando...' : 'Cancelar todos los turnos'}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* ─── Turnos agrupados por mes ─── */}
-                  <div className="turnos-history-list">
-                    {groupedByMonth.length === 0 ? (
-                      <p style={{ textAlign: 'center', color: 'var(--text-color-distinct)', padding: '30px' }}>
-                        {historyActiveTab === 'pending'
-                          ? 'No se encontraron turnos pendientes.'
-                          : 'No se encontraron turnos pasados.'}
-                      </p>
-                    ) : groupedByMonth.map(([mesKey, turnos]) => (
-                      <div key={mesKey} style={{ marginBottom: '16px' }}>
-                        <div style={{
-                          fontSize: '14px', fontWeight: 700, color: 'var(--text-color-distinct)',
-                          textTransform: 'capitalize', padding: '6px 0', borderBottom: '1px solid var(--border-color)',
-                          marginBottom: '6px'
-                        }}>
-                          {getMesLabel(mesKey)}
-                        </div>
-                        {turnos.map(t => {
-                          const clase = t.HorarioClase?.Clase?.nombre || '—';
-                          const horario = t.HorarioClase;
-                          return (
-                            <div key={t.id_turno} style={{
-                              display: 'flex', gap: '8px', alignItems: 'center', padding: '8px 6px',
-                              borderBottom: '1px solid var(--border-color)', fontSize: '13px'
-                            }}>
-                              <span style={{ minWidth: '85px', fontWeight: 500 }}>
-                                {getDiaSemana(t.fecha)} {formatFecha(t.fecha)}
-                              </span>
-                              <span style={{ minWidth: '50px', color: 'var(--text-color-distinct)' }}>
-                                {formatHora(horario?.horaIni)}
-                              </span>
-                              <span style={{ minWidth: '90px' }}>{clase}</span>
-                              <span style={{
-                                fontSize: '11px', padding: '2px 8px', borderRadius: '5px',
-                                background: t.origen === 'FIJO' ? 'rgba(59,130,246,0.12)' : 'rgba(107,114,128,0.12)',
-                                color: t.origen === 'FIJO' ? '#3b82f6' : '#6b7280',
-                                fontWeight: 600, minWidth: '46px', textAlign: 'center'
-                              }}>
-                                {t.origen || '—'}
-                              </span>
-                              <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                                <span style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                  padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                                  background: `${badgeColor(t.estado)}18`,
-                                  color: badgeColor(t.estado),
-                                }}>
-                                  <span style={{
-                                    width: '7px', height: '7px', borderRadius: '50%',
-                                    background: badgeColor(t.estado), display: 'inline-block'
-                                  }} />
-                                  {badgeLabel(t.estado)}
-                                </span>
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {showImportModal && (
-          <ImportUsuariosModal
-            onClose={() => setShowImportModal(false)}
-            onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
+        {(fromAdmin || fromEntrenador) && (
+          <ConfirmationPopup
+            isOpen={isPopupOpen}
+            onClose={closePopup}
+            onConfirm={handlePopupConfirm}
+            message="¿Qué acción deseas realizar?"
+            options={["Activar", "Desactivar"]}
+            placeholderOption="Elige estado"
           />
         )}
 

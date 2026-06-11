@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import './login.css';
 // Assets
 import LoginBackgroundImage from '../../../assets/login/login_background.png';
-import ClientLogo from '../../../assets/client/ag_entrenamiento.png'
+import ClientLogo from '../../../assets/client/wellness_logo.png'
 import OurLogo from '../../../assets/gymhour/logo_gymhour_sin_texto.png'
 import OurLogoBlack from '../../../assets/gymhour/logo_gymhour_sin_texto_negro.png'
 // Funciones
@@ -51,7 +51,7 @@ const Login = () => {
     return () => observer.disconnect();
   }, []);
 
-  const logoSrc = currentTheme === 'light' ? OurLogoBlack : OurLogo;
+  const logoSrc = currentTheme === 'light' ? ClientLogo : ClientLogo;
 
   // --- Nuevo: estado del modal de cumpleaños y redirección pendiente ---
   const [showBirthdayModal, setShowBirthdayModal] = useState(false);

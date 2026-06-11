@@ -16,48 +16,7 @@ import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
 
-const cuotasSelectStyles = {
-  control: (base, state) => ({
-    ...base,
-    width: '100%',
-    minHeight: 44,
-    borderRadius: 8,
-    borderColor: state.isFocused ? 'rgba(218, 70, 50, 0.48)' : 'var(--border-color)',
-    backgroundColor: 'var(--background-color-distinct)',
-    boxShadow: state.isFocused ? '0 0 0 3px rgba(218, 70, 50, 0.12)' : 'none',
-    color: 'var(--text-color)',
-    fontSize: 14,
-    ':hover': {
-      borderColor: 'rgba(218, 70, 50, 0.48)'
-    }
-  }),
-  menu: (base) => ({
-    ...base,
-    zIndex: 1001,
-    overflow: 'hidden',
-    border: '1px solid var(--border-color)',
-    borderRadius: 8,
-    backgroundColor: 'var(--background-color)',
-    boxShadow: '0 18px 40px rgba(0, 0, 0, 0.12)'
-  }),
-  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? 'var(--background-hover-color)' : 'var(--background-color)',
-    color: 'var(--text-color)',
-    fontSize: 14
-  }),
-  singleValue: (base) => ({ ...base, color: 'var(--text-color)' }),
-  input: (base) => ({ ...base, color: 'var(--text-color)' }),
-  placeholder: (base) => ({ ...base, color: 'var(--text-color-distinct)' })
-};
-
-const usuarioToOption = (usuario) => ({
-  value: usuario.ID_Usuario,
-  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
-});
-
-const CuotasUsuarios = () => {
+const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   // — Estados de datos y carga —
   const [cuotas, setCuotas] = useState([]);
   const [planOptions, setPlanOptions] = useState([]);
@@ -396,7 +355,7 @@ const CuotasUsuarios = () => {
   return (
     <div className="page-layout">
       {loading && <LoaderFullScreen />}
-      <SidebarMenu isAdmin={true} />
+      <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
 
       <div className="content-layout">
         <div className="header-actions cuotas-usuarios" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -1,8 +1,8 @@
 /* variables.css */
 :root {
-    --primary-color: #DA4632;
-    --primary-color-hover: #ee452f;
-    --background-hover-color: #da463244;
+    --primary-color: #01A5A6;
+    --primary-color-hover: #21b0b0;
+    --background-hover-color: #01a6a630;
     --medium-grey: #8d8d8d;
     --light-grey: #ffffff36;
     --admin-kpi-card-gradient: linear-gradient(180deg, rgba(16, 16, 16, 0.035) 0%, rgba(16, 16, 16, 0.015) 46%, rgba(255, 255, 255, 0) 100%);
@@ -83,7 +83,7 @@
     --login-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
     --login-card-border: var(--border-color);
     --login-input-border: var(--border-color);
-    --login-input-focus-shadow: 0 0 0 4px rgba(218, 70, 50, 0.16);
+    --login-input-focus-shadow: var(--background-hover-color);
     --login-backdrop-blur: none;
     --success-text-color: #77E97B;
     --button-hover-text-color: rgba(255, 255, 255, 0.8);
@@ -101,7 +101,7 @@
     --login-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
     --login-card-border: rgba(0, 0, 0, 0.04);
     --login-input-border: #e5e5e5;
-    --login-input-focus-shadow: 0 0 0 3px rgba(218, 70, 50, 0.15);
+    --login-input-focus-shadow: var(--background-hover-color);
     --login-backdrop-blur: blur(4px);
     --success-text-color: #059669;
     --button-hover-text-color: rgba(0, 0, 0, 0.7);
