@@ -17,7 +17,6 @@ import {
   Notebook,
   CalendarCheck,
   Star,
-  UserPlus,
   Users,
   Menu,
   X,
@@ -25,7 +24,11 @@ import {
   UserCog,
   FileText,
   Dumbbell,
-  FilePenLine
+  FilePenLine,
+  ClipboardCheck,
+  ScanLine,
+  AlertTriangle,
+  TrendingDown
 } from 'lucide-react';
 
 
@@ -182,7 +185,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                   >
                     <li className="menu-item">
                       <Activity className="icon" />{" "}
-                      Clases y actividades
+                      Clases y Actividades
                     </li>
                   </Link>
                   <Link
@@ -198,15 +201,15 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     </li>
                   </Link>
                   <Link
-                    to="/admin/crear-usuario"
-                    className={`menu-link ${location.pathname === "/admin/crear-usuario"
+                    to="/admin/grupos-usuarios"
+                    className={`menu-link ${location.pathname === "/admin/grupos-usuarios"
                       ? "active"
                       : ""
                       }`}
                   >
                     <li className="menu-item">
-                      <UserPlus className="icon" />{" "}
-                      Crear usuario
+                      <UserCog className="icon" />{" "}
+                      Grupos de Usuarios
                     </li>
                   </Link>
                   <Link
@@ -248,7 +251,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                   >
                     <li className="menu-item">
                       <Notebook className="icon" />{" "}
-                      Rutinas recomendadas
+                      Rutinas Recomendadas
                     </li>
                   </Link>
                   <Link
@@ -273,6 +276,54 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                     <li className="menu-item">
                       <DollarSign className="icon" />{" "}
                       Cuotas
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/salidas-dinero"
+                    className={`menu-link ${location.pathname === "/admin/salidas-dinero"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <TrendingDown className="icon" />{" "}
+                      Salidas de dinero
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/ingreso"
+                    className={`menu-link ${location.pathname === "/admin/ingreso"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <ScanLine className="icon" />{" "}
+                      Ingreso
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/asistencias"
+                    className={`menu-link ${location.pathname === "/admin/asistencias"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <ClipboardCheck className="icon" />{" "}
+                      Asistencias
+                    </li>
+                  </Link>
+                  <Link
+                    to="/admin/predictor-bajas"
+                    className={`menu-link ${location.pathname === "/admin/predictor-bajas"
+                      ? "active"
+                      : ""
+                      }`}
+                  >
+                    <li className="menu-item">
+                      <AlertTriangle className="icon" />{" "}
+                      Riesgo de baja
                     </li>
                   </Link>
                 </>
@@ -444,8 +495,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                           }`}
                       >
                         <li className="menu-item">
-                          <Notebook className="icon" /> Mi
-                          rutina
+                          <Notebook className="icon" /> Mi plan de entrenamiento
                         </li>
                       </Link>
                       <Link
@@ -507,6 +557,17 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       >
                         <li className="menu-item">
                           <DollarSign className="icon" /> Cuotas
+                        </li>
+                      </Link>
+                      <Link
+                        to="/alumno/mis-asistencias"
+                        className={`menu-link ${location.pathname === "/mis-asistencias" || location.pathname === "/alumno/mis-asistencias"
+                          ? "active"
+                          : ""
+                          }`}
+                      >
+                        <li className="menu-item">
+                          <ClipboardCheck className="icon" /> Mis asistencias
                         </li>
                       </Link>
                     </>

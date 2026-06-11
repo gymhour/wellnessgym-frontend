@@ -2,13 +2,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Select from 'react-select';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
-import apiService, { fetchAllClientsActive } from '../../../services/apiService';
+import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
-import { ChevronDown, ChevronUp, Copy, Edit, Trash2, Video } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Edit, Trash2, Video, MoreVertical, FileSpreadsheet, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import '../../Entrenador/RutinasAsignadas/RutinasAsignadas.css';
 
 /* ===================== Helpers ===================== */
@@ -332,13 +332,17 @@ const customStyles = {
   }),
   control: (provided) => ({
     ...provided,
-    backgroundColor: 'var(--background-color-distinct)',
-    borderColor: 'transparent',
-    borderRadius: '12px',
-    padding: '6px',
+    minHeight: '42px',
+    backgroundColor: 'var(--background-color)',
+    borderColor: 'var(--border-color)',
+    borderRadius: '8px',
+    padding: '2px',
     boxShadow: 'none',
     color: 'var(--text-color)',
-    width: '300px',
+    width: '100%',
+    ':hover': {
+      borderColor: 'var(--primary-color)',
+    },
   }),
   singleValue: (provided) => ({
     ...provided,
@@ -348,6 +352,8 @@ const customStyles = {
     ...provided,
     backgroundColor: 'var(--background-color)',
     border: '1px solid var(--border-color)',
+    borderRadius: '8px',
+    overflow: 'hidden',
     zIndex: 100
   }),
   input: (provided) => ({
@@ -360,63 +366,163 @@ const customStyles = {
   })
 };
 
+const usuarioToOption = (usuario) => ({
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
+  value: usuario.ID_Usuario
+});
+
+const formatNombreCompleto = (persona) =>
+  `${persona?.nombre || ''} ${persona?.apellido || ''}`.trim();
+
+const resumenAsignaciones = (items, formatter, limit = 2) => {
+  const values = (Array.isArray(items) ? items : [])
+    .map(formatter)
+    .filter(Boolean);
+
+  if (!values.length) {
+    return {
+      hasItems: false,
+      text: '',
+      fullText: '',
+      isTruncated: false
+    };
+  }
+
+  return {
+    hasItems: true,
+    text: values.length > limit ? `${values.slice(0, limit).join(', ')}, ...` : values.join(', '),
+    fullText: values.join(', '),
+    isTruncated: values.length > limit
+  };
+};
+
 const RutinasAsignadas = () => {
   const [loading, setLoading] = useState(false);
-  const [allRutinas, setAllRutinas] = useState([]);
   const [rutinas, setRutinas] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [grupos, setGrupos] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedGrupo, setSelectedGrupo] = useState(null);
   const [asignadasPorMi, setAsignadasPorMi] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedRutinaId, setSelectedRutinaId] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [openActionsId, setOpenActionsId] = useState(null);
   const navigate = useNavigate();
 
   // estado de desplegables: { [ID_Rutina]: { [diaKey]: boolean } }
   const [openState, setOpenState] = useState({});
 
   useEffect(() => {
-    fetchUsers();
-    loadRutinasAsignadas();
+    fetchGrupos();
+    fetchRutinas(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    const term = userSearch.trim();
+    let isCurrentRequest = true;
+
+    if (term.length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsersLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUserOptions(options);
+      } catch (error) {
+        if (isCurrentRequest) {
+          setUserOptions([]);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [userSearch]);
+
+  const mergedUserOptions = useMemo(() => {
+    const optionsById = new Map();
+    [selectedUser, ...userOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [selectedUser, userOptions]);
+
+  const fetchGrupos = async () => {
     try {
-      const clientes = await fetchAllClientsActive(apiService, { take: 100 });
-      setUsers(clientes);
+      const data = await apiService.getGruposUsuarios();
+      setGrupos(Array.isArray(data) ? data : (data?.grupos || data?.data || []));
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
-      toast.error('No se pudieron cargar los usuarios para el filtro.');
+      console.error('Error cargando grupos:', error);
+      toast.error('No se pudieron cargar los grupos para el filtro.');
     }
   };
 
-  const loadRutinasAsignadas = async () => {
+  const buildOpenState = (lista) => {
+    const init = {};
+    lista.forEach(r => {
+      init[r.ID_Rutina] = {};
+      if (r.semanas && r.semanas.length > 0) {
+        const firstSem = r.semanas[0];
+        const semKey = `sem_${firstSem.id || 0}`;
+        init[r.ID_Rutina][semKey] = true;
+        const semDias = normalizeDias({ dias: firstSem.dias });
+        if (semDias.length > 0) {
+          init[r.ID_Rutina][`${semKey}_${semDias[0].key}`] = true;
+        }
+      } else {
+        const dias = normalizeDias(r);
+        if (dias.length > 0) {
+          init[r.ID_Rutina][dias[0].key] = true;
+        }
+      }
+    });
+    return init;
+  };
+
+  const fetchRutinas = async (targetPage = 1, filtros = {}) => {
     setLoading(true);
     try {
-      const { rutinas: lista = [] } = await apiService.getRutinasAsignadas();
-      // abrir primer día por defecto por rutina
-      const init = {};
-      lista.forEach(r => {
-        init[r.ID_Rutina] = {};
-        if (r.semanas && r.semanas.length > 0) {
-          const firstSem = r.semanas[0];
-          const semKey = `sem_${firstSem.id || 0}`;
-          init[r.ID_Rutina][semKey] = true;
-          // open first day of first week
-          const semDias = normalizeDias({ dias: firstSem.dias });
-          if (semDias.length > 0) {
-            init[r.ID_Rutina][`${semKey}_${semDias[0].key}`] = true;
-          }
-        } else {
-          const dias = normalizeDias(r);
-          if (dias.length > 0) {
-            init[r.ID_Rutina][dias[0].key] = true;
-          }
-        }
+      const {
+        grupoId = selectedGrupo?.value,
+        usuarioId = selectedUser?.value,
+        soloMias = asignadasPorMi,
+      } = filtros;
+      const { rutinas: lista = [], meta } = await apiService.getRutinasAsignadas({
+        page: targetPage,
+        grupoId,
+        usuarioId,
+        asignadasPorMi: soloMias,
       });
-
-      setAllRutinas(lista);
       setRutinas(lista);
-      setOpenState(init);
+      setOpenState(buildOpenState(lista));
+      setPage(meta?.page || targetPage);
+      setTotalPages(meta?.totalPages || 1);
     } catch (error) {
       console.error('Error cargando rutinas:', error);
       toast.error('Error al cargar las rutinas. Intenta nuevamente.');
@@ -426,28 +532,18 @@ const RutinasAsignadas = () => {
   };
 
   const handleSearch = () => {
-    let filtrado = [...allRutinas];
-
-    if (selectedUser) {
-      const userId = Number(selectedUser.value);
-      filtrado = filtrado.filter(r => Number(r?.alumno?.ID_Usuario) === userId);
-    }
-
-    if (asignadasPorMi) {
-      const myId = Number(localStorage.getItem('usuarioId'));
-      filtrado = filtrado.filter(r => Number(r?.ID_Entrenador) === myId || Number(r?.entrenador?.ID_Usuario) === myId);
-    }
-
-    setRutinas(filtrado);
+    fetchRutinas(1);
   };
 
   const limpiarFiltros = () => {
     setSelectedUser(null);
+    setSelectedGrupo(null);
     setAsignadasPorMi(false);
-    setRutinas(allRutinas);
+    fetchRutinas(1, { grupoId: null, usuarioId: null, soloMias: false });
   };
 
   const openDeletePopup = id => {
+    setOpenActionsId(null);
     setSelectedRutinaId(id);
     setIsPopupOpen(true);
   };
@@ -458,20 +554,18 @@ const RutinasAsignadas = () => {
   };
 
   const handleConfirmDelete = async () => {
+    if (!selectedRutinaId) return;
     setLoading(true);
-    if (selectedRutinaId) {
-      try {
-        await apiService.deleteRutina(selectedRutinaId);
-        setAllRutinas(prev => prev.filter(r => r.ID_Rutina !== selectedRutinaId));
-        setRutinas(prev => prev.filter(r => r.ID_Rutina !== selectedRutinaId));
-        toast.success('Rutina eliminada correctamente.');
-      } catch (error) {
-        toast.error('Error al eliminar la rutina');
-        console.error('Error al eliminar rutina', error);
-      } finally {
-        setLoading(false);
-        closePopup();
-      }
+    try {
+      await apiService.deleteRutina(selectedRutinaId);
+      toast.success('Rutina eliminada correctamente.');
+      closePopup();
+      await fetchRutinas(page);
+    } catch (error) {
+      toast.error('Error al eliminar la rutina');
+      console.error('Error al eliminar rutina', error);
+      setLoading(false);
+      closePopup();
     }
   };
 
@@ -482,10 +576,22 @@ const RutinasAsignadas = () => {
     }));
   };
 
-  // ====== Duplicar rutina (incluye campos TABATA) ======
+  // ====== Duplicar rutina (incluye campos TABATA y urlPlanificacion) ======
   const buildDuplicatePayload = (rutina) => {
     const entrenadorId = Number(localStorage.getItem('usuarioId')) || null;
     const alumnoId = rutina?.alumno?.ID_Usuario || null;
+
+    if (rutina?.urlPlanificacion) {
+      return {
+        ID_Usuario: alumnoId,
+        ID_Entrenador: entrenadorId,
+        nombre: `${rutina?.nombre || 'Rutina'} (1)`,
+        desc: rutina?.desc || '',
+        claseRutina: rutina?.claseRutina || 'Combinada',
+        grupoMuscularRutina: rutina?.grupoMuscularRutina || 'Mixto',
+        urlPlanificacion: rutina.urlPlanificacion,
+      };
+    }
 
     const parseBloques = (bloquesArr) => {
       const bloques = Array.isArray(bloquesArr) ? bloquesArr : [];
@@ -556,11 +662,16 @@ const RutinasAsignadas = () => {
 
   const handleDuplicate = async (rutina) => {
     try {
+      setOpenActionsId(null);
       setLoading(true);
       const payload = buildDuplicatePayload(rutina);
-      await apiService.createRutina(payload);
+      if (rutina?.urlPlanificacion) {
+        await apiService.createRutinaSimple(payload);
+      } else {
+        await apiService.createRutina(payload);
+      }
       toast.success('Rutina duplicada correctamente.');
-      await loadRutinasAsignadas();
+      await fetchRutinas(page);
     } catch (error) {
       console.error('Error al duplicar rutina:', error);
       toast.error('No se pudo duplicar la rutina. Intente nuevamente.');
@@ -573,40 +684,79 @@ const RutinasAsignadas = () => {
   return (
     <div className='page-layout'>
       <SidebarMenu isAdmin={true} isEntrenador={false} />
-      <div className='content-layout mi-rutina-ctn'>
+      <div className='content-layout mi-rutina-ctn rutinas-asignadas-page'>
 
-        <div className='mi-rutina-title' style={{ marginBottom: '20px' }}>
+        <div className='mi-rutina-title rutinas-asignadas-title'>
           <h2>Rutinas asignadas</h2>
         </div>
 
-        {/* ——— Filtro por usuario ——— */}
-        <div className='rutinas-asignadas-filtro-ctn'>
-          <Select
-            options={users.map(u => ({
-              label: `${u.nombre} ${u.apellido} (${u.email})`,
-              value: u.ID_Usuario
-            }))}
-            value={selectedUser}
-            onChange={setSelectedUser}
-            placeholder='Seleccioná un usuario'
-            isClearable
-            isSearchable
-            styles={customStyles}
-          />
-          <div className="rutinas-asignadas-checkbox-ctn">
-            <input
-              type="checkbox"
-              id="asignadasPorMi"
-              checked={asignadasPorMi}
-              onChange={(e) => setAsignadasPorMi(e.target.checked)}
-              style={{ cursor: 'pointer', width: '18px', height: '18px', accentColor: 'var(--primary-color)' }}
-            />
-            <label htmlFor="asignadasPorMi" style={{ cursor: 'pointer', margin: 0, fontWeight: 500 }}>Asignadas por mi</label>
-          </div>
-          <div className="rutinas-asignadas-filtros-btns">
-            <PrimaryButton onClick={handleSearch} text="Buscar" />
-            <SecondaryButton onClick={limpiarFiltros} text="Limpiar" />
-          </div>
+        <div className="rutinas-asignadas-filter-shell">
+          <button
+            type="button"
+            className="rutinas-asignadas-filter-trigger"
+            onClick={() => setShowFilters(prev => !prev)}
+            aria-expanded={showFilters}
+          >
+            <span>Filtros</span>
+            <span className="rutinas-asignadas-filter-meta">
+              {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </span>
+          </button>
+
+          {showFilters && (
+            <div className='rutinas-asignadas-filtro-ctn'>
+              <label className="rutinas-asignadas-filter-field">
+                <span>Usuario</span>
+                <Select
+                  options={mergedUserOptions}
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  onInputChange={(value, meta) => {
+                    if (meta.action === 'input-change') setUserSearch(value);
+                  }}
+                  placeholder='Seleccioná un usuario'
+                  noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+                  loadingMessage={() => 'Buscando usuarios...'}
+                  isClearable
+                  isSearchable
+                  isLoading={usersLoading}
+                  filterOption={null}
+                  styles={customStyles}
+                />
+              </label>
+
+              <label className="rutinas-asignadas-filter-field">
+                <span>Grupo</span>
+                <Select
+                  options={grupos.map(g => ({
+                    label: g.nombre,
+                    value: g.ID_GrupoUsuario
+                  }))}
+                  value={selectedGrupo}
+                  onChange={setSelectedGrupo}
+                  placeholder='Filtrar por grupo'
+                  isClearable
+                  isSearchable
+                  styles={customStyles}
+                />
+              </label>
+
+              <div className="rutinas-asignadas-checkbox-ctn">
+                <input
+                  type="checkbox"
+                  id="asignadasPorMi"
+                  checked={asignadasPorMi}
+                  onChange={(e) => setAsignadasPorMi(e.target.checked)}
+                />
+                <label htmlFor="asignadasPorMi">Asignadas por mi</label>
+              </div>
+
+              <div className="rutinas-asignadas-filtros-btns">
+                <PrimaryButton onClick={handleSearch} text="Buscar" />
+                <SecondaryButton onClick={limpiarFiltros} text="Limpiar" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ——— Listado de rutinas ——— */}
@@ -615,48 +765,100 @@ const RutinasAsignadas = () => {
             <p>No tienes rutinas asignadas en este momento.</p>
           ) : rutinas.map(rutina => {
             const dias = normalizeDias(rutina);
+            const usuariosResumen = resumenAsignaciones(
+              Array.isArray(rutina?.asignacionesUsuarios)
+                ? rutina.asignacionesUsuarios
+                : rutina?.alumno
+                  ? [rutina.alumno]
+                  : [],
+              formatNombreCompleto
+            );
+            const gruposResumen = resumenAsignaciones(rutina?.asignacionesGrupos, g => g?.nombre);
 
             return (
               <div key={rutina.ID_Rutina} className='rutina-card'>
                 <div className='rutina-header'>
-                  <h3>{rutina.nombre}</h3>
+                  <h3>
+                    {rutina.nombre}
+                    {/* {rutina.urlPlanificacion && (
+                      <span className="routine-badge sheet-badge">
+                        <FileSpreadsheet size={13} />
+                        Planilla Digital
+                      </span>
+                    )} */}
+                  </h3>
                   <div className="rutina-header-acciones">
                     <button
-                      onClick={() => handleDuplicate(rutina)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Duplicar rutina'
+                      type="button"
+                      onClick={() => setOpenActionsId(prev => prev === rutina.ID_Rutina ? null : rutina.ID_Rutina)}
+                      className='rutina-actions-trigger'
+                      title='Opciones de rutina'
+                      aria-expanded={openActionsId === rutina.ID_Rutina}
                     >
-                      <Copy size={18} />
+                      <MoreVertical size={19} />
                     </button>
-                    <button
-                      onClick={() => openDeletePopup(rutina.ID_Rutina)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Eliminar rutina'
-                    >
-                      <Trash2 width={20} height={20} />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/admin/editar-rutina/${rutina.ID_Rutina}`)}
-                      className='mi-rutina-eliminar-btn'
-                      title='Editar rutina'
-                    >
-                      <Edit width={20} height={20} />
-                    </button>
+                    {openActionsId === rutina.ID_Rutina && (
+                      <div className="rutina-actions-menu">
+                        <button type="button" onClick={() => handleDuplicate(rutina)}>
+                          <Copy size={16} />
+                          Duplicar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionsId(null);
+                            navigate(`/admin/editar-rutina/${rutina.ID_Rutina}`);
+                          }}
+                        >
+                          <Edit size={16} />
+                          Editar
+                        </button>
+                        <button type="button" className="danger" onClick={() => openDeletePopup(rutina.ID_Rutina)}>
+                          <Trash2 size={16} />
+                          Eliminar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className='rutina-data'>
+                {/* <div className='rutina-data'>
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
-                  <p>
-                    {rutina.semanas && rutina.semanas.length > 0
-                      ? `Semanas totales: ${rutina.semanas.length}`
-                      : `Días totales: ${dias.length}`}
-                  </p>
-                </div>
+                  {rutina.urlPlanificacion ? (
+                    <p>Modalidad: Planificación Digital</p>
+                  ) : (
+                    <p>
+                      {rutina.semanas && rutina.semanas.length > 0
+                        ? `Semanas totales: ${rutina.semanas.length}`
+                        : `Días totales: ${dias.length}`}
+                    </p>
+                  )}
+                </div> */}
 
                 {/* ===== SEMANAS o DÍAS ===== */}
-                {rutina.semanas && rutina.semanas.length > 0 ? (
+                {rutina.urlPlanificacion ? (
+                  <div className="sheet-quick-access">
+                    <div className="sheet-quick-copy">
+                      <span className="sheet-quick-icon">
+                        <FileSpreadsheet size={18} />
+                      </span>
+                      <div>
+                        <p className="sheet-quick-title">Planilla digital</p>
+                        <span>Google Sheets vinculado a esta rutina.</span>
+                      </div>
+                    </div>
+                    <a
+                      href={rutina.urlPlanificacion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sheet-quick-btn"
+                    >
+                      <span>Abrir planilla</span>
+                      <ExternalLink size={15} />
+                    </a>
+                  </div>
+                ) : rutina.semanas && rutina.semanas.length > 0 ? (
                   <div className='rutina-semanas-accordion'>
                     {rutina.semanas.map((s, idx) => {
                       const key = `sem_${s.id || idx}`;
@@ -687,15 +889,35 @@ const RutinasAsignadas = () => {
                   renderDiasContent(dias, rutina.ID_Rutina, openState, toggleDia)
                 )}
 
-                <div className="rutina-asignada" style={{ marginTop: 10 }}>
-                  <strong>Asignada a:</strong> {rutina?.alumno?.nombre} {rutina?.alumno?.apellido}
+                <div className="rutina-asignada">
+                  <div
+                    className={`rutina-asignada-row ${!usuariosResumen.hasItems ? 'empty' : ''}`}
+                    title={usuariosResumen.isTruncated ? usuariosResumen.fullText : undefined}
+                  >
+                    {usuariosResumen.hasItems && (
+                      <>
+                        <strong>Usuarios:</strong> {usuariosResumen.text}
+                      </>
+                    )}
+                  </div>
 
-                  <div>
+                  <div
+                    className={`rutina-asignada-row ${!gruposResumen.hasItems ? 'empty' : ''}`}
+                    title={gruposResumen.isTruncated ? gruposResumen.fullText : undefined}
+                  >
+                    {gruposResumen.hasItems && (
+                      <>
+                        <strong>Grupos:</strong> {gruposResumen.text}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="rutina-asignada-row">
                     <strong>Por:</strong> {`${rutina?.entrenador?.nombre || ''} ${rutina?.entrenador?.apellido || ''}`.trim() || '—'}
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12 }}>
+                <div className="rutina-card-footer">
                   <button className='rutina-ver-detalle-btn' onClick={() => navigate(`/admin/rutinas/${rutina.ID_Rutina}`)}>
                     Ver mas detalles
                   </button>
@@ -704,6 +926,34 @@ const RutinasAsignadas = () => {
             );
           })}
         </div>
+
+        {totalPages > 1 && (
+          <div className="rutinas-paginacion">
+            <button
+              type="button"
+              className="rutinas-pagination-btn"
+              onClick={() => fetchRutinas(page - 1)}
+              disabled={page <= 1}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft size={18} />
+              <span>Anterior</span>
+            </button>
+            <span className="rutinas-pagination-status">
+              Página <strong>{page}</strong> de {totalPages}
+            </span>
+            <button
+              type="button"
+              className="rutinas-pagination-btn"
+              onClick={() => fetchRutinas(page + 1)}
+              disabled={page >= totalPages}
+              aria-label="Página siguiente"
+            >
+              <span>Siguiente</span>
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
 
         <ConfirmationPopup
           isOpen={isPopupOpen}

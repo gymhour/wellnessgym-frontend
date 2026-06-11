@@ -8,7 +8,7 @@ import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropd
 import apiService from '../../../services/apiService';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { Video, ChevronDown, ChevronUp } from 'lucide-react';
+import { Video, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 
 
 /* ===================== Helpers ===================== */
@@ -318,7 +318,7 @@ const RutinasRecomendadas = () => {
             className='toggle-filters-button'
             onClick={() => setShowFilters(prev => !prev)}
           >
-            Filtros {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <SlidersHorizontal size={16} /> Filtros {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 

@@ -3,10 +3,17 @@
 .mi-rutina-title {
     display: flex;
     gap: 12px;
-    max-width: 300px;
+    max-width: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin: 0 auto 28px;
+}
+
+.mi-rutina-title h2 {
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: -0.5px;
 }
 
 .mis-rutinas-list {
@@ -283,4 +290,232 @@
 
 .rutina-ver-detalle-btn:hover {
     background-color: var(--text-color-distinct);
+}
+
+/* ==========================================
+   Premium Training Plan Styles (Antigravity)
+   ========================================== */
+.rutina-card.rutina-card-premium {
+    position: relative;
+    width: 100%;
+    max-width: 650px;
+    background: linear-gradient(135deg, var(--background-color-distinct) 0%, var(--background-color) 100%);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    padding: 24px;
+}
+
+[data-theme="dark"] .rutina-card.rutina-card-premium {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+.rutina-card.rutina-card-premium:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .rutina-card.rutina-card-premium:hover {
+    box-shadow: 0 20px 40px rgba(0, 240, 255, 0.05), 0 0 1px var(--primary-color);
+}
+
+/* Premium Badge */
+.premium-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #10B981;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 4px 10px;
+    border-radius: 9999px;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.premium-header h3 {
+    font-size: 28px;
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+    letter-spacing: 0.5px;
+}
+
+.premium-desc {
+    font-size: 0.95rem;
+    color: var(--text-color-distinct);
+    line-height: 1.5;
+    margin: 0;
+    text-transform: none;
+    font-family: inherit;
+}
+
+/* Premium Data Grid */
+.premium-data {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 16px 0;
+    font-family: inherit;
+    text-transform: none;
+}
+
+.premium-data .data-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.premium-data .data-item .label {
+    font-size: 0.75rem;
+    color: var(--text-color-distinct);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.premium-data .data-item .value {
+    font-size: 1rem;
+    color: var(--text-color);
+    font-weight: 700;
+}
+
+/* Premium Action Zone */
+.premium-action-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.sheets-icon-container {
+    background: rgba(15, 157, 88, 0.1);
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    transition: transform 0.3s ease;
+}
+
+.premium-action-zone:hover .sheets-icon-container {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.premium-action-text h4 {
+    font-size: 1.15rem;
+    margin: 0 0 6px 0;
+    color: var(--text-color);
+}
+
+.premium-action-text p {
+    font-size: 0.9rem;
+    color: var(--text-color-distinct);
+    margin: 0 0 20px 0;
+    line-height: 1.4;
+}
+
+/* Premium CTA Button */
+.premium-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #0F9D58 0%, #0B8043 100%);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none !important;
+    padding: 12px 24px;
+    border-radius: 8px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(15, 157, 88, 0.3);
+    transition: all 0.2s ease;
+}
+
+.premium-cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(15, 157, 88, 0.5);
+    background: linear-gradient(135deg, #13b367 0%, #0c914e 100%);
+}
+
+.premium-cta-btn .arrow-icon {
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+}
+
+.premium-cta-btn:hover .arrow-icon {
+    transform: translateX(4px);
+}
+
+/* Iframe Section */
+.iframe-collapsible-section {
+    margin-top: 16px;
+    width: 100%;
+}
+
+.iframe-details {
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+}
+
+.iframe-summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    user-select: none;
+}
+
+.iframe-summary::-webkit-details-marker {
+    display: none;
+}
+
+.iframe-summary:hover {
+    color: var(--text-color);
+}
+
+.iframe-wrapper {
+    margin-top: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: #000;
+    aspect-ratio: 16/10;
+    width: 100%;
+}
+
+.premium-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #ffffff;
+}
+
+@media screen and (max-width: 768px) {
+    .iframe-collapsible-section {
+        display: none; /* Hide interactive iframe on mobile because Google Sheets needs wide desktop displays */
+    }
 }

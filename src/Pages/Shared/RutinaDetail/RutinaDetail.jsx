@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiService from '../../../services/apiService';
 import './RutinaDetail.css';
@@ -21,6 +21,20 @@ const TYPE_LABELS = {
 
 const pretty = (v, fallback = '—') =>
   v === null || v === undefined || v === '' ? fallback : v;
+
+const formatNombreCompleto = (persona) =>
+  `${persona?.nombre || ''} ${persona?.apellido || ''}`.trim();
+
+const getUsuariosAsignados = (rutina) => {
+  if (Array.isArray(rutina?.asignacionesUsuarios)) {
+    return rutina.asignacionesUsuarios;
+  }
+
+  return rutina?.alumno ? [rutina.alumno] : [];
+};
+
+const getGruposAsignados = (rutina) =>
+  Array.isArray(rutina?.asignacionesGrupos) ? rutina.asignacionesGrupos : [];
 
 /* ===================== DÍAS ===================== */
 // Normaliza y ordena dia1, dia2, ...
@@ -135,22 +149,31 @@ const RenderMedia = ({ ej }) => {
 
   if (ej?.mediaUrl) {
     return (
-      <img
-        className="gh-ej-thumb"
-        src={ej.mediaUrl}
-        alt={ej?.nombre || 'Ejercicio'}
-        onError={(ev) => {
-          ev.currentTarget.style.display = 'none';
-          const sib = ev.currentTarget.nextElementSibling;
-          if (sib && sib.classList.contains('gh-ej-thumb-placeholder')) {
-            sib.classList.add('show');
-          }
-        }}
-      />
+      <>
+        <img
+          className="gh-ej-thumb"
+          src={ej.mediaUrl}
+          alt={ej?.nombre || 'Ejercicio'}
+          onError={(ev) => {
+            ev.currentTarget.style.display = 'none';
+            const sib = ev.currentTarget.nextElementSibling;
+            if (sib && sib.classList.contains('gh-ej-thumb-placeholder')) {
+              sib.classList.add('show');
+            }
+          }}
+        />
+        <div className="gh-ej-thumb-placeholder" aria-label="Sin imagen o video">
+          <span className="gh-ej-placeholder-mark" aria-hidden="true" />
+        </div>
+      </>
     );
   }
 
-  return <div className="gh-ej-thumb-placeholder show" aria-hidden="true" />;
+  return (
+    <div className="gh-ej-thumb-placeholder show" aria-label="Sin imagen o video">
+      <span className="gh-ej-placeholder-mark" aria-hidden="true" />
+    </div>
+  );
 };
 
 /* ===================== DROPSET (COMPARTIDO) ===================== */
@@ -207,9 +230,6 @@ const DropSetDetail = ({ bloque }) => {
       <div className="gh-list-item gh-ej-row">
         <div className="gh-media-slot">
           <RenderMedia ej={ejFirst} />
-          {!ejFirst?.mediaUrl && (
-            <div className="gh-ej-thumb-placeholder show" />
-          )}
         </div>
 
         <div className="gh-ej-main">
@@ -338,10 +358,12 @@ const safeFileName = (titulo, alumnoObj) => {
  * ========================= */
 const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [rutina, setRutina] = useState(null);
   const [activeDiaKey, setActiveDiaKey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAsignadosModal, setShowAsignadosModal] = useState(false);
 
   const [activeSemanaId, setActiveSemanaId] = useState(null);
 
@@ -379,6 +401,10 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   const dias = useMemo(() => normalizeDias(rutina?.dias), [rutina]);
   const semanas = useMemo(() => rutina?.semanas || [], [rutina]);
+  const usuariosAsignados = useMemo(() => getUsuariosAsignados(rutina), [rutina]);
+  const gruposAsignados = useMemo(() => getGruposAsignados(rutina), [rutina]);
+  const asignadosCount = usuariosAsignados.length + gruposAsignados.length;
+  const hasMultipleAsignados = asignadosCount > 1;
 
   const headerSubtitle = useMemo(() => {
     if (!rutina) return '';
@@ -663,57 +689,67 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
         {!loading && !error && rutina && (
           <>
-            {/* Acciones */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: 12,
-              }}
-            >
-              <PrimaryButton
-                text="Exportar como PDF"
-                type="button"
-                onClick={handleExportPDF}
-              />
-            </div>
-
             {/* Header rutina */}
             <div
               className="header-rutina"
               style={{ display: 'grid', gap: 12 }}
             >
-              <div style={{ display: 'grid', gap: 6 }}>
-                <h2
-                  className="gh-title"
-                  style={{ margin: 0 }}
-                >
-                  {pretty(rutina.nombre, 'Rutina sin nombre')}
-                </h2>
-                {headerSubtitle && (
-                  <p
-                    className="gh-muted sm"
+              <div className="rutina-detail-headerbar">
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <button
+                    type="button"
+                    className="rutina-detail-back-btn"
+                    onClick={() => navigate(-1)}
+                  >
+                    <span aria-hidden="true">←</span>
+                    Volver
+                  </button>
+                  <h2
+                    className="gh-title"
                     style={{ margin: 0 }}
                   >
-                    {headerSubtitle}
-                  </p>
+                    {pretty(rutina.nombre, 'Rutina sin nombre')}
+                  </h2>
+                  {headerSubtitle && (
+                    <p
+                      className="gh-muted sm"
+                      style={{ margin: 0 }}
+                    >
+                      {headerSubtitle}
+                    </p>
+                  )}
+                </div>
+
+                {!rutina.urlPlanificacion && (
+                  <PrimaryButton
+                    text="Exportar como PDF"
+                    onClick={handleExportPDF}
+                  />
                 )}
               </div>
 
               <div className="rutina-detail-datos">
                 <div className="gh-surface">
-                  <div className="gh-label xs">Alumno</div>
-                  <div className="gh-text">
-                    {pretty(
-                      rutina?.alumno
-                        ? `${pretty(
-                          rutina.alumno.nombre,
-                          ''
-                        )} ${pretty(
-                          rutina.alumno.apellido,
-                          ''
-                        )}`.trim()
-                        : ''
+                  <div className="gh-label xs">Asignados</div>
+                  <div className="rutina-asignados-preview">
+                    {hasMultipleAsignados ? (
+                      <button
+                        type="button"
+                        className="rutina-asignados-modal-btn"
+                        onClick={() => setShowAsignadosModal(true)}
+                      >
+                        Ver personas y grupos asignados
+                      </button>
+                    ) : usuariosAsignados.length === 1 ? (
+                      <div className="gh-text">
+                        <strong>Usuario:</strong> {formatNombreCompleto(usuariosAsignados[0]) || 'Sin nombre'}
+                      </div>
+                    ) : gruposAsignados.length === 1 ? (
+                      <div className="gh-text">
+                        <strong>Grupo:</strong> {gruposAsignados[0]?.nombre || 'Sin nombre'}
+                      </div>
+                    ) : (
+                      <div className="gh-text">Sin asignados</div>
                     )}
                   </div>
                 </div>
@@ -759,8 +795,101 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
               )}
             </div>
 
+            {showAsignadosModal && (
+              <div
+                className="rutina-asignados-modal-overlay"
+                onClick={() => setShowAsignadosModal(false)}
+              >
+                <div
+                  className="rutina-asignados-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="rutina-asignados-modal-title"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="rutina-asignados-modal-header">
+                    <div>
+                      <span className="gh-label xs">Rutina</span>
+                      <h3 id="rutina-asignados-modal-title">Asignados</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="rutina-asignados-modal-close"
+                      onClick={() => setShowAsignadosModal(false)}
+                      aria-label="Cerrar listado de asignados"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="rutina-asignados-modal-content">
+                    <section>
+                      <h4>Usuarios</h4>
+                      {usuariosAsignados.length > 0 ? (
+                        <ul>
+                          {usuariosAsignados.map((usuario, index) => (
+                            <li key={usuario?.ID_Usuario || index}>
+                              {formatNombreCompleto(usuario) || 'Sin nombre'}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No hay usuarios asignados.</p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h4>Grupos</h4>
+                      {gruposAsignados.length > 0 ? (
+                        <ul>
+                          {gruposAsignados.map((grupo, index) => (
+                            <li key={grupo?.ID_GrupoUsuario || index}>
+                              {grupo?.nombre || 'Sin nombre'}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No hay grupos asignados.</p>
+                      )}
+                    </section>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Google Sheets View */}
+            {rutina.urlPlanificacion && (
+              <div className="sheets-detail-wrapper">
+                <section className="sheets-detail-card">
+                  <div className="sheets-detail-header">
+                    <div>
+                      <div className="gh-label xs">Planilla digital</div>
+                      <h3>Google Sheets</h3>
+                    </div>
+                    <a 
+                      href={rutina.urlPlanificacion} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="primary-button sheets-detail-link"
+                    >
+                      Abrir planilla
+                    </a>
+                  </div>
+
+                  <div className="sheets-detail-frame">
+                    <iframe
+                      src={rutina.urlPlanificacion.replace('/edit', '/preview').replace('?usp=sharing', '')}
+                      title="Plan de Entrenamiento"
+                      className="sheets-detail-iframe"
+                      allowFullScreen
+                    />
+                  </div>
+                </section>
+              </div>
+            )}
+
             {/* Semanas TABS */}
-            {semanas.length > 0 && (
+            {!rutina.urlPlanificacion && semanas.length > 0 && (
               <div
                 className="tab-dias"
                 style={{ display: 'grid', gap: 12, marginBottom: '20px' }}
@@ -795,7 +924,7 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
             )}
 
             {/* Obtener dias de la semana activa o dias nativos */}
-            {(() => {
+            {!rutina.urlPlanificacion && (() => {
               let currentDias = dias;
               if (semanas.length > 0) {
                 const activeWeek = semanas.find(s => (s.id || s.numero) === activeSemanaId) || semanas[0];
@@ -964,9 +1093,6 @@ const RutinaDetail = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                                                     ej
                                                   }
                                                 />
-                                                {!ej?.mediaUrl && (
-                                                  <div className="gh-ej-thumb-placeholder show" />
-                                                )}
                                               </div>
 
                                               <div className="gh-ej-main">

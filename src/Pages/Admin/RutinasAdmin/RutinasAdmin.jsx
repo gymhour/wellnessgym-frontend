@@ -5,7 +5,6 @@ import '../../../App.css';
 import './RutinasAdmin.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu.jsx';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton.jsx';
-import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton.jsx';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
 import apiService from '../../../services/apiService.js';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
@@ -133,9 +132,10 @@ const RutinasAdmin = () => {
   };
 
   const fetchRutinas = async () => {
-    const userId = localStorage.getItem('usuarioId');
     try {
-      const { rutinas: lista = [] } = await apiService.getUserRutinas(userId);
+      // "Rutinas recomendadas" del admin: mismas rutinas genéricas que ve el alumno
+      // (no las rutinas de las que el admin es dueño). Usa el endpoint de recomendadas.
+      const { rutinas: lista = [] } = await apiService.getRutinasAdmins();
       setRutinas(lista);
       const init = {};
       (lista || []).forEach(r => {
@@ -182,10 +182,23 @@ const RutinasAdmin = () => {
     }));
   };
 
-  // duplicar rutina — actualizado para TABATA
+  // duplicar rutina — actualizado para TABATA y urlPlanificacion
   const buildDuplicatePayload = (rutina) => {
     const currentUserId = Number(localStorage.getItem('usuarioId')) || null;
     const alumnoId = rutina?.alumno?.ID_Usuario ?? currentUserId;
+
+    if (rutina?.urlPlanificacion) {
+      return {
+        ID_Usuario: alumnoId,
+        ID_Entrenador: null,
+        nombre: `${rutina?.nombre || 'Rutina'} (1)`,
+        desc: rutina?.desc || '',
+        claseRutina: rutina?.claseRutina || 'Combinada',
+        grupoMuscularRutina: rutina?.grupoMuscularRutina || 'Mixto',
+        urlPlanificacion: rutina.urlPlanificacion,
+      };
+    }
+
     const originalDias = rutina?.dias || {};
     const diasPayload = {};
 
@@ -241,7 +254,11 @@ const RutinasAdmin = () => {
     try {
       setLoading(true);
       const payload = buildDuplicatePayload(rutina);
-      await apiService.createRutina(payload);
+      if (rutina?.urlPlanificacion) {
+        await apiService.createRutinaSimple(payload);
+      } else {
+        await apiService.createRutina(payload);
+      }
       toast.success('Rutina duplicada correctamente.');
       await fetchRutinas();
     } catch (error) {
@@ -257,21 +274,30 @@ const RutinasAdmin = () => {
     <div className='page-layout'>
       <SidebarMenu isAdmin={true} />
       <div className='content-layout mi-rutina-ctn'>
-        <div className="mi-rutina-title">
-          <h2>Mis Rutinas</h2>
+        <div className="rutinas-admin-page-header">
+          <h1>Rutinas recomendadas</h1>
           <PrimaryButton text="Crear rutina" linkTo="/admin/crear-rutina" />
         </div>
 
         <div className="mis-rutinas-list">
           {rutinas.length === 0 ? (
-            <p>No hay rutinas cargadas</p>
+            <div className="rutinas-admin-empty-state">
+              <p>No tiene rutinas cargadas aún.</p>
+            </div>
           ) : rutinas.map(rutina => {
             const dias = normalizeDias(rutina);
 
             return (
               <div key={rutina.ID_Rutina} className="rutina-card">
                 <div className='rutina-header'>
-                  <h3>{rutina.nombre}</h3>
+                  <h3>
+                    {rutina.nombre}
+                    {rutina.urlPlanificacion && (
+                      <span className="routine-badge sheet-badge">
+                        Planilla Digital
+                      </span>
+                    )}
+                  </h3>
                   <div className="rutina-header-acciones">
                     <button onClick={() => handleDuplicate(rutina)} title='Duplicar rutina'><Copy size={18} /></button>
                     <button onClick={() => openDeletePopup(rutina.ID_Rutina)} title='Eliminar rutina'><Trash2 width={20} height={20} /></button>
@@ -282,11 +308,27 @@ const RutinasAdmin = () => {
                 <div className="rutina-data">
                   <p>Clase: {rutina.claseRutina || '—'}</p>
                   <p>Grupo muscular: {rutina.grupoMuscularRutina || '—'}</p>
-                  <p>Días totales: {dias.length}</p>
+                  {rutina.urlPlanificacion ? (
+                    <p>Modalidad: Planificación Digital</p>
+                  ) : (
+                    <p>Días totales: {dias.length}</p>
+                  )}
                 </div>
 
                 {/* ===== DÍAS ===== */}
-                {dias.length <= 1 ? (
+                {rutina.urlPlanificacion ? (
+                  <div className="sheet-quick-access">
+                    <p className="sheet-quick-title">Plan de entrenamiento con planilla digital asignada</p>
+                    <a
+                      href={rutina.urlPlanificacion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sheet-quick-btn"
+                    >
+                      <span>Abrir Google Sheets</span>
+                    </a>
+                  </div>
+                ) : dias.length <= 1 ? (
                   <div className='rutina-dia'>
                     {dias[0] && <h4>{dias[0].nombre}</h4>}
                     {dias[0]?.descripcion && <p className='dia-desc'>{dias[0].descripcion}</p>}

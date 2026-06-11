@@ -14,15 +14,47 @@ import apiService from '../../../services/apiService'
 moment.locale('es')
 
 const localizer = momentLocalizer(moment)
-const CURRENT_YEAR = new Date().getFullYear()
-const CURRENT_MONTH = moment().month()
+
+const CANCELLED_STATUS = 'CANCELADO'
+
+const TURNO_STATUS_LABELS = {
+  ACTIVO: 'Activo',
+  ASISTIDO: 'Asistió',
+  AUSENTE: 'Ausente',
+  CANCELADO: 'Cancelado'
+}
+
+const normalizeTurnoStatus = status => String(status || '').toUpperCase()
+const isCancelledTurno = turno => normalizeTurnoStatus(turno.estado) === CANCELLED_STATUS
+const getTurnoStatusLabel = status => TURNO_STATUS_LABELS[normalizeTurnoStatus(status)] || status || 'Sin estado'
+
+const getTurnoUser = turno => {
+  const nombre = turno.User?.nombre || ''
+  const apellido = turno.User?.apellido || ''
+
+  return {
+    id: turno.id_turno || turno.ID_Turno || turno.id || `${nombre}-${apellido}-${turno.fecha}`,
+    name: `${nombre} ${apellido}`.trim() || 'Usuario sin nombre',
+    status: normalizeTurnoStatus(turno.estado)
+  }
+}
+
+// Contenido de cada recuadro de turno: nombre de la clase + turnos sacados / cupos totales.
+const EventContent = ({ event }) => (
+  <div className="ta-event">
+    <span className="ta-event-title">{event.title}</span>
+    <span className="ta-event-count">{event.activeUsers.length}/{event.cupos}</span>
+  </div>
+)
+
+const CALENDAR_COMPONENTS = { event: EventContent }
 
 const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const [rawTurnos, setRawTurnos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [calendarDate, setCalendarDate] = useState(new Date())
 
   // filtros
-  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH)
   const [selectedClass, setSelectedClass] = useState('')
 
   // modal
@@ -36,19 +68,43 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
   );
 
+  const selectedMonth = moment(calendarDate).month()
+  const selectedYear = moment(calendarDate).year()
+  const weekStart = useMemo(
+    () => moment(calendarDate).startOf('isoWeek').format('YYYY-MM-DD'),
+    [calendarDate]
+  )
+  const weekEnd = useMemo(
+    () => moment(calendarDate).startOf('isoWeek').add(6, 'days').format('YYYY-MM-DD'),
+    [calendarDate]
+  )
+
   useEffect(() => {
-    apiService.getTurnos()
-      .then(data => setRawTurnos(data))
-      .catch(err => console.log(err))
-      .finally(() => setLoading(false))
-  }, [])
+    let isCurrentRequest = true
+
+    setLoading(true)
+    apiService.getTurnos({ fechaDesde: weekStart, fechaHasta: weekEnd })
+      .then(data => {
+        if (isCurrentRequest) setRawTurnos(data)
+      })
+      .catch(err => {
+        console.log(err)
+        if (isCurrentRequest) toast.error('Error al cargar los turnos de la semana.')
+      })
+      .finally(() => {
+        if (isCurrentRequest) setLoading(false)
+      })
+
+    return () => { isCurrentRequest = false }
+  }, [weekStart, weekEnd])
 
   // opciones de filtro
   const monthOptions = useMemo(() => {
-    return Array.from(new Set(rawTurnos.map(t => moment(t.fecha).month())))
-      .sort()
-      .map(m => ({ value: m, label: moment().month(m).format('MMMM YYYY') }))
-  }, [rawTurnos])
+    return Array.from({ length: 12 }, (_, m) => ({
+      value: m,
+      label: moment({ year: selectedYear, month: m, day: 1 }).format('MMMM YYYY')
+    }))
+  }, [selectedYear])
 
   const classOptions = useMemo(() => {
     return Array.from(
@@ -61,6 +117,11 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     return new Date(d.getTime() + d.getTimezoneOffset() * 60000)
   }
 
+  const parseTurnoDate = isoString => {
+    const d = new Date(isoString)
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  }
+
   const events = useMemo(() => {
     // 1) filtramos
     const filtrados = rawTurnos.filter(t =>
@@ -70,7 +131,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     // 2) reducimos a un objeto de grupos
     const grupos = filtrados.reduce((acc, t) => {
       // fecha base (día correcto)
-      const fecha = new Date(t.fecha)
+      const fecha = parseTurnoDate(t.fecha)
 
       // parseo de horaIni/horaFin en local
       const horaIni = parseLocalISO(t.HorarioClase.horaIni)
@@ -92,10 +153,19 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           title: t.HorarioClase.Clase.nombre,
           start,
           end,
-          users: []
+          cupos: t.HorarioClase.cupos,
+          activeUsers: [],
+          cancelledUsers: []
         }
       }
-      acc[key].users.push(`${t.User.nombre} ${t.User.apellido}`)
+
+      const user = getTurnoUser(t)
+      if (isCancelledTurno(t)) {
+        acc[key].cancelledUsers.push(user)
+      } else {
+        acc[key].activeUsers.push(user)
+      }
+
       return acc
     }, {})
 
@@ -107,11 +177,21 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     setIsModalOpen(true)
   }
 
-  // defaultDate: hoy si es el mes actual, o día 1 del mes seleccionado
-  const initialDate =
-    selectedMonth === CURRENT_MONTH
-      ? new Date()
-      : new Date(CURRENT_YEAR, selectedMonth, 1)
+  const handleMonthChange = e => {
+    const nextMonth = Number(e.target.value)
+    const today = moment()
+    const nextDate = moment(calendarDate)
+      .date(1)
+      .month(nextMonth)
+      .date(nextMonth === today.month() && selectedYear === today.year() ? today.date() : 1)
+      .toDate()
+
+    setCalendarDate(nextDate)
+  }
+
+  const handleNavigate = nextDate => {
+    setCalendarDate(nextDate)
+  }
 
   useEffect(() => {
     const onResize = () => setIsNarrow(window.innerWidth < MOBILE_BREAKPOINT);
@@ -143,51 +223,59 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
       {loading && <LoaderFullScreen />}
       <div className='content-layout'>
-        <h2>Turnos – {moment().month(selectedMonth).format('MMMM YYYY')}</h2>
+        <div className="turnos-admin-header">
+          <div>
+            <h2>Turnos</h2>
+          </div>
+        </div>
 
         <div className='turnos-filters'>
-          <div className='turnos-filters-input-ctn'>
-            <label>Mes: </label>
-            <CustomDropdown
-              options={monthOptions}
-              value={String(selectedMonth ?? '')}
-              onChange={e => setSelectedMonth(+e.target.value)}
-              name="month"
-              id="month"
-              placeholderOption={null}
-            />
-          </div>
+          <div className="turnos-filters-controls">
+            <div className='turnos-filters-input-ctn'>
+              <label>Mes</label>
+              <CustomDropdown
+                options={monthOptions}
+                value={String(selectedMonth ?? '')}
+                onChange={handleMonthChange}
+                name="month"
+                id="month"
+                placeholderOption={null}
+              />
+            </div>
 
-          <div className="turnos-filters-input-ctn">
-            <label>Clase: </label>
-            <CustomDropdown
-              options={classOptions}
-              value={selectedClass ?? ''}
-              onChange={e => setSelectedClass(e.target.value)}
-              name="class"
-              id="class"
-              placeholderOption="— Todas —"
-              placeholderDisabled={false}
-            />
+            <div className="turnos-filters-input-ctn">
+              <label>Clase</label>
+              <CustomDropdown
+                options={classOptions}
+                value={selectedClass ?? ''}
+                onChange={e => setSelectedClass(e.target.value)}
+                name="class"
+                id="class"
+                placeholderOption="Todas"
+                placeholderDisabled={false}
+              />
+            </div>
           </div>
         </div>
 
 
         <div className="calendar-wrapper">
           <Calendar
-            key={`${selectedMonth}-${isNarrow ? 'day' : 'week'}`}
+            key={isNarrow ? 'day' : 'week'}
             localizer={localizer}
             events={events}
             startAccessor="start"
             endAccessor="end"
             defaultView={isNarrow ? 'day' : 'week'}
             views={isNarrow ? ['day'] : ['week']}
+            date={calendarDate}
+            onNavigate={handleNavigate}
             step={60}
             timeslots={1}
             onSelectEvent={handleSelectEvent}
             scrollToTime={new Date(1970, 1, 1, 6)}
-            defaultDate={initialDate}
             messages={messages}
+            components={CALENDAR_COMPONENTS}
           />
         </div>
 
@@ -197,13 +285,60 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       {isModalOpen && selectedEvent && (
         <div className="ta-modal" onClick={closeModal}>
           <div className="ta-modal-content" onClick={e => e.stopPropagation()}>
-            <button className="ta-modal-close" onClick={closeModal}><X size={24} /></button>
-            <h4>Reservas para {selectedEvent.title}</h4>
-            <ul>
-              {selectedEvent.users.map((u, i) => (
-                <li key={i}>{u}</li>
-              ))}
-            </ul>
+            <button className="ta-modal-close" onClick={closeModal} aria-label="Cerrar modal"><X size={18} /></button>
+            <div className="ta-modal-header">
+              <span className="ta-modal-kicker">Reservas</span>
+              <h4>{selectedEvent.title}</h4>
+              <p>
+                {moment(selectedEvent.start).format('dddd D [de] MMMM, HH:mm')} - {moment(selectedEvent.end).format('HH:mm')}
+              </p>
+            </div>
+            <div className="ta-modal-count">
+              <strong className="ta-modal-count-ratio">{selectedEvent.activeUsers.length}/{selectedEvent.cupos}</strong> cupos ocupados
+            </div>
+            <div className="ta-modal-reservation-section">
+              <div className="ta-modal-section-title">
+                <span>Con cupo</span>
+                <strong>{selectedEvent.activeUsers.length}</strong>
+              </div>
+              {selectedEvent.activeUsers.length > 0 ? (
+                <ul className="ta-modal-users">
+                  {selectedEvent.activeUsers.map((user, i) => (
+                    <li key={user.id || i}>
+                      <span className="ta-modal-avatar">{user.name.trim().charAt(0).toUpperCase()}</span>
+                      <span className="ta-modal-user-name">{user.name}</span>
+                      <span className={`ta-modal-status ta-modal-status-${user.status.toLowerCase()}`}>
+                        {getTurnoStatusLabel(user.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ta-modal-empty">No hay reservas activas.</p>
+              )}
+            </div>
+
+            <div className="ta-modal-reservation-section">
+              <div className="ta-modal-section-title">
+                <span>Cancelados</span>
+                <strong>{selectedEvent.cancelledUsers.length}</strong>
+              </div>
+              {selectedEvent.cancelledUsers.length > 0 ? (
+                <ul className="ta-modal-users ta-modal-users-cancelled">
+                  {selectedEvent.cancelledUsers.map((user, i) => (
+                    <li key={user.id || i}>
+                      <span className="ta-modal-avatar">{user.name.trim().charAt(0).toUpperCase()}</span>
+                      <span className="ta-modal-user-name">{user.name}</span>
+                      <span className="ta-modal-status ta-modal-status-cancelado">
+                        {getTurnoStatusLabel(user.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ta-modal-empty">No hay turnos cancelados.</p>
+              )}
+            </div>
           </div>
         </div>
       )}

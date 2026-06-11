@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "../../../App.css";
 import "./clasesActividadesForm.css";
 import SidebarMenu from "../../../Components/SidebarMenu/SidebarMenu";
 import SecondaryButton from "../../../Components/utils/SecondaryButton/SecondaryButton";
-import { ArrowLeft, PlusCircle, X } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import apiClient from "../../../axiosConfig";
 import apiService from "../../../services/apiService";
@@ -11,7 +11,6 @@ import CustomDropdown from "../../../Components/utils/CustomDropdown/CustomDropd
 import { toast } from "react-toastify";
 import LoaderFullScreen from "../../../Components/utils/LoaderFullScreen/LoaderFullScreen";
 import CustomInput from "../../../Components/utils/CustomInput/CustomInput";
-import ConfirmationPopup from "../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp";
 
 // ——————————————————————————————————————————
 // Utils de día/horario (hora “de pared” → ISO Z)
@@ -68,8 +67,40 @@ const toISOZSameClockTime = (hhmm, diaSemana) => {
   ).toISOString();
 };
 
-// Key por fila para manejar edición/estado
-const rowKey = (h, idx) => (h.idHorarioClase ? `id-${h.idHorarioClase}` : `new-${idx}`);
+const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sabado", "Domingo"];
+const DURACION_OPTIONS = [30, 45, 60, 90];
+const INTERVAL_OPTIONS = [30, 60, 90];
+const DEFAULT_INTERVAL_BY_DURATION = { 30: 30, 45: 60, 60: 60, 90: 90 };
+const MINUTOS_DIA = 24 * 60;
+
+const hhmmToMinutes = (value) => {
+  const [hh = "0", mm = "0"] = String(value || "00:00").split(":");
+  return (Number(hh) || 0) * 60 + (Number(mm) || 0);
+};
+
+const minutesToHHMM = (minutes) => {
+  const normalized = Math.max(0, Math.min(minutes, MINUTOS_DIA));
+  const h = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const mm = String(normalized % 60).padStart(2, "0");
+  return `${h}:${mm}`;
+};
+
+const getHoraFinFromDuration = (horaIni, duracionMin) =>
+  minutesToHHMM(hhmmToMinutes(horaIni) + Number(duracionMin || 0));
+
+const getDurationFromHorario = (horario) => {
+  const diff = hhmmToMinutes(horario?.horaFin) - hhmmToMinutes(horario?.horaIni);
+  return DURACION_OPTIONS.includes(diff) ? diff : 60;
+};
+
+const horarioVisualKey = (horario) => `${normalizeDay(horario.diaSemana)}-${horario.horaIni}`;
+
+const sortHorariosVisual = (items) =>
+  [...items].sort((a, b) => {
+    const dayDiff = dayIndexFromSpanish(a.diaSemana) - dayIndexFromSpanish(b.diaSemana);
+    if (dayDiff !== 0) return dayDiff;
+    return hhmmToMinutes(a.horaIni) - hhmmToMinutes(b.horaIni);
+  });
 
 const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fromEntrenador }) => {
   const navigate = useNavigate();
@@ -88,6 +119,15 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
   const [horarios, setHorarios] = useState([
     { diaSemana: "", horaIni: "", horaFin: "", cupos: "", idHorarioClase: null, activo: true }
   ]);
+  const [selectedDias, setSelectedDias] = useState([]);
+  const [duracionMin, setDuracionMin] = useState(60);
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("21:00");
+  const [intervalMin, setIntervalMin] = useState(60);
+  const [baseCupos, setBaseCupos] = useState("");
+
+  // Modal de edición de un horario existente (dos pasos: form → confirmación preserve/instant)
+  const [editModal, setEditModal] = useState(null); // { id, diaSemana, horaIni, duracion, cupos, step, original }
 
   const [entrenadores, setEntrenadores] = useState([]);
   const [initialEntrenadores, setInitialEntrenadores] = useState([]);
@@ -96,25 +136,10 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // snapshot de horarios iniciales (para revertir al cancelar edición)
+  // snapshot de horarios iniciales para detectar cambios pendientes
   const [initialHorariosMap, setInitialHorariosMap] = useState({}); // { [idHorarioClase]: {diaSemana, horaIni, horaFin, cupos, activo} }
 
-  // Estado de edición por fila y modo por fila
-  const [editingRowMap, setEditingRowMap] = useState({}); // key->bool
-  const [rowUpdateMode, setRowUpdateMode] = useState({}); // key->"preserve" | "instant"
-
-  // Modal de confirmación de borrado
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null });
-
-  // Popup para elegir modo ANTES de guardar
-  const [editModeDialog, setEditModeDialog] = useState({
-    open: false,
-    idx: null,
-    key: null,
-    mode: "preserve", // default
-  });
-
-  // Slots 30'
+  // Opciones de hora cada 30', con 24:00 para cierres de día.
   const generateTimeSlots = () => {
     const slots = [];
     for (let m = 0; m < 24 * 60; m += 30) {
@@ -122,9 +147,23 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
       const mm = String(m % 60).padStart(2, "0");
       slots.push(`${h}:${mm}`);
     }
+    slots.push("24:00");
     return slots;
   };
-  const timeSlots = generateTimeSlots();
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+  const generatedStartSlots = useMemo(() => {
+    const start = hhmmToMinutes(startTime);
+    const end = hhmmToMinutes(endTime);
+    const duration = Number(duracionMin) || 60;
+    const interval = Number(intervalMin) || 60;
+    if (end <= start || start + duration > end) return [];
+
+    const slots = [];
+    for (let m = start; m + duration <= end; m += interval) {
+      slots.push(minutesToHHMM(m));
+    }
+    return slots;
+  }, [duracionMin, endTime, intervalMin, startTime]);
 
   // ——————————————————————————————————————————
   // 2) Cargar entrenadores
@@ -173,6 +212,29 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
           : [{ diaSemana: "", horaIni: "", horaFin: "", cupos: "", idHorarioClase: null, activo: true }]
       );
 
+      if (formatted.length > 0) {
+        const sortedFormatted = sortHorariosVisual(formatted);
+        const initialDuration = getDurationFromHorario(sortedFormatted[0]);
+        const startMinutes = Math.min(...sortedFormatted.map((h) => hhmmToMinutes(h.horaIni)));
+        const endMinutes = Math.max(...sortedFormatted.map((h) => hhmmToMinutes(h.horaFin)));
+
+        // El builder arranca sin días seleccionados: es la herramienta para AGREGAR horarios.
+        // (Si se preseleccionaran los días cargados, "Guardar horarios" agregaría slots no pedidos.)
+        setSelectedDias([]);
+        setDuracionMin(initialDuration);
+        setIntervalMin(DEFAULT_INTERVAL_BY_DURATION[initialDuration] || 60);
+        setStartTime(minutesToHHMM(startMinutes));
+        setEndTime(minutesToHHMM(endMinutes));
+        setBaseCupos(formatted[0]?.cupos ? String(formatted[0].cupos) : "");
+      } else {
+        setSelectedDias([]);
+        setDuracionMin(60);
+        setIntervalMin(60);
+        setStartTime("18:00");
+        setEndTime("21:00");
+        setBaseCupos("");
+      }
+
       const map = {};
       for (const h of formatted) {
         if (h.idHorarioClase) {
@@ -193,10 +255,6 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
       const init = (entrenadoresIniciales ?? []);
       setSelectedEntrenadores(init);
       setInitialEntrenadores(init);
-
-      // reset UI de edición por fila
-      setEditingRowMap({});
-      setRowUpdateMode({});
     } catch (error) {
       console.error("Error al obtener los detalles de la clase:", error);
       toast.error("Error al obtener información de la clase. Intenta nuevamente.");
@@ -234,125 +292,161 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
     }
   };
 
-  // ——————————————————————————————————————————
-  // 6) Horarios (UI)
-  // ——————————————————————————————————————————
-  const handleAddHorario = () => {
-    setHorarios((prev) => [
-      ...prev,
-      { diaSemana: "", horaIni: "", horaFin: "", cupos: "", idHorarioClase: null, activo: true }
-    ]);
+  const toggleDia = (dia) => {
+    setSelectedDias((prev) =>
+      prev.includes(dia) ? prev.filter((item) => item !== dia) : [...prev, dia]
+    );
   };
 
-  const handleHorarioChange = (e, idx) => {
-    const { name, value } = e.target;
-    const h = horarios[idx];
-    const key = rowKey(h, idx);
+  const handleDurationChange = (value) => {
+    const parsed = Number(value);
+    const next = DURACION_OPTIONS.includes(parsed) ? parsed : 60;
+    setDuracionMin(next);
+    setIntervalMin(DEFAULT_INTERVAL_BY_DURATION[next] || 60);
+  };
 
-    // Si es existente y NO está en modo edición, no permitir
-    if (h.idHorarioClase && !editingRowMap[key]) return;
+  // Mergea los horarios generados por el builder con la lista actual.
+  // ADITIVO: nunca borra ni pisa lo ya cargado; sólo agrega los slots que no existen.
+  const mergeBuilderIntoList = (prevList) => {
+    const duration = Number(duracionMin) || 30;
+    const cleanPrev = prevList.filter((h) => h.diaSemana && h.horaIni);
+    const existingKeys = new Set(cleanPrev.map((h) => horarioVisualKey(h)));
+    const additions = [];
 
-    setHorarios((prev) => {
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], [name]: value };
-      return copy;
+    selectedDias.forEach((dia) => {
+      generatedStartSlots.forEach((horaIni) => {
+        const key = `${normalizeDay(dia)}-${horaIni}`;
+        if (existingKeys.has(key)) return; // ya está cargado: no duplicar ni pisar cupos
+        additions.push({
+          diaSemana: dia,
+          horaIni,
+          horaFin: getHoraFinFromDuration(horaIni, duration),
+          cupos: baseCupos,
+          idHorarioClase: null,
+          activo: true
+        });
+      });
+    });
+
+    return sortHorariosVisual([...cleanPrev, ...additions]);
+  };
+
+  // Modo crear: agrega los horarios del builder a la lista (se persisten al crear la clase).
+  const handleAgregarHorarios = () => {
+    setHorarios((prev) => mergeBuilderIntoList(prev));
+  };
+
+  // Modo editar: agrega lo del builder a lo cargado y guarda todo contra la API.
+  const handleGuardarHorarios = async () => {
+    const merged = mergeBuilderIntoList(horarios);
+    setHorarios(merged);
+    const ok = await syncHorariosChanges({ items: merged });
+    if (ok) setSelectedDias([]);
+  };
+
+  const updatePreviewCupos = (targetHorario, value) => {
+    const targetKey = targetHorario.idHorarioClase
+      ? `id-${targetHorario.idHorarioClase}`
+      : horarioVisualKey(targetHorario);
+
+    setHorarios((prev) =>
+      prev.map((h) => {
+        const currentKey = h.idHorarioClase ? `id-${h.idHorarioClase}` : horarioVisualKey(h);
+        return currentKey === targetKey ? { ...h, cupos: value } : h;
+      })
+    );
+  };
+
+  const removePreviewHorario = (targetHorario) => {
+    const targetKey = targetHorario.idHorarioClase
+      ? `id-${targetHorario.idHorarioClase}`
+      : horarioVisualKey(targetHorario);
+    setHorarios((prev) =>
+      prev.filter((h) => {
+        const currentKey = h.idHorarioClase ? `id-${h.idHorarioClase}` : horarioVisualKey(h);
+        return currentKey !== targetKey;
+      })
+    );
+  };
+
+  // ——————————————————————————————————————————
+  // Edición de un horario existente (modal de dos pasos)
+  // ——————————————————————————————————————————
+  const openEditHorario = (horario) => {
+    setEditModal({
+      id: horario.idHorarioClase,
+      diaSemana: horario.diaSemana,
+      horaIni: horario.horaIni,
+      duracion: getDurationFromHorario(horario),
+      cupos: String(horario.cupos ?? ""),
+      step: "form",
+      original: { diaSemana: horario.diaSemana, horaIni: horario.horaIni, horaFin: horario.horaFin, cupos: horario.cupos },
     });
   };
 
-  const enterEditRow = (idx) => {
-    const h = horarios[idx];
-    const key = rowKey(h, idx);
-    setEditingRowMap((m) => ({ ...m, [key]: true }));
-    setRowUpdateMode((m) => ({ ...m, [key]: "preserve" })); // default por fila
-  };
+  const closeEditHorario = () => setEditModal(null);
 
-  const cancelEditRow = (idx) => {
-    const h = horarios[idx];
-    const key = rowKey(h, idx);
+  const editHorarioHoraFin = editModal
+    ? getHoraFinFromDuration(editModal.horaIni, editModal.duracion)
+    : "";
 
-    setHorarios((prev) => {
-      const copy = [...prev];
-      // Si es nuevo, lo quitamos directamente
-      if (!h.idHorarioClase) {
-        copy.splice(idx, 1);
-      } else {
-        // Revertir al snapshot
-        const snap = initialHorariosMap[h.idHorarioClase];
-        if (snap) {
-          copy[idx] = {
-            ...h,
-            diaSemana: snap.diaSemana,
-            horaIni: snap.horaIni,
-            horaFin: snap.horaFin,
-            cupos: snap.cupos,
-            activo: snap.activo
-          };
-        }
-      }
-      return copy;
-    });
+  // ¿Cambió día u horario? (si sólo cambian cupos, los turnos sacados no se ven afectados)
+  const editChangesSchedule = editModal
+    ? editModal.diaSemana !== editModal.original.diaSemana ||
+      editModal.horaIni !== editModal.original.horaIni ||
+      editHorarioHoraFin !== editModal.original.horaFin
+    : false;
 
-    setEditingRowMap((m) => ({ ...m, [key]: false }));
-  };
-
-  // Guardar fila NUEVA → POST /clase/:ID_Clase/horarioClase
-  const saveNewRow = async (idx) => {
-    if (!classId) {
-      toast.error("No se pudo identificar la clase.");
+  const goToEditConfirm = async () => {
+    if (!editModal) return;
+    if (!editModal.diaSemana || !editModal.horaIni || !Number(editModal.cupos)) {
+      toast.error("Completá día, hora de inicio y cupos.");
       return;
     }
-    const h = horarios[idx];
-
-    if (!h.diaSemana || !h.horaIni || !h.horaFin || !h.cupos) {
-      toast.error("Completa día, inicio, fin y cupos antes de guardar.");
+    if (!editChangesSchedule) {
+      // Sólo cambian cupos: no afecta turnos sacados, se guarda directo.
+      applyEditHorario("preserve");
       return;
     }
 
-    const payload = {
-      diaSemana: h.diaSemana,
-      horaIni: toISOZSameClockTime(h.horaIni, h.diaSemana),
-      horaFin: toISOZSameClockTime(h.horaFin, h.diaSemana),
-      cupos: Number(h.cupos)
-    };
-
+    // Cambió día/horario: preguntar preserve/instant SOLO si el horario tiene turnos sacados.
     setIsLoading(true);
     try {
-      await apiClient.post(`/clase/${classId}/horarioClase`, payload);
-      toast.success("Horario creado.");
-      await fetchClaseDetalle(); // refresco para obtener ID_HorarioClase, etc.
+      const { data } = await apiClient.get(`/clase/horario/${editModal.id}/turnos-activos`);
+      const turnosActivos = Number(data?.turnosActivos || 0);
+      if (turnosActivos > 0) {
+        setEditModal((prev) => ({ ...prev, step: "confirm", turnosActivos }));
+      } else {
+        // Sin turnos sacados: actualizar el horario directamente (in-place, sin duplicar registros).
+        await applyEditHorario("instant");
+      }
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo crear el horario.");
+      // Si el chequeo falla, no bloqueamos: mostramos el popup para que decida el admin.
+      setEditModal((prev) => ({ ...prev, step: "confirm" }));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Guardar edición de fila EXISTENTE → POST /clase/horario/:ID_HorarioClase/modify
-  const saveExistingRow = async (idx, modeOverride) => {
-    const h = horarios[idx];
-    if (!h.idHorarioClase) return;
-
-    const key = rowKey(h, idx);
-    const mode = modeOverride || rowUpdateMode[key] || "preserve";
-
-    if (!h.diaSemana || !h.horaIni || !h.horaFin || !h.cupos) {
-      toast.error("Completa día, inicio, fin y cupos antes de guardar.");
-      return;
-    }
-
-    const payload = {
-      updateMode: mode,
-      diaSemana: h.diaSemana,
-      horaIni: toISOZSameClockTime(h.horaIni, h.diaSemana),
-      horaFin: toISOZSameClockTime(h.horaFin, h.diaSemana),
-      cupos: Number(h.cupos)
-    };
-
+  const applyEditHorario = async (updateMode) => {
+    if (!editModal) return;
+    const horaFin = getHoraFinFromDuration(editModal.horaIni, editModal.duracion);
     setIsLoading(true);
     try {
-      await apiClient.post(`/clase/horario/${h.idHorarioClase}/modify`, payload);
-      toast.success("Horario y turnos asociados actualizados.");
+      await apiClient.post(`/clase/horario/${editModal.id}/modify`, {
+        updateMode,
+        diaSemana: editModal.diaSemana,
+        horaIni: toISOZSameClockTime(editModal.horaIni, editModal.diaSemana),
+        horaFin: toISOZSameClockTime(horaFin, editModal.diaSemana),
+        cupos: Number(editModal.cupos),
+      });
+      toast.success(
+        updateMode === "preserve"
+          ? "Horario actualizado. Los turnos ya sacados se preservaron en su horario original."
+          : "Horario actualizado. Los turnos futuros se movieron al nuevo horario."
+      );
+      setEditModal(null);
       await fetchClaseDetalle();
     } catch (error) {
       console.error(error);
@@ -362,56 +456,119 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
     }
   };
 
-  // Eliminar fila EXISTENTE → modal + DELETE /clase/horarioClase/:ID_HorarioClase
-  const requestDeleteRow = (idx) => {
-    const h = horarios[idx];
-    if (!h.idHorarioClase) {
-      // si es nuevo sin guardar, simplemente quitarlo
-      setHorarios((prev) => prev.filter((_, i) => i !== idx));
-      return;
-    }
-    setConfirmDelete({ open: true, id: h.idHorarioClase });
-  };
+  const horariosPreview = useMemo(
+    () => sortHorariosVisual(horarios.filter((h) => h.activo !== false && h.diaSemana && h.horaIni && h.horaFin)),
+    [horarios]
+  );
 
-  const confirmDeleteHorario = async () => {
-    const id = confirmDelete.id;
-    if (!id) return;
-    setIsLoading(true);
+  const horariosPorDia = useMemo(() => {
+    return horariosPreview.reduce((acc, horario) => {
+      if (!acc[horario.diaSemana]) acc[horario.diaSemana] = [];
+      acc[horario.diaSemana].push(horario);
+      return acc;
+    }, {});
+  }, [horariosPreview]);
+
+  const previewDiasOrdenados = useMemo(
+    () => Object.keys(horariosPorDia).sort((a, b) => dayIndexFromSpanish(a) - dayIndexFromSpanish(b)),
+    [horariosPorDia]
+  );
+
+  const hasHorarioChanges = useMemo(() => {
+    if (!isEditing) return false;
+    const previewIds = new Set(horariosPreview.map((h) => h.idHorarioClase).filter(Boolean));
+    const hasDeletedRows = Object.keys(initialHorariosMap).some((id) => !previewIds.has(Number(id)));
+    if (hasDeletedRows) return true;
+
+    return horariosPreview.some((h) => {
+      if (!h.idHorarioClase) return true;
+      const snap = initialHorariosMap[h.idHorarioClase];
+      if (!snap) return false;
+      return (
+        snap.diaSemana !== h.diaSemana ||
+        snap.horaIni !== h.horaIni ||
+        snap.horaFin !== h.horaFin ||
+        Number(snap.cupos) !== Number(h.cupos)
+      );
+    });
+  }, [horariosPreview, initialHorariosMap, isEditing]);
+
+  const syncHorariosChanges = async ({ silent = false, manageLoading = true, items = null } = {}) => {
+    if (!isEditing || !classId) return true;
+
+    // 'items' permite pasar la lista recién mergeada (setState es async y horariosPreview quedaría viejo)
+    const lista = items
+      ? sortHorariosVisual(items.filter((h) => h.activo !== false && h.diaSemana && h.horaIni && h.horaFin))
+      : horariosPreview;
+
+    const previewIds = new Set(lista.map((h) => h.idHorarioClase).filter(Boolean));
+    const deletedIds = Object.keys(initialHorariosMap)
+      .map(Number)
+      .filter((id) => !previewIds.has(id));
+    const newRows = lista.filter((h) => !h.idHorarioClase);
+    const changedRows = lista.filter((h) => {
+      if (!h.idHorarioClase) return false;
+      const snap = initialHorariosMap[h.idHorarioClase];
+      if (!snap) return false;
+      return (
+        snap.diaSemana !== h.diaSemana ||
+        snap.horaIni !== h.horaIni ||
+        snap.horaFin !== h.horaFin ||
+        Number(snap.cupos) !== Number(h.cupos)
+      );
+    });
+
+    if (newRows.length === 0 && changedRows.length === 0 && deletedIds.length === 0) {
+      if (!silent) toast.info("No hay cambios de horarios para guardar.");
+      return true;
+    }
+
+    const invalid = [...newRows, ...changedRows].find((h) => !h.diaSemana || !h.horaIni || !h.horaFin || !Number(h.cupos));
+    if (invalid) {
+      toast.error("Todos los horarios deben tener día, inicio, fin y cupos.");
+      return false;
+    }
+
+    if (manageLoading) setIsLoading(true);
     try {
-      await apiClient.delete(`/clase/horarioClase/${id}`);
-      toast.success("Horario eliminado.");
-      await fetchClaseDetalle();
+      for (const h of newRows) {
+        await apiClient.post(`/clase/${classId}/horarioClase`, {
+          diaSemana: h.diaSemana,
+          horaIni: toISOZSameClockTime(h.horaIni, h.diaSemana),
+          horaFin: toISOZSameClockTime(h.horaFin, h.diaSemana),
+          cupos: Number(h.cupos)
+        });
+      }
+
+      for (const h of changedRows) {
+        // Cambios masivos desde la lista (sólo cupos): preserve no toca los turnos ya sacados.
+        await apiClient.post(`/clase/horario/${h.idHorarioClase}/modify`, {
+          updateMode: 'preserve',
+          diaSemana: h.diaSemana,
+          horaIni: toISOZSameClockTime(h.horaIni, h.diaSemana),
+          horaFin: toISOZSameClockTime(h.horaFin, h.diaSemana),
+          cupos: Number(h.cupos)
+        });
+      }
+
+      for (const id of deletedIds) {
+        await apiClient.delete(`/clase/horarioClase/${id}`);
+      }
+
+      if (manageLoading) await fetchClaseDetalle();
+      if (!silent) toast.success("Horarios actualizados.");
+      return true;
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo eliminar el horario.");
+      toast.error("No se pudieron guardar los cambios de horarios.");
+      return false;
     } finally {
-      setIsLoading(false);
-      setConfirmDelete({ open: false, id: null });
+      if (manageLoading) setIsLoading(false);
     }
-  };
-
-  // ——— POPUP DE MODO ANTES DE GUARDAR ———
-  const requestModeBeforeSave = (idx) => {
-    const h = horarios[idx];
-    const key = rowKey(h, idx);
-    const current = rowUpdateMode[key] || "preserve";
-    setEditModeDialog({ open: true, idx, key, mode: current });
-  };
-
-  const confirmSaveWithMode = () => {
-    const { idx, key, mode } = editModeDialog;
-    if (idx == null || !key) return;
-
-    // Guardamos preferencia (opcional)
-    setRowUpdateMode((m) => ({ ...m, [key]: mode }));
-
-    // Cerrar popup y ejecutar guardado con el modo elegido
-    setEditModeDialog({ open: false, idx: null, key: null, mode: "preserve" });
-    saveExistingRow(idx, mode);
   };
 
   // ——————————————————————————————————————————
-  // 7) Submit (crear/editar CLASE)
+  // 6) Submit (crear/editar CLASE)
   // ——————————————————————————————————————————
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -423,6 +580,12 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
     if (image) dataForm.append("image", image);
 
     if (isEditing) {
+      const horariosSynced = await syncHorariosChanges({ silent: true, manageLoading: false });
+      if (!horariosSynced) {
+        setIsLoading(false);
+        return;
+      }
+
       // ✅ Ahora SOLO nombre/descr/imagen
       apiClient
         .put(`/clase/clase/${classId}`, dataForm, {
@@ -455,9 +618,13 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
         .finally(() => setIsLoading(false));
     } else {
       // Crear clase (POST original con horarios embebidos)
-      const onlyEditable = horarios.filter((h) => h.activo !== false);
+      if (horariosPreview.length === 0) {
+        toast.error("Agregá al menos un horario.");
+        setIsLoading(false);
+        return;
+      }
 
-      const transformedHorarios = onlyEditable.map((h) => ({
+      const transformedHorarios = horariosPreview.map((h) => ({
         diaSemana: h.diaSemana,
         horaIni: toISOZSameClockTime(h.horaIni, h.diaSemana),
         horaFin: toISOZSameClockTime(h.horaFin, h.diaSemana),
@@ -503,11 +670,15 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
     setImage(null);
     setImagePreview("");
     setHorarios([{ diaSemana: "", horaIni: "", horaFin: "", cupos: "", idHorarioClase: null, activo: true }]);
+    setSelectedDias([]);
+    setDuracionMin(60);
+    setStartTime("18:00");
+    setEndTime("21:00");
+    setIntervalMin(60);
+    setBaseCupos("");
     setSelectedEntrenadores([]);
     setDropdownValue("");
     setInitialHorariosMap({});
-    setEditingRowMap({});
-    setRowUpdateMode({});
   };
 
   return (
@@ -534,6 +705,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
                 <CustomInput
                   id="nombre"
                   type="text"
+                  width="100%"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required={true}
@@ -541,7 +713,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Descripción */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="descripcion">Descripción:</label>
                 <textarea
                   id="descripcion"
@@ -552,7 +724,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Imagen */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="imagen">Imagen:</label>
                 <input type="file" id="imagen" onChange={handleImageChange} />
                 {imagePreview && (
@@ -568,7 +740,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
               </div>
 
               {/* Entrenadores */}
-              <div className="form-input-ctn">
+              <div className="form-input-ctn form-input-ctn--full">
                 <label htmlFor="entrenadores">Entrenadores:</label>
                 <CustomDropdown
                   id="entrenadores"
@@ -598,118 +770,216 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
 
               {/* Horarios */}
               <div className="form-input-horarios">
-                <label>Horarios (solo se muestran activos):</label>
+                <div className="horarios-builder-header">
+                  <div>
+                    <label>Horarios</label>
+                    <p>Seleccioná días, duración, cupo y horarios de inicio.</p>
+                  </div>
+                  {isEditing && hasHorarioChanges && (
+                    <span className="horarios-pending-badge">Cambios pendientes</span>
+                  )}
+                </div>
 
-                {horarios
-                  .filter((h) => h.activo !== false)
-                  .map((horario, idx) => {
-                    const isInactive = horario.activo === false; // por si en un futuro llegan inactivos
-                    const key = rowKey(horario, idx);
-                    const isEditingRow = !!editingRowMap[key];
-                    const isExisting = !!horario.idHorarioClase;
+                <div className="horarios-builder">
+                  <section className="horario-builder-section">
+                    <div className="horario-section-title">
+                      <span>Días</span>
+                      <div className="quick-pill-actions">
+                        <button type="button" onClick={() => setSelectedDias(DIAS_SEMANA)}>Todos</button>
+                        <button type="button" onClick={() => setSelectedDias([])}>Limpiar</button>
+                      </div>
+                    </div>
+                    <div className="pill-group dias-pill-group">
+                      {DIAS_SEMANA.map((dia) => (
+                        <button
+                          key={dia}
+                          type="button"
+                          className={`selector-pill ${selectedDias.includes(dia) ? "selected" : ""}`}
+                          onClick={() => toggleDia(dia)}
+                        >
+                          {dia}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
 
-                    return (
-                      <div
-                        key={horario.idHorarioClase ?? `new-${idx}`}
-                        className={`horario-item ${isInactive ? "horario-item--inactive" : ""}`}
-                        style={isInactive ? { opacity: 0.6 } : undefined}
+                  <section className="horario-builder-section horario-settings-grid">
+                    <div className="form-input-ctn-horario">
+                      <label>Duración</label>
+                      <select
+                        value={duracionMin}
+                        onChange={(e) => handleDurationChange(e.target.value)}
                       >
-                        {/* Día */}
-                        <div className="form-input-ctn-horario">
-                          <label>Día de la semana</label>
-                          <select
-                            name="diaSemana"
-                            value={horario.diaSemana}
-                            onChange={(e) => handleHorarioChange(e, idx)}
-                            required
-                            disabled={isInactive || (isExisting && !isEditingRow)}
-                          >
-                            <option value="">Seleccionar día</option>
-                            {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sabado", "Domingo"].map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
+                        {DURACION_OPTIONS.map((minutes) => (
+                          <option key={minutes} value={minutes}>
+                            {minutes} minutos
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                        {/* Inicio */}
-                        <div className="form-input-ctn-horario">
-                          <label>Hr. Inicio</label>
-                          <select
-                            name="horaIni"
-                            value={horario.horaIni}
-                            onChange={(e) => handleHorarioChange(e, idx)}
-                            required
-                            disabled={isInactive || (isExisting && !isEditingRow)}
-                          >
-                            <option value="">Seleccionar horario</option>
-                            {timeSlots.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
+                    <div className="form-input-ctn-horario">
+                      <label>Desde</label>
+                      <select
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                      >
+                        {timeSlots.filter((time) => time !== "24:00").map((time) => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                        {/* Fin */}
-                        <div className="form-input-ctn-horario">
-                          <label>Hr. Fin</label>
-                          <select
-                            name="horaFin"
-                            value={horario.horaFin}
-                            onChange={(e) => handleHorarioChange(e, idx)}
-                            required
-                            disabled={isInactive || (isExisting && !isEditingRow)}
-                          >
-                            <option value="">Seleccionar horario</option>
-                            {timeSlots.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
+                    <div className="form-input-ctn-horario">
+                      <label>Hasta</label>
+                      <select
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                      >
+                        {timeSlots.map((time) => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                        {/* Cupos */}
-                        <div className="form-input-ctn-horario">
-                          <label>Cupos</label>
-                          <input
-                            type="number"
-                            min={1}
-                            name="cupos"
-                            placeholder="Cupos"
-                            value={horario.cupos}
-                            onChange={(e) => handleHorarioChange(e, idx)}
-                            required
-                            disabled={isInactive || (isExisting && !isEditingRow)}
-                          />
-                        </div>
+                    <div className="form-input-ctn-horario">
+                      <label>Inicio cada</label>
+                      <select
+                        value={intervalMin}
+                        onChange={(e) => setIntervalMin(Number(e.target.value))}
+                      >
+                        {INTERVAL_OPTIONS.map((minutes) => (
+                          <option key={minutes} value={minutes}>
+                            {minutes} minutos
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                        {/* Acciones por fila */}
-                        <div className="form-input-ctn-horario actions-col">
-                          {isExisting ? (
-                            !isEditingRow ? (
-                              <div className="row-actions">
-                                {/* EDITAR → habilita campos */}
-                                <SecondaryButton text="Editar" onClick={() => enterEditRow(idx)} />
-                                <X className="close-icon" onClick={() => requestDeleteRow(idx)} />
+                    <div className="form-input-ctn-horario">
+                      <label>Cupo base</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={baseCupos}
+                        onChange={(e) => setBaseCupos(e.target.value)}
+                        placeholder="Cupos"
+                      />
+                    </div>
+
+                  </section>
+
+                  <section className="horario-builder-section">
+                    <div className="horario-section-title">
+                      <span>Inicios calculados</span>
+                      <small>
+                        {generatedStartSlots.length} por día
+                      </small>
+                    </div>
+                    {generatedStartSlots.length === 0 ? (
+                      <div className="generated-empty-state">
+                        Ajustá el rango para que entre al menos un turno.
+                      </div>
+                    ) : (
+                      <div className="generated-start-list">
+                        {generatedStartSlots.map((time) => (
+                          <span key={time} className="generated-start-pill">
+                            {time} - {getHoraFinFromDuration(time, duracionMin)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  <div className="horarios-builder-actions">
+                    {isEditing ? (
+                      <button
+                        type="button"
+                        className="horarios-action-btn"
+                        onClick={handleGuardarHorarios}
+                        disabled={isLoading}
+                      >
+                        Guardar horarios
+                      </button>
+                    ) : (
+                      <button type="button" className="horarios-action-btn" onClick={handleAgregarHorarios}>
+                        <Plus size={18} />
+                        Agregar horarios
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="horarios-preview">
+                  <div className="horarios-preview-header">
+                    <div>
+                      <strong>Horarios cargados</strong>
+                      <span>{horariosPreview.length} horarios</span>
+                    </div>
+                  </div>
+
+                  {horariosPreview.length === 0 ? (
+                    <div className="horarios-empty-state">
+                      No hay horarios cargados todavía.
+                    </div>
+                  ) : (
+                    previewDiasOrdenados.map((dia) => (
+                      <div key={dia} className="preview-day-group">
+                        <h4>{dia}</h4>
+                        <div className="preview-slot-list">
+                          {horariosPorDia[dia].map((horario) => {
+                            const changed = horario.idHorarioClase
+                              ? Number(initialHorariosMap[horario.idHorarioClase]?.cupos) !== Number(horario.cupos)
+                              : false;
+                            return (
+                              <div
+                                key={horario.idHorarioClase ?? horarioVisualKey(horario)}
+                                className={`preview-slot ${horario.idHorarioClase ? "existing" : "new"} ${changed ? "changed" : ""}`}
+                              >
+                                <div className="preview-slot-time">
+                                  <span>{horario.horaIni} - {horario.horaFin}</span>
+                                  <small>{horario.idHorarioClase ? "Existente" : "Nuevo"}</small>
+                                </div>
+                                <div className="preview-slot-cupos">
+                                  <label>Cupos</label>
+                                  <div className="preview-cupos-control">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={horario.cupos}
+                                      onChange={(e) => updatePreviewCupos(horario, e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="preview-slot-actions">
+                                  {isEditing && horario.idHorarioClase && (
+                                    <button
+                                      type="button"
+                                      className="preview-slot-edit"
+                                      onClick={() => openEditHorario(horario)}
+                                      aria-label={`Editar horario ${dia} ${horario.horaIni}`}
+                                      title="Editar horario"
+                                    >
+                                      <Pencil size={17} />
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="preview-slot-remove"
+                                    onClick={() => removePreviewHorario(horario)}
+                                    aria-label={`Quitar horario ${dia} ${horario.horaIni}`}
+                                    title="Eliminar horario"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
                               </div>
-                            ) : (
-                              <div className="row-actions edit-mode">
-                                {/* GUARDAR → abre popup para elegir modo */}
-                                <SecondaryButton text="Guardar" onClick={() => requestModeBeforeSave(idx)} />
-                                <SecondaryButton text="Cancelar" onClick={() => cancelEditRow(idx)} />
-                              </div>
-                            )
-                          ) : (
-                            // Fila NUEVA
-                            <div className="row-actions">
-                              <SecondaryButton text="Guardar" onClick={() => saveNewRow(idx)} />
-                              <X className="close-icon" onClick={() => cancelEditRow(idx)} />
-                            </div>
-                          )}
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })}
-
-                <div className="clase-actividad-form-agg-horario-btn">
-                  <SecondaryButton text="Agregar horario" icon={PlusCircle} onClick={handleAddHorario} />
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -722,54 +992,142 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
             </form>
           </div>
 
-          {/* Modal confirmación eliminar */}
-          <ConfirmationPopup
-            isOpen={confirmDelete.open}
-            onClose={() => setConfirmDelete({ open: false, id: null })}
-            onConfirm={() => confirmDeleteHorario()}
-            message="¿Seguro que querés eliminar este horario? Esto también eliminará todos los turnos existentes asociados."
-          />
-
-          {/* Popup para elegir modo antes de GUARDAR una fila existente */}
-          <ConfirmationPopup
-            isOpen={editModeDialog.open}
-            onClose={() => setEditModeDialog({ open: false, idx: null, key: null, mode: "preserve" })}
-            onConfirm={confirmSaveWithMode}
-            message="¿Cómo querés aplicar los cambios en este horario?"
-          >
-            <div className="editmode-explainer">
-              <label className="editmode-option">
-                <input
-                  type="radio"
-                  name="editmode"
-                  value="preserve"
-                  checked={editModeDialog.mode === "preserve"}
-                  onChange={() => setEditModeDialog((s) => ({ ...s, mode: "preserve" }))}
-                />
-                <div>
-                  <strong>Preserva</strong>
-                  <p>Actualiza el horario preservando los turnos activos.</p>
-                </div>
-              </label>
-
-              <label className="editmode-option">
-                <input
-                  type="radio"
-                  name="editmode"
-                  value="instant"
-                  checked={editModeDialog.mode === "instant"}
-                  onChange={() => setEditModeDialog((s) => ({ ...s, mode: "instant" }))}
-                />
-                <div>
-                  <strong>Instantaneo</strong>
-                  <p>Actualiza el horario de todos los turnos, incluyendo los activos.</p>
-                </div>
-              </label>
-            </div>
-          </ConfirmationPopup>
-
         </div>
       </div>
+
+      {/* ─── Modal editar horario existente ─── */}
+      {editModal && (
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEditHorario();
+          }}
+        >
+          <div className="cuotas-modal cuotas-modal-small" role="dialog" aria-modal="true" aria-labelledby="edit-horario-title">
+            <div className="modal-form">
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="edit-horario-title">
+                    {editModal.step === "form" ? "Editar horario" : "¿Qué hacemos con los turnos ya sacados?"}
+                  </h3>
+                  <span>
+                    {editModal.step === "form"
+                      ? `Horario actual: ${editModal.original.diaSemana} ${editModal.original.horaIni} - ${editModal.original.horaFin}`
+                      : `${editModal.original.diaSemana} ${editModal.original.horaIni} → ${editModal.diaSemana} ${editModal.horaIni} - ${editHorarioHoraFin}`}
+                  </span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={closeEditHorario} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {editModal.step === "form" ? (
+                <>
+                  <div className="cuotas-modal-grid">
+                    <div className="cuotas-modal-field">
+                      <label>Día</label>
+                      <CustomDropdown
+                        options={DIAS_SEMANA}
+                        value={editModal.diaSemana}
+                        onChange={(e) => setEditModal((prev) => ({ ...prev, diaSemana: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="cuotas-modal-field">
+                      <label>Hora de inicio</label>
+                      <CustomDropdown
+                        options={timeSlots.filter((t) => t !== "24:00")}
+                        value={editModal.horaIni}
+                        onChange={(e) => setEditModal((prev) => ({ ...prev, horaIni: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="cuotas-modal-field">
+                      <label>Duración</label>
+                      <CustomDropdown
+                        options={DURACION_OPTIONS.map((m) => ({ value: String(m), label: `${m} minutos` }))}
+                        value={String(editModal.duracion)}
+                        onChange={(e) => setEditModal((prev) => ({ ...prev, duracion: Number(e.target.value) }))}
+                        placeholderOption={null}
+                      />
+                    </div>
+
+                    <div className="cuotas-modal-field">
+                      <label>Cupos</label>
+                      <CustomInput
+                        type="number"
+                        min={1}
+                        value={editModal.cupos}
+                        onChange={(e) => setEditModal((prev) => ({ ...prev, cupos: e.target.value }))}
+                        width="100%"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="edit-horario-resumen">
+                    Nuevo horario: <strong>{editModal.diaSemana} {editModal.horaIni} - {editHorarioHoraFin}</strong>
+                  </p>
+
+                  <div className="cuotas-modal-actions">
+                    <button type="button" className="cuotas-modal-secondary-button" onClick={closeEditHorario}>
+                      Cancelar
+                    </button>
+                    <button type="button" className="cuotas-modal-primary-button" onClick={goToEditConfirm} disabled={isLoading}>
+                      Guardar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="edit-horario-confirm-text">
+                    {editModal.turnosActivos
+                      ? `Este horario tiene ${editModal.turnosActivos} turno${editModal.turnosActivos === 1 ? "" : "s"} ya sacado${editModal.turnosActivos === 1 ? "" : "s"} por alumnos. Elegí cómo proceder:`
+                      : "Este horario puede tener turnos ya reservados por alumnos. Elegí cómo proceder:"}
+                  </p>
+
+                  <div className="edit-horario-options">
+                    <button
+                      type="button"
+                      className="edit-horario-option"
+                      onClick={() => applyEditHorario("preserve")}
+                      disabled={isLoading}
+                    >
+                      <strong>Preservar turnos sacados</strong>
+                      <span>
+                        Los turnos ya reservados se mantienen en su día y horario original.
+                        El horario viejo deja de aceptar nuevas reservas y se crea el nuevo.
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="edit-horario-option"
+                      onClick={() => applyEditHorario("instant")}
+                      disabled={isLoading}
+                    >
+                      <strong>Mover turnos al nuevo horario</strong>
+                      <span>
+                        Los turnos futuros se reprograman automáticamente al nuevo día y horario.
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="cuotas-modal-actions">
+                    <button
+                      type="button"
+                      className="cuotas-modal-secondary-button"
+                      onClick={() => setEditModal((prev) => ({ ...prev, step: "form" }))}
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

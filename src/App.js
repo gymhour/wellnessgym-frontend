@@ -42,6 +42,13 @@ import EjercicioDetail from './Pages/Shared/EjercicioDetail/EjercicioDetail';
 import RutinaDetail from './Pages/Shared/RutinaDetail/RutinaDetail';
 import CrearRutinaRecomendada from './Pages/Admin/CrearRutinaRecomendada/CrearRutinaRecomendada';
 import RutinasAsignadasAdmin from './Pages/Admin/RutinasAsignadasAdmin/RutinasAsignadasAdmin';
+import GruposUsuarios from './Pages/Admin/GruposUsuarios/GruposUsuarios';
+import AdminAttendancePage from './Pages/Admin/Attendances/AdminAttendancePage';
+import AdminCheckInPage from './Pages/Admin/CheckIn/AdminCheckInPage';
+import ChurnRiskPage from './Pages/Admin/ChurnRisk/ChurnRiskPage';
+import Gastos from './Pages/Admin/Gastos/Gastos';
+import UserMyAttendancesPage from './Pages/Alumno/MisAsistencias/UserMyAttendancesPage';
+import PublicCheckInPage from './Pages/Public/CheckIn/PublicCheckInPage';
 import React, { useState, useEffect } from 'react';
 
 function App() {
@@ -87,6 +94,7 @@ function App() {
         <Route path="/sign-up" element={<SignUp />} />
         <Route path='/forgot-password' element={<ForgotPassword />} />
         <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/ingreso' element={<PublicCheckInPage />} />
 
         {/* Rutas protegidas */}
         {/* Admin */}
@@ -137,6 +145,13 @@ function App() {
           element={
             <ProtectedRoute>
               <UsuariosList fromAdmin={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/admin/grupos-usuarios"
+          element={
+            <ProtectedRoute>
+              <GruposUsuarios />
             </ProtectedRoute>
           }
         />
@@ -237,6 +252,38 @@ function App() {
           element={
             <ProtectedRoute>
               <CuotasUsuarios fromAdmin={true}/>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/asistencias"
+          element={
+            <ProtectedRoute>
+              <AdminAttendancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/predictor-bajas"
+          element={
+            <ProtectedRoute>
+              <ChurnRiskPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/salidas-dinero"
+          element={
+            <ProtectedRoute>
+              <Gastos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ingreso"
+          element={
+            <ProtectedRoute>
+              <AdminCheckInPage />
             </ProtectedRoute>
           }
         />
@@ -508,6 +555,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Cuotas />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alumno/mis-asistencias"
+          element={
+            <ProtectedRoute>
+              <UserMyAttendancesPage />
             </ProtectedRoute>
           }
         />

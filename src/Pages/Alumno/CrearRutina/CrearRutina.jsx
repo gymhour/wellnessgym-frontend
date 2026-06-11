@@ -5,16 +5,21 @@ import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropd
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput.jsx';
 import './CrearRutina.css';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton.jsx';
-import apiService, { fetchAllClientsActive } from '../../../services/apiService';
+import apiService from '../../../services/apiService';
 import { toast } from "react-toastify";
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen.jsx';
 import { useParams, useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-import { X } from 'lucide-react';
+import { Copy, Dumbbell, Table2, X } from 'lucide-react';
 import SecondaryButton from "../../../Components/utils/SecondaryButton/SecondaryButton.jsx";
 
 /* ================= Helpers ================= */
 const customStyles = {
+  container: (provided) => ({
+    ...provided,
+    width: '100%',
+    minWidth: 0,
+  }),
   option: (provided, state) => ({
     ...provided,
     backgroundColor: state.isSelected
@@ -28,23 +33,53 @@ const customStyles = {
       backgroundColor: 'var(--background-hover-color)',
     },
   }),
-  control: (provided) => ({
+  control: (provided, state) => ({
     ...provided,
     backgroundColor: 'var(--background-color-distinct)',
-    borderColor: 'transparent', // CustomDropdown has no visible border usually or matches style
-    borderRadius: '12px',
-    padding: '6px',
+    borderColor: 'var(--border-color)',
+    borderRadius: '10px',
+    borderWidth: '1px',
+    minHeight: '44px',
+    padding: '0 4px',
     boxShadow: 'none',
     color: 'var(--text-color)',
+    transition: 'border-color 150ms ease, box-shadow 150ms ease',
+    ':hover': {
+      borderColor: 'var(--border-color)',
+    },
   }),
   singleValue: (provided) => ({
     ...provided,
     color: 'var(--text-color)',
   }),
+  valueContainer: (provided) => ({
+    ...provided,
+    padding: '4px 8px',
+    gap: '4px',
+  }),
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    minHeight: '42px',
+  }),
+  dropdownIndicator: (provided) => ({
+    ...provided,
+    padding: '6px',
+    color: 'var(--text-color-distinct)',
+  }),
+  clearIndicator: (provided) => ({
+    ...provided,
+    padding: '6px',
+    color: 'var(--text-color-distinct)',
+  }),
+  indicatorSeparator: () => ({
+    display: 'none',
+  }),
   menu: (provided) => ({
     ...provided,
     backgroundColor: 'var(--background-color)',
     border: '1px solid var(--border-color)',
+    borderRadius: '10px',
+    overflow: 'hidden',
     zIndex: 100
   }),
   input: (provided) => ({
@@ -54,6 +89,28 @@ const customStyles = {
   placeholder: (provided) => ({
     ...provided,
     color: 'var(--text-color-distinct)',
+  }),
+  multiValue: (provided) => ({
+    ...provided,
+    backgroundColor: 'var(--background-color)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '7px',
+    margin: '2px',
+  }),
+  multiValueLabel: (provided) => ({
+    ...provided,
+    color: 'var(--text-color)',
+    fontSize: '12px',
+    padding: '2px 6px',
+  }),
+  multiValueRemove: (provided) => ({
+    ...provided,
+    color: 'var(--text-color-distinct)',
+    borderRadius: '7px',
+    ':hover': {
+      backgroundColor: 'var(--background-hover-color)',
+      color: 'var(--text-color)',
+    },
   })
 };
 
@@ -347,6 +404,12 @@ const normalizeUserMetrics = (resp) => {
   return { ejercicios };
 };
 
+const usuarioToOption = (usuario) => ({
+  label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
+  value: usuario.ID_Usuario,
+  usuario
+});
+
 /* ================= Component ================= */
 const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const { rutinaId } = useParams();
@@ -362,14 +425,20 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const [clases, setClases] = useState([]);
   const [selectedClase, setSelectedClase] = useState("");
   const [selectedGrupoMuscular, setSelectedGrupoMuscular] = useState("");
+  const [tipoRutina, setTipoRutina] = useState("clasica"); // "clasica" | "simple"
+  const [urlPlanificacion, setUrlPlanificacion] = useState("");
   const gruposMusculares = [
     "Pecho", "Espalda", "Piernas", "Brazos", "Hombros",
     "Abdominales", "Glúteos", "Tren Superior", "Tren Inferior",
     "Full Body", "Mixto"
   ];
 
-  const [users, setUsers] = useState([]);
-  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [userOptions, setUserOptions] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUserOptions, setSelectedUserOptions] = useState([]);
+  const [gruposUsuarios, setGruposUsuarios] = useState([]);
+  const [selectedGroupOptions, setSelectedGroupOptions] = useState([]);
 
   const [allExercises, setAllExercises] = useState([]);
 
@@ -382,6 +451,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [userMetrics, setUserMetrics] = useState(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [selectedInfoUserId, setSelectedInfoUserId] = useState(null);
 
   // Días
   const [days, setDays] = useState([
@@ -431,14 +501,100 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     if (canAssign) {
       (async () => {
         try {
-          const clientes = await fetchAllClientsActive(apiService, { take: 100 });
-          setUsers(clientes);
+          const gruposResp = await apiService.getGruposUsuarios();
+          setGruposUsuarios(Array.isArray(gruposResp?.grupos) ? gruposResp.grupos : []);
         } catch {
-          toast.error('No se pudieron cargar todos los usuarios');
+          toast.error('No se pudieron cargar los grupos de usuarios');
         }
       })();
     }
   }, [canAssign]);
+
+  useEffect(() => {
+    if (!canAssign) return;
+
+    const term = userSearch.trim();
+    let isCurrentRequest = true;
+
+    if (term.length < 2) {
+      setUserOptions([]);
+      setUsersLoading(false);
+      return () => { isCurrentRequest = false; };
+    }
+
+    setUsersLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: 20,
+          tipo: 'cliente',
+          estado: true,
+          search: term
+        });
+
+        if (!isCurrentRequest) return;
+        const options = Array.isArray(response?.data)
+          ? response.data.map(usuarioToOption)
+          : [];
+        setUserOptions(options);
+      } catch {
+        if (isCurrentRequest) {
+          setUserOptions([]);
+          toast.error('No se pudieron buscar usuarios');
+        }
+      } finally {
+        if (isCurrentRequest) setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      isCurrentRequest = false;
+      clearTimeout(timeoutId);
+    };
+  }, [canAssign, userSearch]);
+
+  const mergedUserOptions = useMemo(() => {
+    const optionsById = new Map();
+    [...selectedUserOptions, ...userOptions].forEach(option => {
+      if (option?.value) optionsById.set(option.value, option);
+    });
+    return Array.from(optionsById.values());
+  }, [selectedUserOptions, userOptions]);
+
+  const assignedInfoUserOptions = useMemo(() => {
+    const optionsById = new Map();
+
+    selectedUserOptions.forEach(option => {
+      if (option?.value) optionsById.set(Number(option.value), option);
+    });
+
+    selectedGroupOptions.forEach(groupOption => {
+      const group = gruposUsuarios.find(g => Number(g.ID_GrupoUsuario) === Number(groupOption.value));
+      const members = group?.miembros || group?.usuarios || group?.Usuarios || [];
+
+      members.forEach(member => {
+        const usuario = member?.usuario || member?.Usuario || member;
+        const id = Number(usuario?.ID_Usuario || usuario?.id || usuario?.value);
+        if (!id || optionsById.has(id)) return;
+        optionsById.set(id, usuarioToOption({ ...usuario, ID_Usuario: id }));
+      });
+    });
+
+    return Array.from(optionsById.values());
+  }, [gruposUsuarios, selectedGroupOptions, selectedUserOptions]);
+
+  useEffect(() => {
+    if (!canAssign) return;
+
+    const selectedStillAvailable = assignedInfoUserOptions.some(
+      option => Number(option.value) === Number(selectedInfoUserId)
+    );
+
+    if (!selectedStillAvailable) {
+      setSelectedInfoUserId(assignedInfoUserOptions[0]?.value ?? null);
+    }
+  }, [assignedInfoUserOptions, canAssign, selectedInfoUserId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -453,19 +609,17 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
   }, []);
 
   useEffect(() => {
-    if (isEditing && (!canAssign || users.length > 0)) {
+    if (isEditing) {
       fetchRoutine();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, canAssign, users]);
+  }, [isEditing, canAssign]);
 
   /* Restoring selectedUserId for JSX usage */
   const selectedUserId = useMemo(() => {
     if (!canAssign) return Number(localStorage.getItem("usuarioId"));
-    if (!users.length) return null;
-    const u = users.find(u => u.email === selectedEmail);
-    return u?.ID_Usuario ?? null;
-  }, [canAssign, users, selectedEmail]);
+    return selectedInfoUserId ?? assignedInfoUserOptions?.[0]?.value ?? null;
+  }, [assignedInfoUserOptions, canAssign, selectedInfoUserId]);
 
   useEffect(() => {
     if (!canAssign) return;
@@ -476,6 +630,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     (async () => {
       try {
         setLoadingMetrics(true);
+        setUserMetrics(null);
         const resp = await apiService.getEjerciciosResultadosUsuario(uid);
         const normalized = normalizeUserMetrics(resp);
         setUserMetrics(normalized);
@@ -513,28 +668,32 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       });
       setSelectedClase(r.claseRutina || "");
       setSelectedGrupoMuscular(r.grupoMuscularRutina || "");
+      if (r.urlPlanificacion) {
+        setTipoRutina("simple");
+        setUrlPlanificacion(r.urlPlanificacion);
+      } else {
+        setTipoRutina("clasica");
+        setUrlPlanificacion("");
+      }
 
       if (canAssign) {
-        const alumnoEmail = r?.alumno?.email ?? r?.alumnoEmail ?? null;
-        const alumnoId = r?.ID_Usuario ?? r?.alumno?.ID_Usuario ?? null;
-        let selected = null;
-        if (alumnoEmail) {
-          selected = alumnoEmail;
-        } else if (alumnoId) {
-          // Force wait for users if empty?
-          const uid = Number(alumnoId);
-          const u = users.find(u => u.ID_Usuario === uid);
-          if (u) {
-            selected = u.email;
-          } else {
-            // Fallback: if user not found yet, maybe check if we can fetch individual?
-            // checking if users array is populated
-            if (users.length > 0) {
-              console.warn("User ID not found in users list", uid);
-            }
-          }
-        }
-        setSelectedEmail(selected);
+        const asignacionesUsuarios = Array.isArray(r?.asignacionesUsuarios)
+          ? r.asignacionesUsuarios
+          : (r?.alumno ? [r.alumno] : []);
+        const selectedUsers = asignacionesUsuarios
+          .map(a => {
+            const id = Number(a.ID_Usuario);
+            return id ? usuarioToOption({ ...a, ID_Usuario: id }) : null;
+          })
+          .filter(Boolean);
+        setSelectedUserOptions(selectedUsers);
+        const selectedGroups = (Array.isArray(r?.asignacionesGrupos) ? r.asignacionesGrupos : [])
+          .map(g => ({
+            label: g.nombre,
+            value: g.ID_GrupoUsuario
+          }))
+          .filter(g => g.value);
+        setSelectedGroupOptions(selectedGroups);
       }
 
       const mapBloques = (bloquesApi = []) =>
@@ -643,8 +802,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       return toast.error("Ingresá un nombre para la rutina");
     if (!days.length)
       return toast.error("Agregá al menos un día");
-    if (canAssign && !selectedEmail)
-      return toast.error("Seleccioná un usuario para asignar la rutina");
+    if (canAssign && selectedUserOptions.length === 0 && selectedGroupOptions.length === 0)
+      return toast.error("Seleccioná al menos un usuario o grupo para asignar la rutina");
     setStep(2);
   };
 
@@ -667,6 +826,34 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       .map((d, i) => ({ ...d, key: `dia${i + 1}` }));
     handleSetDays(newDays);
     setActiveDayIndex(Math.max(0, idx - 1));
+  };
+
+  const duplicateDay = (idx) => {
+    const original = days[idx];
+    if (!original) return;
+
+    const clonedBlocks = (original.blocks || []).map(block => ({
+      ...block,
+      id: cryptoRandomId(),
+      data: JSON.parse(JSON.stringify(block.data || {}))
+    }));
+
+    const duplicatedDay = {
+      ...original,
+      key: 'tmp',
+      nombre: original.nombre ? `${original.nombre} (copia)` : '',
+      descripcion: original.descripcion || '',
+      blocks: clonedBlocks
+    };
+
+    const newDays = [
+      ...days.slice(0, idx + 1),
+      duplicatedDay,
+      ...days.slice(idx + 1)
+    ].map((d, i) => ({ ...d, key: `dia${i + 1}` }));
+
+    handleSetDays(newDays);
+    setActiveDayIndex(idx + 1);
   };
 
   const activeDay = days[activeDayIndex];
@@ -1114,6 +1301,49 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     setActiveDayIndex(0);
   };
 
+  const duplicateWeek = (idx) => {
+    const original = weeks[idx];
+    if (!original) return;
+
+    const clonedDays = (original.days || []).map((day, dayIdx) => ({
+      ...day,
+      key: `dia${dayIdx + 1}`,
+      blocks: (day.blocks || []).map(block => ({
+        ...block,
+        id: cryptoRandomId(),
+        data: JSON.parse(JSON.stringify(block.data || {}))
+      }))
+    }));
+
+    const nextNum = weeks.length + 1;
+    const duplicatedWeek = {
+      key: `semana${Date.now()}`,
+      nombre: `Semana ${nextNum}`,
+      numero: nextNum,
+      days: clonedDays.length
+        ? clonedDays
+        : [{ key: 'dia1', nombre: '', descripcion: '', blocks: [] }]
+    };
+
+    const newWeeks = [
+      ...weeks.slice(0, idx + 1),
+      duplicatedWeek,
+      ...weeks.slice(idx + 1)
+    ].map((week, weekIdx) => ({
+      ...week,
+      numero: weekIdx + 1,
+      nombre: week.nombre.startsWith('Semana ')
+        ? `Semana ${weekIdx + 1}`
+        : week.nombre
+    }));
+
+    const newActiveIndex = idx + 1;
+    setWeeks(newWeeks);
+    setActiveWeekIndex(newActiveIndex);
+    setDays(newWeeks[newActiveIndex].days);
+    setActiveDayIndex(0);
+  };
+
   const handleWeekNameChange = (idx, newName) => {
     const updated = [...weeks];
     updated[idx].nombre = newName;
@@ -1199,12 +1429,17 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   // Payload
   const buildPayload = () => {
-    const userId = canAssign
-      ? (users.find(u => u.email === selectedEmail)?.ID_Usuario ?? null)
-      : Number(localStorage.getItem("usuarioId"));
+    const usuariosAsignados = canAssign
+      ? selectedUserOptions.map(option => Number(option.value)).filter(Boolean)
+      : [Number(localStorage.getItem("usuarioId"))].filter(Boolean);
+    const gruposAsignados = canAssign
+      ? selectedGroupOptions.map(option => Number(option.value)).filter(Boolean)
+      : [];
+    const currentUserId = Number(localStorage.getItem("usuarioId"));
+    const userId = usuariosAsignados[0] || currentUserId;
 
     const entrenadorId = canAssign
-      ? Number(localStorage.getItem("usuarioId"))
+      ? currentUserId
       : null;
 
     const transformBlocks = (blocksList) => {
@@ -1350,6 +1585,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     const payload = {
       ID_Usuario: userId,
       ID_Entrenador: entrenadorId,
+      usuariosAsignados,
+      gruposAsignados,
       nombre: formData.nombre,
       desc: formData.descripcion,
       claseRutina: selectedClase,
@@ -1380,13 +1617,48 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = buildPayload();
+      let payload;
+      if (tipoRutina === 'simple') {
+        if (!urlPlanificacion.trim()) {
+          toast.error("Ingresá la URL de Google Sheets");
+          setLoading(false);
+          return;
+        }
+
+        const usuariosAsignadosIds = canAssign
+          ? selectedUserOptions.map(option => Number(option.value)).filter(Boolean)
+          : [Number(localStorage.getItem("usuarioId"))].filter(Boolean);
+        const gruposAsignadosIds = canAssign
+          ? selectedGroupOptions.map(option => Number(option.value)).filter(Boolean)
+          : [];
+        const currentUserId = Number(localStorage.getItem("usuarioId"));
+        const userId = usuariosAsignadosIds[0] || currentUserId;
+        const entrenadorId = canAssign ? currentUserId : null;
+
+        payload = {
+          ID_Usuario: userId,
+          ID_Entrenador: entrenadorId,
+          usuariosAsignados: usuariosAsignadosIds,
+          gruposAsignados: gruposAsignadosIds,
+          nombre: formData.nombre,
+          desc: formData.descripcion,
+          claseRutina: selectedClase,
+          grupoMuscularRutina: selectedGrupoMuscular,
+          urlPlanificacion: urlPlanificacion.trim()
+        };
+      } else {
+        payload = buildPayload();
+      }
 
       if (isEditing) {
         await apiService.editRutina(rutinaId, payload);
         toast.success('Rutina actualizada correctamente');
       } else {
-        await apiService.createRutina(payload);
+        if (tipoRutina === 'simple') {
+          await apiService.createRutinaSimple(payload);
+        } else {
+          await apiService.createRutina(payload);
+        }
         toast.success('Rutina creada correctamente');
       }
 
@@ -1453,10 +1725,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
   const selectedUser = useMemo(() => {
     if (!canAssign) return null;
-    return (
-      users.find(u => u.ID_Usuario === selectedUserId) || null
-    );
-  }, [canAssign, users, selectedUserId]);
+    return assignedInfoUserOptions.find(option => Number(option.value) === Number(selectedUserId))?.usuario || null;
+  }, [assignedInfoUserOptions, canAssign, selectedUserId]);
 
   /* ================= Render ================= */
   return (
@@ -1467,10 +1737,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         isEntrenador={fromEntrenador}
       />
 
-      <div
-        className='content-layout mi-rutina-ctn layout-with-info'
-        style={{ display: 'flex', gap: 16 }}
-      >
+      <div className='content-layout mi-rutina-ctn layout-with-info crear-rutina-layout'>
         {/* FAB abrir info en mobile y desktop cuando cerrado */}
         {canAssign && step === 2 && !infoOpen && (
           <button
@@ -1486,19 +1753,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
         )}
 
         {/* Columna principal */}
-        <div
-          className="main-col"
-          style={{ flex: '1 1 auto', minWidth: 0 }}
-        >
-          <div
-            className="mi-rutina-title header-row"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 8
-            }}
-          >
+        <div className="main-col crear-rutina-main">
+          <div className="mi-rutina-title header-row crear-rutina-header">
             <h2>
               {isEditing ? 'Editar Rutina' : 'Crear Rutina'}
             </h2>
@@ -1528,6 +1784,8 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
           {step === 1 && (
             <div className="crear-rutina-step1">
               <div className="crear-rutina-step-1-form">
+                <h3 className="crear-rutina-section-title">Información de la rutina</h3>
+
                 <CustomInput
                   placeholder="Nombre de la rutina"
                   value={formData.nombre}
@@ -1574,44 +1832,104 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                   }
                 />
 
+                {/* Selector de Tipo de Rutina */}
+                <h3 className="crear-rutina-section-title">Tipo de carga de entrenamiento</h3>
+
+                <div className="tipo-rutina-selector-container">
+                  {/* <label className="tipo-rutina-label">Tipo de entrenamiento</label> */}
+                  <div className="tipo-rutina-selector">
+                    <button
+                      type="button"
+                      className={`tipo-rutina-btn ${tipoRutina === 'clasica' ? 'active' : ''}`}
+                      onClick={() => setTipoRutina('clasica')}
+                    >
+                      <Dumbbell className="icon" aria-hidden="true" />
+                      <div className="text-wrapper">
+                        <span className="title">Clásica</span>
+                        <span className="subtitle">Bloques estructurados</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tipo-rutina-btn ${tipoRutina === 'simple' ? 'active' : ''}`}
+                      onClick={() => setTipoRutina('simple')}
+                    >
+                      <Table2 className="icon" aria-hidden="true" />
+                      <div className="text-wrapper">
+                        <span className="title">Planilla Digital</span>
+                        <span className="subtitle">Google Sheets</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Campo URL Planificación si es simple */}
+                {tipoRutina === 'simple' && (
+                  <div className="url-planificacion-container premium-glow-border">
+                    <CustomInput
+                      placeholder="Pegá el enlace a la planilla de Google Sheets"
+                      value={urlPlanificacion}
+                      onChange={(e) => setUrlPlanificacion(e.target.value)}
+                    />
+                    <div className="url-planificacion-help">
+                      <span className="help-icon">💡</span>
+                      <p>Asegurate de que el enlace de Google Sheets tenga permisos de lectura para que el alumno pueda visualizarlo.</p>
+                    </div>
+                  </div>
+                )}
+
                 {canAssign && (
-                  <Select
-                    options={users.map(u => ({
-                      label: `${u.nombre} ${u.apellido} (${u.email})`,
-                      value: u.email
-                    }))}
-                    value={
-                      selectedEmail
-                        ? {
-                          label: `${users.find(
-                            u =>
-                              u.email ===
-                              selectedEmail
-                          )?.nombre || ''} ${users.find(
-                            u =>
-                              u.email ===
-                              selectedEmail
-                          )?.apellido || ''} (${selectedEmail})`,
-                          value: selectedEmail
-                        }
-                        : null
-                    }
-                    onChange={option =>
-                      setSelectedEmail(option.value)
-                    }
-                    placeholder="Seleccioná un usuario"
-                    isSearchable
-                    required={!!fromEntrenador}
-                    styles={customStyles}
-                  />
+                  <>
+                    <h3 className="crear-rutina-section-title">Asignación de usuario/s</h3>
+
+                    <Select
+                      options={mergedUserOptions}
+                      value={selectedUserOptions}
+                      onChange={options => setSelectedUserOptions(options || [])}
+                      onInputChange={(value, meta) => {
+                        if (meta.action === 'input-change') setUserSearch(value);
+                      }}
+                      placeholder="Usuarios asignados"
+                      noOptionsMessage={() => userSearch.trim().length < 2 ? 'Escribí al menos 2 caracteres' : 'No se encontraron usuarios'}
+                      loadingMessage={() => 'Buscando usuarios...'}
+                      isMulti
+                      isSearchable
+                      isLoading={usersLoading}
+                      filterOption={null}
+                      styles={customStyles}
+                    />
+
+                    <Select
+                      options={gruposUsuarios
+                        .filter(g => g.estado !== false)
+                        .map(g => ({
+                          label: `${g.nombre} (${g.miembros?.length || 0} usuarios)`,
+                          value: g.ID_GrupoUsuario
+                        }))}
+                      value={selectedGroupOptions}
+                      onChange={options => setSelectedGroupOptions(options || [])}
+                      placeholder="Grupos asignados"
+                      isMulti
+                      isSearchable
+                      styles={customStyles}
+                    />
+                  </>
                 )}
 
                 <div className='crearRutina-s1-continuar-btn-ctn'>
-                  <PrimaryButton
-                    text="Continuar"
-                    linkTo="#"
-                    onClick={handleContinue}
-                  />
+                  {tipoRutina === 'simple' ? (
+                    <PrimaryButton
+                      text={isEditing ? "Guardar cambios" : "Crear rutina"}
+                      linkTo="#"
+                      onClick={handleSubmit}
+                    />
+                  ) : (
+                    <PrimaryButton
+                      text="Continuar"
+                      linkTo="#"
+                      onClick={handleContinue}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -1682,6 +2000,18 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                             <span className="day-tab-label">{w.nombre}</span>
 
                             <button
+                              className="day-tab-action"
+                              title="Duplicar semana"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                duplicateWeek(idx);
+                              }}
+                            >
+                              <Copy width={13} height={13} />
+                            </button>
+
+                            <button
                               className="day-tab-close"
                               onClick={(e) => { e.stopPropagation(); removeWeek(idx); }}
                               type="button"
@@ -1750,6 +2080,18 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                           </button>
 
                           <span className="day-tab-label">{`Día ${idx + 1}`}</span>
+
+                          <button
+                            className="day-tab-action"
+                            title="Duplicar día"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateDay(idx);
+                            }}
+                          >
+                            <Copy width={13} height={13} />
+                          </button>
 
                           <button
                             className="day-tab-close"
@@ -3170,6 +3512,21 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                 {infoTab ===
                   'usuario' && (
                     <div>
+                      <div className="info-user-select">
+                        <label className="info-user-select__label">
+                          Usuario para consultar
+                        </label>
+                        <Select
+                          options={assignedInfoUserOptions}
+                          value={assignedInfoUserOptions.find(option => Number(option.value) === Number(selectedUserId)) || null}
+                          onChange={option => setSelectedInfoUserId(option?.value ?? null)}
+                          placeholder="Seleccionar usuario"
+                          noOptionsMessage={() => 'No hay usuarios asignados'}
+                          isSearchable
+                          styles={customStyles}
+                        />
+                      </div>
+
                       <div className="user-meta">
                         <div className="user-meta__line">
                           <b>
@@ -3187,14 +3544,36 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
                           Para ver
                           mediciones, primero
                           seleccioná un
-                          usuario en el
-                          desplegable de la
-                          izquierda.
+                          usuario asignado.
                         </p>
                       )}
 
                       {selectedUserId && (
                         <>
+                          <div className="user-health">
+                            <div className="user-health__section">
+                              <strong>Observaciones de Salud</strong>
+                              <p className="user-health__text">
+                                {selectedUser?.observacionesSalud || 'Sin observaciones cargadas.'}
+                              </p>
+                            </div>
+                            <div className="user-health__section">
+                              <strong>Ficha médica</strong>
+                              {selectedUser?.fichaMedicaUrl ? (
+                                <a
+                                  className="user-health__link"
+                                  href={selectedUser.fichaMedicaUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Ver ficha médica
+                                </a>
+                              ) : (
+                                <p className="user-health__text">Sin ficha médica cargada.</p>
+                              )}
+                            </div>
+                          </div>
+
                           {loadingMetrics && (
                             <p className="info-loading">
                               Cargando

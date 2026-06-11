@@ -5,6 +5,12 @@
     margin-bottom: 16px;
 }
 
+.exercises-header h2 {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+}
+
 .ejercicios-list {
     display: flex;
     justify-content: start;

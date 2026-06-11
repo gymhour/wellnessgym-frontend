@@ -101,7 +101,7 @@ const Ejercicios = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
       <div className='content-layout'>
         <div className='exercises-header'>
-          <h2>Listado de Ejercicios</h2>
+          <h2>Lista de Ejercicios</h2>
           {(fromAdmin || fromEntrenador) && (
             <PrimaryButton
               text='Nuevo ejercicio'

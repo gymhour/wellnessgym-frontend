@@ -1,4 +1,66 @@
-import apiClient from '../axiosConfig';
+import apiClient, { authClient } from '../axiosConfig';
+import { ATTENDANCE_REJECT_REASON, ATTENDANCE_STATUS } from '../types/attendanceTypes';
+
+const attendanceReasonMap = {
+    DENEGADO_NO_EXISTE: ATTENDANCE_REJECT_REASON.STUDENT_NOT_FOUND,
+    DENEGADO_INACTIVO: ATTENDANCE_REJECT_REASON.USER_INACTIVE,
+    DENEGADO_CUOTA: ATTENDANCE_REJECT_REASON.MEMBERSHIP_EXPIRED,
+    DENEGADO_DUPLICADO: ATTENDANCE_REJECT_REASON.DUPLICATE_ATTENDANCE,
+    DENEGADO_SIN_TURNO: ATTENDANCE_REJECT_REASON.NO_ACTIVE_PLAN,
+    DENEGADO_LIMITE_SEMANAL: ATTENDANCE_REJECT_REASON.WEEKLY_LIMIT_REACHED,
+};
+
+const normalizeAttendanceMethod = method => (
+    String(method || 'DNI').toLowerCase() === 'qr' ? 'qr' : 'dni'
+);
+
+const mapCheckInResponse = data => {
+    const allowed = Boolean(data?.permitido);
+    const fullName = [data?.alumno?.nombre, data?.alumno?.apellido].filter(Boolean).join(' ');
+
+    return {
+        allowed,
+        status: allowed ? ATTENDANCE_STATUS.ALLOWED : ATTENDANCE_STATUS.REJECTED,
+        message: data?.motivo || (allowed ? 'Ingreso permitido.' : 'Ingreso rechazado.'),
+        reason: attendanceReasonMap[data?.resultado],
+        student: data?.alumno ? {
+            id: data.alumno.id ? String(data.alumno.id) : '',
+            name: fullName || '-',
+            dni: data.alumno.dni || '',
+        } : undefined,
+        attendance: data?.asistencia ? {
+            id: String(data.asistencia.id),
+            date: data.asistencia.fechaIngreso,
+            method: normalizeAttendanceMethod(data.asistencia.metodo),
+        } : undefined,
+    };
+};
+
+const mapAttendanceHistoryItem = item => {
+    const fullName = [item?.User?.nombre, item?.User?.apellido].filter(Boolean).join(' ');
+
+    return {
+        id: String(item?.ID_Asistencia),
+        student: item?.User ? {
+            id: item?.ID_Usuario ? String(item.ID_Usuario) : '',
+            name: fullName || '-',
+            dni: item.User.dni || '',
+        } : undefined,
+        date: item?.fechaIngreso,
+        method: normalizeAttendanceMethod(item?.metodo),
+        status: item?.permitido ? ATTENDANCE_STATUS.ALLOWED : ATTENDANCE_STATUS.REJECTED,
+        reason: attendanceReasonMap[item?.resultado],
+        rejectionReason: item?.permitido ? '' : item?.motivo,
+        plan: item?.Cuota?.planNombreSnapshot
+            ? { name: item.Cuota.planNombreSnapshot }
+            : undefined,
+    };
+};
+
+const getApiErrorData = error => {
+    if (error?.response?.data) return error.response.data;
+    return null;
+};
 
 // Clases
 const getClases = async () => {
@@ -11,9 +73,13 @@ const getClases = async () => {
 };
 
 // Turnos
-const getTurnos = async () => {
+const getTurnos = async (filters = {}) => {
     try {
-        const response = await apiClient.get(`/turnos`);
+        const params = {};
+        if (filters.fechaDesde) params.fechaDesde = filters.fechaDesde;
+        if (filters.fechaHasta) params.fechaHasta = filters.fechaHasta;
+
+        const response = await apiClient.get(`/turnos`, { params });
         return response.data;
     } catch (error) {
         throw new Error("Error en el service de getTurnos")
@@ -54,7 +120,8 @@ const deleteTurno = async (id) => {
         const response = await apiClient.delete(`/turnos/${id}`);
         return response.data
     } catch (error) {
-        throw new Error("Error en el service de deleteTurno")
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "Error en el service de deleteTurno")
     }
 }
 
@@ -95,6 +162,15 @@ const createRutina = async (data) => {
     }
 };
 
+const createRutinaSimple = async (data) => {
+    try {
+        const response = await apiClient.post("/rutinas/simple", data);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || "Error al crear la rutina simplificada");
+    }
+};
+
 const editRutina = async (idRutina, data) => {
     try {
         const response = await apiClient.put(`/rutinas/${idRutina}`, data);
@@ -113,9 +189,13 @@ const deleteRutina = async (id) => {
     }
 }
 
-const getRutinasAsignadas = async() => {
+const getRutinasAsignadas = async ({ page = 1, take = 6, grupoId, usuarioId, asignadasPorMi } = {}) => {
     try {
-        const response = await apiClient.get("/rutinas/asignadas");
+        const params = { page, take };
+        if (grupoId) params.grupoId = grupoId;
+        if (usuarioId) params.usuarioId = usuarioId;
+        if (asignadasPorMi) params.asignadasPorMi = true;
+        const response = await apiClient.get("/rutinas/asignadas", { params });
         return response.data;
     } catch {
         throw new Error("Error al traer las rutinas asignadas");
@@ -136,7 +216,58 @@ const getRutinasAdmins = async () => {
         const response = await apiClient.get(`/rutinas/admins`)
         return response.data;
     } catch (error) {
+        const apiMessage = error.response?.data?.message;
+        if (error.response?.status === 404 && apiMessage === 'No se encontraron rutinas creadas por admins') {
+            return { rutinas: [] };
+        }
+
         throw new Error("Error al traer las rutinas del admin");
+    }
+}
+
+// Grupos de usuarios
+const getGruposUsuarios = async () => {
+    try {
+        const response = await apiClient.get('/grupos-usuarios');
+        return response.data;
+    } catch (error) {
+        throw new Error('Error al obtener grupos de usuarios');
+    }
+}
+
+const getGrupoUsuarioById = async (id) => {
+    try {
+        const response = await apiClient.get(`/grupos-usuarios/${id}`);
+        return response.data;
+    } catch (error) {
+        throw new Error('Error al obtener el grupo de usuarios');
+    }
+}
+
+const createGrupoUsuario = async (body) => {
+    try {
+        const response = await apiClient.post('/grupos-usuarios', body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al crear grupo de usuarios');
+    }
+}
+
+const updateGrupoUsuario = async (id, body) => {
+    try {
+        const response = await apiClient.put(`/grupos-usuarios/${id}`, body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al actualizar grupo de usuarios');
+    }
+}
+
+const deleteGrupoUsuario = async (id) => {
+    try {
+        const response = await apiClient.delete(`/grupos-usuarios/${id}`);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al eliminar grupo de usuarios');
     }
 }
 
@@ -166,10 +297,20 @@ const removeEntrenadorFromClase = async (idClase, idEntrenador) => {
     }
 }
 
-const getAllUsuarios = async ({ page = 1, take = 15 } = {}) => {
+const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombre, apellido, email, dni, planId } = {}) => {
     try {
+        const params = { page, take };
+        if (tipo) params.tipo = tipo;
+        if (estado !== undefined) params.estado = estado;
+        if (search?.trim()) params.search = search.trim();
+        if (nombre?.trim()) params.nombre = nombre.trim();
+        if (apellido?.trim()) params.apellido = apellido.trim();
+        if (email?.trim()) params.email = email.trim();
+        if (dni?.trim()) params.dni = dni.trim();
+        if (planId) params.planId = planId;
+
         const response = await apiClient('/usuarios', {
-            params: { page, take },
+            params,
         });
         return response.data;
     } catch (error) {
@@ -193,6 +334,15 @@ const updateUserById = async (id, body) => {
         return response.data
     } catch (error) {
         throw new Error(`Error al editar el usuario con ID ${id}`);
+    }
+}
+
+const updateUserHealthById = async (id, body) => {
+    try {
+        const response = await apiClient.put(`/usuarios/${id}/salud`, body);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || `Error al editar salud del usuario con ID ${id}`);
     }
 }
 
@@ -308,6 +458,30 @@ const getKPIs = async () => {
     }
 }
 
+const getChurnRisk = async ({ page = 1, take = 20, riskLevel = '', search = '' } = {}) => {
+    try {
+        const params = { page, take };
+        if (riskLevel) params.riskLevel = riskLevel;
+        if (search?.trim()) params.search = search.trim();
+
+        const response = await apiClient.get("/admin/churn-risk", { params });
+        return response.data;
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "Error en el servicio de getChurnRisk");
+    }
+}
+
+const sendChurnContactEmail = async ({ ID_Usuario, asunto, mensaje, plantilla }) => {
+    try {
+        const response = await apiClient.post("/admin/churn-risk/contact", { ID_Usuario, asunto, mensaje, plantilla });
+        return response.data;
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || "No se pudo enviar el mail.");
+    }
+}
+
 // Admin planes
 const getPlanes = async () => {
     try {
@@ -355,6 +529,25 @@ const postCuotasMasivas = async (body) => {
     }
 }
 
+const postValidarTurnosFijos = async (body) => {
+    try {
+        const response = await apiClient.post("cuotas/validate-turnos-fijos", body);
+        return response;
+    } catch (error) {
+        throw new Error("Error en el servicio de postValidarTurnosFijos")
+    }
+}
+
+const regenerateTurnosFijosUsuario = async (idUsuario) => {
+    try {
+        const response = await apiClient.post(`cuotas/usuario/${idUsuario}/regenerate-turnos-fijos`);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || "Error en el servicio de regenerateTurnosFijosUsuario");
+    }
+}
+
 const getCuotasUsuario = async (id) => {
     try {
         const response = await apiClient.get(`cuotas/usuario/${id}/cuotas`);
@@ -371,6 +564,126 @@ const getCuotasReminder = async (idUsuario) => {
     } catch (error) {
         const apiMsg = error?.response?.data?.message;
         throw new Error(apiMsg || "Error en el servicio de getCuotasReminder");
+    }
+}
+
+// Gastos (Salidas de dinero)
+const getGastos = async ({ page = 1, categoria, mes, fechaDesde, fechaHasta } = {}) => {
+    try {
+        const params = { page };
+        if (categoria) params.categoria = categoria;
+        if (mes) params.mes = mes;
+        if (fechaDesde) params.fechaDesde = fechaDesde;
+        if (fechaHasta) params.fechaHasta = fechaHasta;
+        const response = await apiClient.get('/gastos', { params });
+        return response.data; // { meta, data }
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar los gastos.');
+    }
+}
+
+const createGasto = async (payload) => {
+    try {
+        const response = await apiClient.post('/gastos', payload);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo crear el gasto.');
+    }
+}
+
+const updateGasto = async (id, payload) => {
+    try {
+        const response = await apiClient.put(`/gastos/${id}`, payload);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo actualizar el gasto.');
+    }
+}
+
+const deleteGasto = async (id) => {
+    try {
+        const response = await apiClient.delete(`/gastos/${id}`);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error?.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo eliminar el gasto.');
+    }
+}
+
+// Asistencias
+const registerAttendance = async ({ dni, method = 'DNI' }) => {
+    try {
+        const response = await authClient.post('/usuarios/asistencias/registrar', {
+            dni,
+            metodo: method,
+        });
+        return mapCheckInResponse(response.data);
+    } catch (error) {
+        const apiData = getApiErrorData(error);
+        if (apiData) {
+            return mapCheckInResponse(apiData);
+        }
+        throw new Error(error.message || 'No se pudo registrar la asistencia');
+    }
+}
+
+const getAttendances = async (filters = {}, { page = 1, take = 20 } = {}) => {
+    try {
+        const params = {
+            page,
+            limit: take,
+        };
+
+        if (filters.dni?.trim()) {
+            params.dni = filters.dni.trim();
+        }
+        if (filters.student?.trim()) {
+            params.student = filters.student.trim();
+        }
+        if (filters.method?.trim()) {
+            params.metodo = filters.method.trim().toUpperCase();
+        }
+        if (filters.fromDate) {
+            params.fechaInicio = filters.fromDate;
+        }
+        if (filters.toDate) {
+            params.fechaFin = `${filters.toDate}T23:59:59`;
+        }
+        if (filters.status === ATTENDANCE_STATUS.ALLOWED) {
+            params.permitido = true;
+        }
+        if (filters.status === ATTENDANCE_STATUS.REJECTED) {
+            params.permitido = false;
+        }
+
+        const response = await apiClient.get('/usuarios/asistencias/historial', { params });
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+
+        return {
+            items: data.map(mapAttendanceHistoryItem),
+            pagination: response.data?.pagination || { total: data.length, pages: 1, page, limit: take },
+        };
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar las asistencias.');
+    }
+}
+
+const getMyAttendances = async () => {
+    try {
+        const response = await apiClient.get('/usuarios/asistencias/mis-asistencias');
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+
+        return {
+            summary: response.data?.summary || null,
+            attendances: data.map(mapAttendanceHistoryItem),
+        };
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudieron cargar tus asistencias.');
     }
 }
 
@@ -463,11 +776,17 @@ export default {
     getRutinaById,
     getUserRutinas,
     createRutina,
+    createRutinaSimple,
     editRutina,
     deleteRutina,
     getRutinasEntrenadores,
     getRutinasAdmins,
     getRutinasAsignadas,
+    getGruposUsuarios,
+    getGrupoUsuarioById,
+    createGrupoUsuario,
+    updateGrupoUsuario,
+    deleteGrupoUsuario,
     // Entrenadores
     getEntrenadores,
     addEntrenadorToClase,
@@ -476,6 +795,7 @@ export default {
     getAllUsuarios,
     getUserById,
     updateUserById,
+    updateUserHealthById,
     getUsuariosAdmins,
     // Contraseña
     forgotPassword,
@@ -491,6 +811,8 @@ export default {
     postEjercicioResultado,
     // Admin dashboard
     getKPIs,
+    getChurnRisk,
+    sendChurnContactEmail,
     // Planes
     getPlanes,
     postPlanes,
@@ -499,7 +821,18 @@ export default {
     // Cuotas
     getCuotasUsuario,
     postCuotasMasivas,
+    postValidarTurnosFijos,
+    regenerateTurnosFijosUsuario,
     getCuotasReminder,
+    // Gastos
+    getGastos,
+    createGasto,
+    updateGasto,
+    deleteGasto,
+    // Asistencias
+    registerAttendance,
+    getAttendances,
+    getMyAttendances,
     // Ejercicios
     getEjercicios,
     getEjercicioById,
