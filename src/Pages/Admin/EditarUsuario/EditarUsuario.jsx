@@ -598,7 +598,6 @@ const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
               </button>
             </div>
           </form>
-          </div>
         </div>
       </div>
   );

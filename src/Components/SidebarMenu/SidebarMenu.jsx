@@ -28,7 +28,8 @@ import {
   ClipboardCheck,
   ScanLine,
   AlertTriangle,
-  TrendingDown
+  TrendingDown,
+  UserPlus
 } from 'lucide-react';
 
 

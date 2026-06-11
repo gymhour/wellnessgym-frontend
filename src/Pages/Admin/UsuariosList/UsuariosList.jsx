@@ -194,6 +194,12 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     closePopup();
   };
 
+  const handlePopupConfirm = (nuevoEstado) => {
+    if (!selectedUser) return;
+    updateUsuarioEstado(selectedUser.ID_Usuario, nuevoEstado, motivoSeleccionado);
+    closePopup();
+  };
+
   const fetchTurnosHistory = async (user) => {
     setHistoryUser(user);
     setHistFiltroEstado('');
