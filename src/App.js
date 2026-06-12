@@ -416,14 +416,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/entrenador/cuotas"
-          element={
-            <ProtectedRoute>
-              <CuotasUsuarios fromEntrenador={true}/>
-            </ProtectedRoute>
-          }
-        />
         {/* Alumno */}
         <Route path="/alumno/inicio"
           element={

@@ -11,7 +11,8 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import ReprogramarTurnoModal from '../../../Components/utils/ReprogramarTurnoModal/ReprogramarTurnoModal';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
 
@@ -59,6 +60,16 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [motivoSeleccionado, setMotivoSeleccionado] = useState('');
+  // Flujo "Eliminar y reprogramar" turno AUSENTE/CANCELADO: { user: {id,nombre}, turno: {id,label} }
+  const [reprogramarData, setReprogramarData] = useState(null);
+
+  // Refresca el historial del modal "Ver turnos" sin cerrarlo (post borrado/creación de turno)
+  const refreshTurnosHistory = () => {
+    if (!historyUser) return;
+    apiService.getTurnosUsuario(historyUser.ID_Usuario)
+      .then((data) => setTurnosHistory(data || []))
+      .catch(() => {});
+  };
   const [showImportModal, setShowImportModal] = useState(false);
 
   // Historial de turnos modal
@@ -1008,6 +1019,24 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                                   }} />
                                   {badgeLabel(t.estado)}
                                 </span>
+                                {fromAdmin && ['AUSENTE', 'CANCELADO'].includes(t.estado) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setReprogramarData({
+                                      user: { id: historyUser.ID_Usuario, nombre: `${historyUser.nombre || ''} ${historyUser.apellido || ''}`.trim() },
+                                      turno: { id: t.id_turno, label: `${getDiaSemana(t.fecha)} ${formatFecha(t.fecha)} ${formatHora(horario?.horaIni)} · ${clase}` },
+                                    })}
+                                    title="Eliminar definitivamente y crear un turno nuevo"
+                                    aria-label="Eliminar y reprogramar turno"
+                                    style={{
+                                      marginLeft: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                      width: '28px', height: '28px', border: '1px solid var(--border-color)', borderRadius: '6px',
+                                      background: 'transparent', color: 'var(--text-color-distinct)', cursor: 'pointer', verticalAlign: 'middle'
+                                    }}
+                                  >
+                                    <RotateCcw size={14} />
+                                  </button>
+                                )}
                               </span>
                             </div>
                           );
@@ -1027,6 +1056,18 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
             onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
           />
         )}
+
+        {/* ─── Eliminar y reprogramar turno AUSENTE/CANCELADO ─── */}
+        <ReprogramarTurnoModal
+          isOpen={!!reprogramarData}
+          user={reprogramarData?.user}
+          turno={reprogramarData?.turno}
+          onClose={() => {
+            setReprogramarData(null);
+            refreshTurnosHistory();
+          }}
+          onDeleted={refreshTurnosHistory}
+        />
 
         {showHealthModal && (
           <div className="modal-overlay" onClick={closeHealthModal}>

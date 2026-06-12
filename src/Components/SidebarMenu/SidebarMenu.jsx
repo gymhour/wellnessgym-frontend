@@ -423,18 +423,6 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                         <Activity className="icon" /> Clases y actividades
                       </li>
                     </Link>
-                    <Link
-                    to="/entrenador/cuotas"
-                    className={`menu-link ${location.pathname === "/admin/cuotas"
-                      ? "active"
-                      : ""
-                      }`}
-                  >
-                    <li className="menu-item">
-                      <DollarSign className="icon" />{" "}
-                      Cuotas
-                    </li>
-                  </Link>
                   </>
                 )
                   // SIDEBAR ALUMNO

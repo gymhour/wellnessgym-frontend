@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { X } from 'lucide-react'
+import { RotateCcw, X } from 'lucide-react'
+import ReprogramarTurnoModal from '../../../Components/utils/ReprogramarTurnoModal/ReprogramarTurnoModal'
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
@@ -34,6 +35,8 @@ const getTurnoUser = turno => {
 
   return {
     id: turno.id_turno || turno.ID_Turno || turno.id || `${nombre}-${apellido}-${turno.fecha}`,
+    turnoId: turno.id_turno || turno.ID_Turno || null,
+    userId: turno.User?.ID_Usuario || null,
     name: `${nombre} ${apellido}`.trim() || 'Usuario sin nombre',
     status: normalizeTurnoStatus(turno.estado)
   }
@@ -61,6 +64,10 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const closeModal = () => { setIsModalOpen(false); setSelectedEvent(null) }
+
+  // Eliminar y reprogramar (solo admin): { user: {id,nombre}, turno: {id,label} }
+  const [reprogramarData, setReprogramarData] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // calendario
   const MOBILE_BREAKPOINT = 850;
@@ -96,7 +103,7 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       })
 
     return () => { isCurrentRequest = false }
-  }, [weekStart, weekEnd])
+  }, [weekStart, weekEnd, refreshKey])
 
   // opciones de filtro
   const monthOptions = useMemo(() => {
@@ -175,6 +182,28 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const handleSelectEvent = ev => {
     setSelectedEvent(ev)
     setIsModalOpen(true)
+  }
+
+  const openReprogramar = (user) => {
+    if (!selectedEvent || !user.turnoId || !user.userId) return
+    setReprogramarData({
+      user: { id: user.userId, nombre: user.name },
+      turno: {
+        id: user.turnoId,
+        label: `${moment(selectedEvent.start).format('dddd DD/MM HH:mm')} · ${selectedEvent.title} (${getTurnoStatusLabel(user.status)})`
+      }
+    })
+  }
+
+  // Post-borrado físico: sacar el turno del popup abierto y refrescar la semana
+  const handleTurnoEliminado = () => {
+    const turnoId = reprogramarData?.turno?.id
+    setSelectedEvent(prev => prev ? {
+      ...prev,
+      activeUsers: prev.activeUsers.filter(u => u.turnoId !== turnoId),
+      cancelledUsers: prev.cancelledUsers.filter(u => u.turnoId !== turnoId),
+    } : prev)
+    setRefreshKey(k => k + 1)
   }
 
   const handleMonthChange = e => {
@@ -310,6 +339,17 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
                       <span className={`ta-modal-status ta-modal-status-${user.status.toLowerCase()}`}>
                         {getTurnoStatusLabel(user.status)}
                       </span>
+                      {fromAdmin && user.status === 'AUSENTE' && user.turnoId && user.userId && (
+                        <button
+                          type="button"
+                          className="ta-modal-reprogram"
+                          title="Eliminar definitivamente y crear un turno nuevo"
+                          aria-label={`Eliminar y reprogramar turno de ${user.name}`}
+                          onClick={() => openReprogramar(user)}
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -332,6 +372,17 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
                       <span className="ta-modal-status ta-modal-status-cancelado">
                         {getTurnoStatusLabel(user.status)}
                       </span>
+                      {fromAdmin && user.turnoId && user.userId && (
+                        <button
+                          type="button"
+                          className="ta-modal-reprogram"
+                          title="Eliminar definitivamente y crear un turno nuevo"
+                          aria-label={`Eliminar y reprogramar turno de ${user.name}`}
+                          onClick={() => openReprogramar(user)}
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -342,6 +393,15 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           </div>
         </div>
       )}
+
+      {/* ─── Eliminar y reprogramar turno (solo admin) ─── */}
+      <ReprogramarTurnoModal
+        isOpen={!!reprogramarData}
+        user={reprogramarData?.user}
+        turno={reprogramarData?.turno}
+        onClose={() => { setReprogramarData(null); setRefreshKey(k => k + 1) }}
+        onDeleted={handleTurnoEliminado}
+      />
     </div>
   )
 }

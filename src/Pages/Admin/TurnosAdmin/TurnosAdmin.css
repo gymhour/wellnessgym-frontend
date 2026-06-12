@@ -610,3 +610,26 @@
         width: 100%;
     }
 }
+
+/* Botón "Eliminar y reprogramar" en items del popup de reservas (solo admin) */
+.ta-modal-reprogram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    margin-left: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-color-distinct);
+    cursor: pointer;
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.ta-modal-reprogram:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: var(--background-hover-color);
+}

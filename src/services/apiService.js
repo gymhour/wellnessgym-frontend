@@ -115,6 +115,17 @@ const postTurno = async (body) => {
 };
 
 
+// Borrado FÍSICO (solo admin): elimina definitivamente un turno AUSENTE/CANCELADO
+const deleteTurnoFisico = async (id) => {
+    try {
+        const response = await apiClient.delete(`/turnos/${id}/fisico`);
+        return response.data;
+    } catch (error) {
+        const apiMsg = error.response?.data?.message;
+        throw new Error(apiMsg || 'No se pudo eliminar el turno.');
+    }
+};
+
 const deleteTurno = async (id) => {
     try {
         const response = await apiClient.delete(`/turnos/${id}`);
@@ -771,6 +782,7 @@ export default {
     getTurnoById,
     postTurno,
     deleteTurno,
+    deleteTurnoFisico,
     // Rutinas
     getRutinas,
     getRutinaById,
