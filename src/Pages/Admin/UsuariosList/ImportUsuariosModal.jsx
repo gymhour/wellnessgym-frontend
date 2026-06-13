@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import apiClient from '../../../axiosConfig';
 import { toast } from 'react-toastify';
@@ -7,12 +7,34 @@ import { X, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 
 const COLUMNAS_ESPERADAS = ['email', 'dni', 'nombre', 'apellido', 'tel', 'direc', 'profesion', 'fechaCumple', 'plan'];
 
+// Normaliza la fechaCumple del Excel a texto DD/MM/AAAA (el backend revalida).
+// Cubre: celda fecha real (Date, por cellDates), texto DD/MM/AAAA o ISO, y vacío.
+const pad2 = (n) => String(n).padStart(2, '0');
+const normalizeFechaCumple = (value) => {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return `${pad2(value.getDate())}/${pad2(value.getMonth() + 1)}/${value.getFullYear()}`;
+  }
+  return String(value ?? '').trim();
+};
+
 const ImportUsuariosModal = ({ onClose, onSuccess }) => {
   const fileInputRef = useRef(null);
   const [usuarios, setUsuarios] = useState([]);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const progressTimer = useRef(null);
+
+  // Limpia el intervalo de la barra si el modal se desmonta a mitad de la importación
+  useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
+
+  const stopProgress = () => {
+    if (progressTimer.current) {
+      clearInterval(progressTimer.current);
+      progressTimer.current = null;
+    }
+  };
 
   const clearFile = () => {
     setUsuarios([]);
@@ -30,7 +52,8 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        // cellDates: las celdas con formato de fecha vienen como Date (no como número serial)
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
@@ -43,7 +66,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
           tel: String(row.tel || '').trim(),
           direc: String(row.direc || '').trim(),
           profesion: String(row.profesion || '').trim(),
-          fechaCumple: String(row.fechaCumple || '').trim(),
+          fechaCumple: normalizeFechaCumple(row.fechaCumple),
           plan: String(row.plan || '').trim(),
         }));
 
@@ -65,11 +88,23 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
 
     setLoading(true);
     setErrors(null);
+
+    // Barra de avance estimado: sube sola hasta ~90% (la duración real es desconocida pero acotada);
+    // al volver la respuesta saltamos a 100%. No es progreso por usuario (el insert es masivo).
+    setProgress(8);
+    progressTimer.current = setInterval(() => {
+      setProgress(prev => (prev >= 90 ? 90 : prev + Math.max(1, Math.round((90 - prev) / 12))));
+    }, 400);
+
     try {
       const { data } = await apiClient.post('/usuarios/import', { usuarios });
+      stopProgress();
+      setProgress(100);
       toast.success(`${data.count} usuario(s) importado(s) correctamente`);
       onSuccess();
     } catch (err) {
+      stopProgress();
+      setProgress(0);
       const errData = err.response?.data;
       if (errData?.errors) {
         setErrors(errData.errors);
@@ -126,6 +161,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className={`import-users-file-button${fileName ? ' has-file' : ''}`}
+            disabled={loading}
           >
             <FileSpreadsheet size={22} />
             <span className="import-users-file-copy">
@@ -185,6 +221,18 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {loading && (
+          <div className="import-users-progress">
+            <p className="import-users-progress-text">
+              Aguarde mientras se realiza la importación masiva de usuarios…
+            </p>
+            <div className="import-users-progress-track">
+              <div className="import-users-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="import-users-progress-pct">{progress}%</span>
           </div>
         )}
 
