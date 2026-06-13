@@ -549,6 +549,19 @@ const postValidarTurnosFijos = async (body) => {
     }
 }
 
+// Generación masiva por lotes (paso 1: valida cupos globales y devuelve los IDs pendientes).
+// No envolvemos el error: re-lanzamos el de axios para que el orquestador lea err.response.
+const prepararCuotasMasivas = async (body) => {
+    const response = await apiClient.post("cuotas/generate-cuotas/preparar", body);
+    return response.data;
+}
+
+// Generación masiva por lotes (paso 2: procesa un chunk de IDs en una transacción corta).
+const generarCuotasLote = async (body) => {
+    const response = await apiClient.post("cuotas/generate-cuotas/lote", body);
+    return response.data;
+}
+
 const regenerateTurnosFijosUsuario = async (idUsuario) => {
     try {
         const response = await apiClient.post(`cuotas/usuario/${idUsuario}/regenerate-turnos-fijos`);
@@ -833,6 +846,8 @@ export default {
     // Cuotas
     getCuotasUsuario,
     postCuotasMasivas,
+    prepararCuotasMasivas,
+    generarCuotasLote,
     postValidarTurnosFijos,
     regenerateTurnosFijosUsuario,
     getCuotasReminder,

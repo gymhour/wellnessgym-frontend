@@ -57,6 +57,24 @@ const usuarioToOption = (usuario) => ({
   label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
 });
 
+// Tamaño de lote para la generación masiva: cada request crea las cuotas+turnos de N alumnos.
+// 25 mantiene cada request corta (sin riesgo de timeout en Vercel) y da progreso fluido.
+const BULK_CHUNK_SIZE = 25;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Los turnos se guardan como wall-clock en UTC, así que se lee con getUTC* para mostrar la hora real.
+const formatConflictFecha = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mi = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${dd}/${mm} ${hh}:${mi}hs`;
+};
+
 const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   // — Estados de datos y carga —
   const [cuotas, setCuotas] = useState([]);
@@ -84,6 +102,10 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [bulkMesDate, setBulkMesDate] = useState(null);
   const [bulkVenceDate, setBulkVenceDate] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
+
+  // — Estado de la barra de progreso real de la generación masiva por lotes —
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ total: 0, procesados: 0, cuotas: 0, turnos: 0 });
 
   // — Estados de filtros (inputs) —
   const [inputEmail, setInputEmail] = useState('');
@@ -320,31 +342,95 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     }
   };
 
+  // Generación masiva orquestada por lotes con progreso REAL.
+  // Paso 1 (preparar): valida cupos globales y trae los IDs pendientes. Paso 2: procesa por lotes.
   const handleBulkGenerate = async () => {
-    if (!bulkMesDate) { alert('Selecciona un mes válido.'); return; }
-    if (!bulkVenceDate) { alert('Selecciona fecha de vencimiento.'); return; }
-    setShowBulkModal(false);
-    setLoading(true);
-    try {
-      const mesString = buildMesString(bulkMesDate);
-      const venceIso = toIsoUtcEndOfDay(bulkVenceDate);
+    if (!bulkMesDate) { toast.error('Seleccioná un mes válido.'); return; }
+    if (!bulkVenceDate) { toast.error('Seleccioná fecha de vencimiento.'); return; }
 
-      const payload = { mes: mesString, vence: venceIso };
-      await apiService.postCuotasMasivas(payload);
-      setPage(1);
-      fetchCuotas();
-      toast.success("Las cuotas se generaron correctamente con todos los turnos fijos.");
+    const mes = buildMesString(bulkMesDate);
+    const vence = toIsoUtcEndOfDay(bulkVenceDate);
+    setShowBulkModal(false);
+
+    // — Paso 1: preparar —
+    let prep;
+    try {
+      setLoading(true);
+      prep = await apiService.prepararCuotasMasivas({ mes, vence });
     } catch (err) {
-      console.error('Error al generar cuotas masivas:', err);
-      const errData = err?.response?.data;
-      if (errData && errData.valido === false && errData.usuariosConProblemas) {
-        setValidationResult(errData);
+      console.error('Error al preparar cuotas masivas:', err);
+      const data = err?.response?.data;
+      if (err?.response?.status === 409 && Array.isArray(data?.conflictosCupo)) {
+        setValidationResult(data);
       } else {
-        toast.error(errData?.message || 'No se pudieron generar las cuotas masivas.');
+        toast.error(data?.message || 'No se pudo preparar la generación de cuotas.');
       }
+      return;
     } finally {
       setLoading(false);
     }
+
+    if (!prep?.total) {
+      toast.info(prep?.message || 'No hay cuotas nuevas para generar (ya estaban generadas).');
+      return;
+    }
+
+    // — Paso 2: procesar por lotes con barra real —
+    const ids = Array.isArray(prep.ids) ? prep.ids : [];
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += BULK_CHUNK_SIZE) {
+      chunks.push(ids.slice(i, i + BULK_CHUNK_SIZE));
+    }
+
+    setBulkProgress({ total: prep.total, procesados: 0, cuotas: 0, turnos: 0 });
+    setBulkRunning(true);
+
+    let procesados = 0;
+    let cuotasCreadas = 0;
+    let turnosGenerados = 0;
+
+    for (const chunk of chunks) {
+      let ok = false;
+      let lastErr = null;
+
+      // Reintentar 1 vez ante un fallo transitorio (no ante 409 de cupo: no se resuelve reintentando).
+      for (let intento = 0; intento < 2 && !ok; intento++) {
+        try {
+          const r = await apiService.generarCuotasLote({ mes, vence, ids: chunk });
+          cuotasCreadas += r?.cuotasCreadas || 0;
+          turnosGenerados += r?.turnosGenerados || 0;
+          ok = true;
+        } catch (e) {
+          lastErr = e;
+          if (e?.response?.status === 409) break;
+          if (intento === 0) await sleep(800);
+        }
+      }
+
+      if (!ok) {
+        setBulkRunning(false);
+        const data = lastErr?.response?.data;
+        if (lastErr?.response?.status === 409 && Array.isArray(data?.conflictosCupo)) {
+          setValidationResult(data);
+        } else {
+          toast.error(
+            `Se generaron ${procesados} de ${prep.total} alumno(s). Volvé a tocar "Generar cuotas de este mes" para completar el resto (no se duplican).`,
+            { autoClose: 9000 }
+          );
+        }
+        setPage(1);
+        fetchCuotas();
+        return;
+      }
+
+      procesados += chunk.length;
+      setBulkProgress({ total: prep.total, procesados, cuotas: cuotasCreadas, turnos: turnosGenerados });
+    }
+
+    setBulkRunning(false);
+    setPage(1);
+    fetchCuotas();
+    toast.success(`Listo: ${cuotasCreadas} cuota(s) y ${turnosGenerados} turno(s) generados.`);
   };
 
   const applyFilters = () => {
@@ -396,6 +482,28 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   return (
     <div className="page-layout">
       {loading && <LoaderFullScreen />}
+
+      {bulkRunning && (
+        <div className="cuotas-bulk-progress-overlay" role="alert" aria-busy="true">
+          <div className="cuotas-bulk-progress-card">
+            <h3>Generando cuotas y turnos…</h3>
+            <p className="cuotas-bulk-progress-text">
+              No cierres esta pantalla. Procesando {bulkProgress.procesados} de {bulkProgress.total} alumno(s).
+            </p>
+            <div className="cuotas-bulk-progress-track">
+              <div
+                className="cuotas-bulk-progress-fill"
+                style={{ width: `${bulkProgress.total ? Math.round((bulkProgress.procesados / bulkProgress.total) * 100) : 0}%` }}
+              />
+            </div>
+            <span className="cuotas-bulk-progress-pct">
+              {bulkProgress.total ? Math.round((bulkProgress.procesados / bulkProgress.total) * 100) : 0}%
+              {' · '}{bulkProgress.cuotas} cuota(s) · {bulkProgress.turnos} turno(s)
+            </span>
+          </div>
+        </div>
+      )}
+
       <SidebarMenu isAdmin={fromAdmin} isEntrenador={fromEntrenador} />
 
       <div className="content-layout">
@@ -759,27 +867,32 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
           <div className="cuotas-modal validation-modal" role="dialog" aria-modal="true" aria-labelledby="cuotas-validation-modal-title">
             <div className="cuotas-modal-header">
               <div>
-                <h3 id="cuotas-validation-modal-title">Problemas de turnos fijos detectados</h3>
-                <span>Corregí estos casos antes de volver a generar cuotas.</span>
+                <h3 id="cuotas-validation-modal-title">Horarios sin cupo suficiente</h3>
+                <span>No se generó ninguna cuota. Resolvé estos horarios y volvé a generar.</span>
               </div>
               <button type="button" className="cuotas-modal-close" onClick={() => setValidationResult(null)} aria-label="Cerrar modal">
                 <X size={18} />
               </button>
             </div>
             <p className="validation-summary">
-              Se encontraron <strong>{validationResult.usuariosConProblemas.length}</strong> usuario(s) con problemas en sus turnos fijos.
-              Corregí los siguientes casos y volvé a intentar:
+              Hay <strong>{validationResult.conflictosCupo?.length || 0}</strong> horario(s) donde los turnos fijos
+              superan el cupo disponible. Liberá lugar o ajustá los turnos fijos de los alumnos afectados:
             </p>
             <div className="validation-problems-list">
-              {validationResult.usuariosConProblemas.map(u => (
-                <div key={u.usuarioId} className="validation-problem-card">
-                  <strong>{u.usuario}</strong>
-                  <span>{u.cantidadProblemas} problema(s)</span>
-                  <ul>
-                    {u.problemas.map((p, i) => (
-                      <li key={i}>{p.descripcion}</li>
-                    ))}
-                  </ul>
+              {(validationResult.conflictosCupo || []).map((c, i) => (
+                <div key={i} className="validation-problem-card">
+                  <strong>{c.clase || 'Clase'} · {c.diaSemana} {formatConflictFecha(c.fecha)}</strong>
+                  <span>
+                    Cupo {c.cupos} · ocupados {c.turnosExistentes} · solicitados {c.turnosSolicitados}
+                    {' · '}exceso {c.exceso}
+                  </span>
+                  {Array.isArray(c.usuariosAfectados) && c.usuariosAfectados.length > 0 && (
+                    <ul>
+                      {c.usuariosAfectados.map(u => (
+                        <li key={u.ID_Usuario}>{u.nombre}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ))}
             </div>
