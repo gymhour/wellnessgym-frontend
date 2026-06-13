@@ -245,6 +245,12 @@ const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validación de email tolerante a acentos/Unicode (el type="email" nativo rechaza no-ASCII,
+    // y hay usuarios importados con tildes en el mail).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test((formData.email || '').trim())) {
+      toast.error('Ingresá un email válido');
+      return;
+    }
     setIsLoading(true)
     try {
       const isoFecha = formData.fechaCumple
@@ -329,7 +335,7 @@ const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
             <div className="usuario-form-field">
               <label htmlFor="email">Email</label>
               <CustomInput
-                type="email"
+                type="text"
                 id="email"
                 name="email"
                 value={formData.email}

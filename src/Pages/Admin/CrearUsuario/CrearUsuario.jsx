@@ -198,6 +198,12 @@ const CrearUsuario = ({fromAdmin, fromEntrenador}) => {
     e.preventDefault();            // ← evita el submit nativo
     if (isLoading) return;
 
+    // Validación de email tolerante a acentos/Unicode (el type="email" nativo rechaza no-ASCII).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test((formData.email || '').trim())) {
+      toast.error('Ingresá un email válido');
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -293,7 +299,7 @@ const CrearUsuario = ({fromAdmin, fromEntrenador}) => {
             <div className="usuario-form-field">
               <label htmlFor="email">Email</label>
               <CustomInput
-                type="email" id="email" name="email"
+                type="text" id="email" name="email"
                 value={formData.email} onChange={handleChange}
                 required placeholder="Ingresa tu email" width="100%"
               />
