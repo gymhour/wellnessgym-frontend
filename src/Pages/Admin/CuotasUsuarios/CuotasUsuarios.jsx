@@ -573,6 +573,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                 showMonthYearPicker
                 placeholderText="MM/AAAA"
                 className={datePickerClass}
+                popperClassName="notranslate"
               />
             </div>
 
@@ -732,6 +733,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                     showMonthYearPicker
                     placeholderText="Seleccioná mes y año"
                     className={datePickerClass}
+                    popperClassName="notranslate"
                     required
                   />
                 </div>
@@ -805,6 +807,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                     showMonthYearPicker
                     placeholderText="MM/AAAA"
                     className={datePickerClass}
+                    popperClassName="notranslate"
                   />
                 </div>
                 <div className="cuotas-modal-field">
