@@ -148,6 +148,14 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     return `${year}-${month < 10 ? '0' + month : month}`;
   };
 
+  const getLocalDayTime = (dateObj) => (
+    dateObj ? new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime() : 0
+  );
+
+  const buildCuotaStartDate = (dateObj) => (
+    dateObj ? new Date(dateObj.getFullYear(), dateObj.getMonth(), 1) : null
+  );
+
   const fetchPlanes = async () => {
     try {
       const planesRes = await apiService.getPlanes();
@@ -314,6 +322,12 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
       setLoading(false);
       return;
     }
+    const cuotaStartDate = buildCuotaStartDate(mesDate);
+    if (getLocalDayTime(venceDate) <= getLocalDayTime(cuotaStartDate)) {
+      toast.error('La fecha de vencimiento debe ser posterior a la fecha de inicio de la cuota.');
+      setLoading(false);
+      return;
+    }
 
     const mesString = buildMesString(mesDate);
     const venceIso = toIsoUtcEndOfDay(venceDate);
@@ -336,7 +350,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
       }
     } catch (err) {
       console.error('Error al crear cuota:', err);
-      alert('No se pudo crear la cuota.');
+      toast.error(err?.response?.data?.message || 'No se pudo crear la cuota.');
     } finally {
       setLoading(false);
     }
@@ -347,6 +361,11 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const handleBulkGenerate = async () => {
     if (!bulkMesDate) { toast.error('Seleccioná un mes válido.'); return; }
     if (!bulkVenceDate) { toast.error('Seleccioná fecha de vencimiento.'); return; }
+    const bulkCuotaStartDate = buildCuotaStartDate(bulkMesDate);
+    if (getLocalDayTime(bulkVenceDate) <= getLocalDayTime(bulkCuotaStartDate)) {
+      toast.error('La fecha de vencimiento debe ser posterior a la fecha de inicio de la cuota.');
+      return;
+    }
 
     const mes = buildMesString(bulkMesDate);
     const vence = toIsoUtcEndOfDay(bulkVenceDate);
