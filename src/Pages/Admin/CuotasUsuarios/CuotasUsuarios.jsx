@@ -12,7 +12,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
@@ -122,6 +122,9 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [popupOpen, setPopupOpen] = useState(false);
   const [actionType, setActionType] = useState(''); // 'pay' | 'delete' | 'bulk-delete'
   const [selectedCuota, setSelectedCuota] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editImporte, setEditImporte] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // — Estados del formulario “Nueva cuota” —
   const [selectedUserOpt, setSelectedUserOpt] = useState(null);
@@ -386,6 +389,24 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setSelectedCuota(null);
   };
 
+  const openEditModal = (cuota) => {
+    if (!cuota || cuota.pagada) {
+      toast.error('Solo se pueden editar cuotas pendientes o vencidas.');
+      return;
+    }
+
+    setSelectedCuota(cuota);
+    setEditImporte(String(cuota.importe ?? ''));
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedCuota(null);
+    setEditImporte('');
+    setSavingEdit(false);
+  };
+
   const openBulkDeleteConfirmation = () => {
     if (!bulkDeleteMesDate) {
       toast.error('Seleccioná un mes válido.');
@@ -527,6 +548,38 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!selectedCuota) return;
+    if (selectedCuota.pagada) {
+      toast.error('Solo se pueden editar cuotas pendientes o vencidas.');
+      closeEditModal();
+      return;
+    }
+
+    const importeText = String(editImporte).trim();
+    const importeNumber = Number(importeText);
+    if (!importeText || !Number.isFinite(importeNumber) || importeNumber <= 0) {
+      toast.error('Ingresá un importe válido mayor a 0.');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      await apiClient.put(`/cuotas/${selectedCuota.ID_Cuota}`, { importe: importeNumber });
+      toast.success(`Importe actualizado: cuota #${selectedCuota.ID_Cuota} por ${formatCurrency(importeNumber)}.`);
+      closeEditModal();
+      fetchCuotas();
+    } catch (err) {
+      console.error('Error al editar cuota:', err);
+      const msg = err?.response?.data?.message || 'No se pudo editar la cuota.';
+      toast.error(msg);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -1001,6 +1054,17 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                     <td data-label="Forma de Pago">{c.formaPago ? c.formaPago : '-'}</td>
                     <td data-label="Fecha Pago">{formatDate(c.fechaPago)}</td>
                     <td data-label="Acciones" className="acciones-cell">
+                      {!c.pagada && (
+                        <button
+                          className="accion-button edit"
+                          onClick={() => openEditModal(c)}
+                          aria-label={`Editar importe de cuota ${c.ID_Cuota}`}
+                          title="Editar importe"
+                        >
+                          <Pencil size={16} />
+                          Editar
+                        </button>
+                      )}
                       <button
                         className="accion-button pay"
                         onClick={() => openConfirmation('pay', c)}
@@ -1157,6 +1221,61 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                 </button>
                 <button type="submit" className="cuotas-modal-primary-button">
                   Crear
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* — Modal Editar importe — */}
+      {showEditModal && selectedCuota && (
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEditModal();
+          }}
+        >
+          <div className="cuotas-modal cuotas-modal-small" role="dialog" aria-modal="true" aria-labelledby="cuotas-edit-modal-title">
+            <form onSubmit={handleEditSubmit} className="modal-form">
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="cuotas-edit-modal-title">Editar importe</h3>
+                  <span>
+                    {selectedCuota.User ? `${selectedCuota.User.nombre || ''} ${selectedCuota.User.apellido || ''}`.trim() : 'Usuario'}
+                    {' · '}
+                    {formatMonth(selectedCuota.mes)}
+                  </span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={closeEditModal} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="cuotas-modal-grid">
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Importe</label>
+                  <CustomInput
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="50000"
+                    value={editImporte}
+                    onChange={event => setEditImporte(event.target.value)}
+                    required
+                    width="100%"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="cuotas-modal-actions">
+                <button type="button" className="cuotas-modal-secondary-button" onClick={closeEditModal} disabled={savingEdit}>
+                  Cancelar
+                </button>
+                <button type="submit" className="cuotas-modal-primary-button" disabled={savingEdit}>
+                  {savingEdit ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>
