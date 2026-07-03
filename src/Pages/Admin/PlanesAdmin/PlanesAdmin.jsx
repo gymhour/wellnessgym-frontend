@@ -3,7 +3,7 @@ import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu'
 import apiService from '../../../services/apiService'
 import './PlanesAdmin.css'
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton'
-import { Edit, Trash2, X } from 'lucide-react'
+import { Copy, Edit, Trash2, X } from 'lucide-react'
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput'
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown'
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen'
@@ -132,6 +132,16 @@ const PlanesAdmin = () => {
     }
   }
 
+  const handleCopyPlanId = async (planId) => {
+    try {
+      await navigator.clipboard.writeText(String(planId))
+      toast.success('ID del plan copiado.')
+    } catch (error) {
+      console.error('Error al copiar ID del plan:', error)
+      toast.error('No se pudo copiar el ID del plan.')
+    }
+  }
+
   return (
     <div className="page-layout">
       <SidebarMenu isAdmin={true} />
@@ -148,7 +158,18 @@ const PlanesAdmin = () => {
               <div key={plan.ID_Plan} className="plan-card">
                 <div className="plan-card-header">
                   <h2 className="plan-name">{plan.nombre}</h2>
-                  <span className="plan-id">#{plan.ID_Plan}</span>
+                  <div className="plan-id-wrap">
+                    <span className="plan-id">ID: {plan.ID_Plan}</span>
+                    <button
+                      type="button"
+                      className="plan-copy-id"
+                      onClick={() => handleCopyPlanId(plan.ID_Plan)}
+                      aria-label={`Copiar ID del plan ${plan.nombre}`}
+                      title="Copiar ID"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
                 </div>
                 <p className="plan-desc">{plan.desc || 'Sin descripción'}</p>
                 <p className="plan-price">${plan.precio.toLocaleString()}</p>

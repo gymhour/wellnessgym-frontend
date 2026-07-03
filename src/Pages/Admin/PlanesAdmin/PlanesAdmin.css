@@ -38,6 +38,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
@@ -49,6 +50,33 @@
 .plan-id {
     font-size: 0.875rem;
     color: var(--text-color-distinct);
+}
+
+.plan-id-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.plan-copy-id {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-color-distinct);
+    cursor: pointer;
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.plan-copy-id:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--background-hover-color);
 }
 
 .plan-desc {

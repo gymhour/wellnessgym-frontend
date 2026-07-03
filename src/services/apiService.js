@@ -308,7 +308,7 @@ const removeEntrenadorFromClase = async (idClase, idEntrenador) => {
     }
 }
 
-const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombre, apellido, email, dni, planId } = {}) => {
+const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombre, apellido, email, dni, planId, sinPlan } = {}) => {
     try {
         const params = { page, take };
         if (tipo) params.tipo = tipo;
@@ -319,6 +319,7 @@ const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombr
         if (email?.trim()) params.email = email.trim();
         if (dni?.trim()) params.dni = dni.trim();
         if (planId) params.planId = planId;
+        if (sinPlan) params.sinPlan = true;
 
         const response = await apiClient('/usuarios', {
             params,

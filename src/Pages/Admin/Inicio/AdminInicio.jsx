@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../../App.css';
 import './AdminInicio.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
@@ -30,10 +31,12 @@ const POSITIVE = '#22c55e';
 const NEGATIVE = '#e5484d';
 
 const AdminInicio = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const [kpi, setKpi] = useState({
     totalActiveUsers: 0,
+    totalInactiveUsers: 0,
     quotasPaidThisMonth: 0,
     quotasPendingThisMonth: 0,
     totalAmountPaidThisMonth: 0,
@@ -163,6 +166,18 @@ const AdminInicio = () => {
   const currentMonthName = new Date()
     .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
     .replace(' de', '');
+  const currentMonthKey = (() => {
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  })();
+
+  const navigateToUsuarios = (params) => {
+    navigate(`/admin/usuarios?${new URLSearchParams(params).toString()}`);
+  };
+
+  const navigateToCuotas = (params) => {
+    navigate(`/admin/cuotas?${new URLSearchParams(params).toString()}`);
+  };
 
   const fmtMes = (d) => d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : null;
   const periodoLabel = (filterStartDate || filterEndDate)
@@ -226,7 +241,12 @@ const AdminInicio = () => {
         {/* ===================== FINANZAS ===================== */}
         <h3 className="dashboard-section-title">Finanzas <span className="month-label">({currentMonthName})</span></h3>
         <div className='admin-kpi-grid'>
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToCuotas({ estado: 'pagada', mes: currentMonthKey })}
+            aria-label="Ver cuotas pagadas del mes"
+          >
             <div className='admin-kpi-card-header'>
               <DollarSign size={20} className="icon-soft-grey" />
               <h3>Ingresos</h3>
@@ -235,7 +255,7 @@ const AdminInicio = () => {
               {currencyFormatter(kpi.totalAmountPaidThisMonth)}
               <span className="admin-kpi-count">({kpi.quotasPaidThisMonth})</span>
             </p>
-          </div>
+          </button>
 
           <div className='admin-kpi-card'>
             <div className='admin-kpi-card-header'>
@@ -257,7 +277,12 @@ const AdminInicio = () => {
             </p>
           </div>
 
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToCuotas({ estado: 'pendiente', mes: currentMonthKey })}
+            aria-label="Ver cuotas pendientes del mes"
+          >
             <div className="admin-kpi-card-header">
               <Clock size={20} className="icon-soft-grey" />
               <h3>Por cobrar</h3>
@@ -266,7 +291,7 @@ const AdminInicio = () => {
               {currencyFormatter(kpi.totalAmountPendingThisMonth)}
               <span className="admin-kpi-count">({kpi.quotasPendingThisMonth})</span>
             </p>
-          </div>
+          </button>
 
           <div className='admin-kpi-card'>
             <div className="admin-kpi-card-header">
@@ -276,7 +301,12 @@ const AdminInicio = () => {
             <p className='value'>{kpi.tasaCobranzaMes}%</p>
           </div>
 
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToCuotas({ estado: 'vencida' })}
+            aria-label="Ver cuotas vencidas"
+          >
             <div className="admin-kpi-card-header">
               <Clock size={20} className="icon-soft-grey" />
               <h3>Deuda vencida <span className="month-label">(acumulada)</span></h3>
@@ -285,21 +315,31 @@ const AdminInicio = () => {
               {currencyFormatter(kpi.totalAmountOverdue)}
               <span className="admin-kpi-count">({kpi.quotasOverdue})</span>
             </p>
-          </div>
+          </button>
         </div>
 
         {/* ===================== SOCIOS ===================== */}
         <h3 className="dashboard-section-title">Socios <span className="month-label">({currentMonthName})</span></h3>
         <div className='admin-kpi-grid'>
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToUsuarios({ tipo: 'Cliente', estado: 'Activo' })}
+            aria-label="Ver clientes activos"
+          >
             <div className='admin-kpi-card-header'>
               <Users size={20} className="icon-soft-grey" />
               <h3>Clientes activos</h3>
             </div>
             <p className='value'>{kpi.totalActiveUsers}</p>
-          </div>
+          </button>
 
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToUsuarios({ tipo: 'Cliente', movimiento: 'ALTA', mes: currentMonthKey })}
+            aria-label="Ver altas del mes"
+          >
             <div className='admin-kpi-card-header'>
               <UserPlus size={20} className="icon-soft-grey" />
               <h3>Altas</h3>
@@ -308,15 +348,33 @@ const AdminInicio = () => {
               {kpi.altasMes}
               <span className="admin-kpi-count">({kpi.reactivacionesMes} react.)</span>
             </p>
-          </div>
+          </button>
 
-          <div className='admin-kpi-card'>
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToUsuarios({ tipo: 'Cliente', movimiento: 'BAJA', mes: currentMonthKey })}
+            aria-label="Ver bajas del mes"
+          >
             <div className='admin-kpi-card-header'>
               <UserMinus size={20} className="icon-soft-grey" />
               <h3>Bajas</h3>
             </div>
             <p className='value'>{kpi.bajasMes}</p>
-          </div>
+          </button>
+
+          <button
+            type="button"
+            className='admin-kpi-card admin-kpi-card-action'
+            onClick={() => navigateToUsuarios({ tipo: 'Cliente', estado: 'Inactivo' })}
+            aria-label="Ver clientes inactivos"
+          >
+            <div className='admin-kpi-card-header'>
+              <Users size={20} className="icon-soft-grey" />
+              <h3>Clientes inactivos</h3>
+            </div>
+            <p className='value'>{kpi.totalInactiveUsers}</p>
+          </button>
 
           <div className='admin-kpi-card'>
             <div className='admin-kpi-card-header'>

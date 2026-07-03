@@ -3,9 +3,9 @@ import * as XLSX from 'xlsx';
 import apiClient from '../../../axiosConfig';
 import { toast } from 'react-toastify';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { X, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, Download } from 'lucide-react';
 
-const COLUMNAS_ESPERADAS = ['email', 'dni', 'nombre', 'apellido', 'tel', 'direc', 'profesion', 'fechaCumple', 'plan'];
+const COLUMNAS_ESPERADAS = ['email', 'dni', 'nombre', 'apellido', 'tel', 'direc', 'profesion', 'fechaCumple', 'ID_Plan'];
 
 // Normaliza la fechaCumple del Excel a texto DD/MM/AAAA (el backend revalida).
 // Cubre: celda fecha real (Date, por cellDates), texto DD/MM/AAAA o ISO, y vacío.
@@ -17,7 +17,7 @@ const normalizeFechaCumple = (value) => {
   return String(value ?? '').trim();
 };
 
-const ImportUsuariosModal = ({ onClose, onSuccess }) => {
+const ImportUsuariosModal = ({ onClose, onSuccess, planes = [] }) => {
   const fileInputRef = useRef(null);
   const [usuarios, setUsuarios] = useState([]);
   const [fileName, setFileName] = useState('');
@@ -67,7 +67,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
           direc: String(row.direc || '').trim(),
           profesion: String(row.profesion || '').trim(),
           fechaCumple: normalizeFechaCumple(row.fechaCumple),
-          plan: String(row.plan || '').trim(),
+          ID_Plan: String(row.ID_Plan ?? '').trim(),
         }));
 
         setUsuarios(parsed);
@@ -77,6 +77,32 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    const usuariosSheet = XLSX.utils.aoa_to_sheet([COLUMNAS_ESPERADAS]);
+    const planesSheet = XLSX.utils.aoa_to_sheet([
+      ['ID_Plan', 'nombre'],
+      ...planes.map((plan) => [plan.ID_Plan, plan.nombre]),
+    ]);
+
+    usuariosSheet['!cols'] = [
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 10 },
+    ];
+    planesSheet['!cols'] = [{ wch: 10 }, { wch: 32 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, usuariosSheet, 'Usuarios');
+    XLSX.utils.book_append_sheet(workbook, planesSheet, 'Planes');
+    XLSX.writeFile(workbook, 'plantilla-importacion-usuarios.xlsx');
   };
 
   const handleImport = async () => {
@@ -117,6 +143,8 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
     }
   };
 
+  const getUsuarioByFila = (fila) => usuarios.find((u) => u._fila === fila);
+
   return (
     <div className="modal-overlay import-users-overlay" onClick={onClose}>
       <div
@@ -143,9 +171,21 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
             <li>Email y DNI son obligatorios.</li>
             <li>La password inicial se crea con el DNI del usuario.</li>
             <li>El tipo de usuario se crea como Cliente.</li>
-            <li>El plan debe coincidir con el nombre de un plan existente.</li>
+            <li>ID_Plan debe ser el ID visible en Administración de Planes. Si queda vacío, el usuario se crea sin plan.</li>
             <li>La fecha de cumpleaños debe usar formato dd/mm/yyyy.</li>
           </ul>
+        </div>
+
+        <div className="import-users-template-row">
+          <button
+            type="button"
+            className="import-users-template-button"
+            onClick={handleDownloadTemplate}
+            disabled={loading}
+          >
+            <Download size={18} />
+            <span>Descargar plantilla</span>
+          </button>
         </div>
 
         <div className="import-users-upload">
@@ -197,7 +237,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
                     <th>DNI</th>
                     <th>Nombre</th>
                     <th>Apellido</th>
-                    <th>Plan</th>
+                    <th>ID_Plan</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,7 +248,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
                       <td className={!u.dni ? 'is-empty' : ''}>{u.dni || 'Vacio'}</td>
                       <td>{u.nombre || '-'}</td>
                       <td>{u.apellido || '-'}</td>
-                      <td>{u.plan || '-'}</td>
+                      <td>{u.ID_Plan || '-'}</td>
                     </tr>
                   ))}
                   {usuarios.length > 50 && (
@@ -242,11 +282,39 @@ const ImportUsuariosModal = ({ onClose, onSuccess }) => {
               <AlertCircle size={17} />
               <span>No se importó ningún usuario</span>
             </div>
-            <ul>
-              {errors.map((e, i) => (
-                <li key={i}>Fila {e.fila}: {e.campo} - {e.error}</li>
-              ))}
-            </ul>
+            <div className="import-users-errors-table-wrap">
+              <table className="import-users-table import-users-errors-table">
+                <thead>
+                  <tr>
+                    <th>Fila</th>
+                    <th>Email</th>
+                    <th>DNI</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>ID_Plan</th>
+                    <th>Campo</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {errors.map((e, i) => {
+                    const usuario = getUsuarioByFila(e.fila);
+                    return (
+                      <tr key={`${e.fila}-${e.campo}-${i}`}>
+                        <td>{e.fila}</td>
+                        <td>{usuario?.email || '-'}</td>
+                        <td>{usuario?.dni || '-'}</td>
+                        <td>{usuario?.nombre || '-'}</td>
+                        <td>{usuario?.apellido || '-'}</td>
+                        <td>{usuario?.ID_Plan || '-'}</td>
+                        <td>{e.campo}</td>
+                        <td>{e.error}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
