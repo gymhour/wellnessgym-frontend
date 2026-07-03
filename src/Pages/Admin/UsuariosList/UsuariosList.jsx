@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import '../../../App.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import apiClient from '../../../axiosConfig';
@@ -53,8 +53,46 @@ const normalizeTextFilters = (filters) => ({
   dni: normalizeFilterValue(filters.dni),
 });
 
+const emptyUsuariosFilters = { tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '', movimiento: '', movimientoMes: '' };
+
+const normalizeTipoParam = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'cliente') return 'Cliente';
+  if (normalized === 'entrenador') return 'Entrenador';
+  if (normalized === 'admin') return 'Admin';
+  return '';
+};
+
+const normalizeEstadoParam = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'activo' || normalized === 'true' || normalized === '1') return 'Activo';
+  if (normalized === 'inactivo' || normalized === 'false' || normalized === '0') return 'Inactivo';
+  return '';
+};
+
+const normalizeMovimientoParam = (value) => {
+  const normalized = String(value || '').toUpperCase();
+  return normalized === 'ALTA' || normalized === 'BAJA' ? normalized : '';
+};
+
+const SIN_PLAN_FILTER_VALUE = '__SIN_PLAN__';
+
+const getUsuariosFiltersFromSearch = (searchParams) => ({
+  ...emptyUsuariosFilters,
+  tipo: normalizeTipoParam(searchParams.get('tipo')),
+  estado: normalizeEstadoParam(searchParams.get('estado')),
+  plan: normalizeFilterValue(searchParams.get('plan')),
+  movimiento: normalizeMovimientoParam(searchParams.get('movimiento')),
+  movimientoMes: normalizeFilterValue(searchParams.get('mes')),
+});
+
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const initialFilters = useMemo(
+    () => getUsuariosFiltersFromSearch(new URLSearchParams(searchParamsString)),
+    [searchParamsString]
+  );
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosStats, setUsuariosStats] = useState({ activos: 0, inactivos: 0, sinPlanAsignado: 0 });
   const [loading, setLoading] = useState(false);
@@ -92,7 +130,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [healthLoading, setHealthLoading] = useState(false);
 
   // ➜ agregamos estado en filtros
-  const [filtros, setFiltros] = useState({ tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' });
+  const [filtros, setFiltros] = useState(initialFilters);
   const [draftFiltros, setDraftFiltros] = useState(filtros);
 
   const [page, setPage] = useState(1);
@@ -103,7 +141,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const opcionesEstado = ['Activo', 'Inactivo'];
   const [planesList, setPlanesList] = useState([]);
 
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(Boolean(searchParamsString));
 
   const estadoToBool = (s) => {
     if (s === 'Activo') return true;
@@ -121,7 +159,13 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       if (activeFilters.apellido) params.apellido = activeFilters.apellido;
       if (activeFilters.email) params.email = activeFilters.email;
       if (activeFilters.dni) params.dni = activeFilters.dni;
-      if (activeFilters.plan) params.planId = activeFilters.plan;
+      if (activeFilters.plan === SIN_PLAN_FILTER_VALUE) {
+        params.sinPlan = true;
+      } else if (activeFilters.plan) {
+        params.planId = activeFilters.plan;
+      }
+      if (activeFilters.movimiento) params.movimientoTipo = activeFilters.movimiento;
+      if (activeFilters.movimientoMes) params.movimientoMes = activeFilters.movimientoMes;
 
       // ➜ enviar estado=true/false si corresponde
       if (activeFilters.estado) {
@@ -146,6 +190,13 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   }, [filtros, page, fromAdmin]);
 
   useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
+
+  useEffect(() => {
+    setFiltros(initialFilters);
+    setDraftFiltros(initialFilters);
+    setPage(1);
+    if (searchParamsString) setShowFilters(true);
+  }, [initialFilters, searchParamsString]);
 
   const fetchUsuariosStats = useCallback(async () => {
     try {
@@ -178,9 +229,8 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   };
 
   const limpiarFiltros = () => {
-    const empty = { tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '' };
-    setDraftFiltros(empty);
-    setFiltros(empty);
+    setDraftFiltros(emptyUsuariosFilters);
+    setFiltros(emptyUsuariosFilters);
     setPage(1);
   };
 
@@ -634,7 +684,10 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                 name="plan"
                 value={draftFiltros.plan}
                 onChange={handleChangeDraft}
-                options={planesList.map(p => ({ value: String(p.ID_Plan), label: p.nombre }))}
+                options={[
+                  { value: SIN_PLAN_FILTER_VALUE, label: 'Sin plan asignado' },
+                  ...planesList.map(p => ({ value: String(p.ID_Plan), label: p.nombre })),
+                ]}
                 placeholderOption="— Todos —"
               />
             </div>
@@ -1087,6 +1140,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           <ImportUsuariosModal
             onClose={() => setShowImportModal(false)}
             onSuccess={() => { setShowImportModal(false); fetchUsuarios(); fetchUsuariosStats(); }}
+            planes={planesList}
           />
         )}
 

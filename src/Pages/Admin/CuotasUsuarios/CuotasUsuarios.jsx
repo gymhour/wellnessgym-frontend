@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import '../../../App.css';
 import './CuotasUsuarios.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
@@ -57,6 +58,30 @@ const usuarioToOption = (usuario) => ({
   label: `${usuario.nombre || ''} ${usuario.apellido || ''}${usuario.dni ? ` - DNI ${usuario.dni}` : usuario.email ? ` (${usuario.email})` : ''}`,
 });
 
+const normalizeCuotaEstadoParam = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'pagada' || normalized === 'true') return 'true';
+  if (normalized === 'pendiente' || normalized === 'pending') return 'pendiente';
+  if (normalized === 'vencida') return 'vencida';
+  return '';
+};
+
+const parseMesDateParam = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || month < 1 || month > 12) return null;
+
+  return new Date(year, month - 1, 1);
+};
+
+const getCuotasFiltersFromSearch = (searchParams) => ({
+  estado: normalizeCuotaEstadoParam(searchParams.get('estado')),
+  mesDate: parseMesDateParam(searchParams.get('mes')),
+});
+
 // Tamaño de lote para la generación masiva: cada request crea las cuotas+turnos de N alumnos.
 // 25 mantiene cada request corta (sin riesgo de timeout en Vercel) y da progreso fluido.
 const BULK_CHUNK_SIZE = 25;
@@ -78,6 +103,13 @@ const formatConflictFecha = (iso) => {
 };
 
 const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
+  const [searchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const initialUrlFilters = useMemo(
+    () => getCuotasFiltersFromSearch(new URLSearchParams(searchParamsString)),
+    [searchParamsString]
+  );
+
   // — Estados de datos y carga —
   const [cuotas, setCuotas] = useState([]);
   const [planOptions, setPlanOptions] = useState([]);
@@ -121,20 +153,20 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [inputEmail, setInputEmail] = useState('');
   const [inputDni, setInputDni] = useState('');
   const [inputStudentName, setInputStudentName] = useState('');
-  const [inputEstado, setInputEstado] = useState(''); // '' | 'true' | 'false' | 'vencida'
-  const [inputMesDate, setInputMesDate] = useState(null);
+  const [inputEstado, setInputEstado] = useState(initialUrlFilters.estado); // '' | 'true' | 'false' | 'vencida'
+  const [inputMesDate, setInputMesDate] = useState(initialUrlFilters.mesDate);
   const [inputPlan, setInputPlan] = useState('');
 
   // — Filtros aplicados + paginación —
   const [filterEmail, setFilterEmail] = useState('');
   const [filterDni, setFilterDni] = useState('');
   const [filterStudentName, setFilterStudentName] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
-  const [filterMesDate, setFilterMesDate] = useState(null);
+  const [filterEstado, setFilterEstado] = useState(initialUrlFilters.estado);
+  const [filterMesDate, setFilterMesDate] = useState(initialUrlFilters.mesDate);
   const [filterPlan, setFilterPlan] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(Boolean(searchParamsString));
 
   // Pagar
   const [formaPago, setFormaPago] = useState('Efectivo');
@@ -234,6 +266,23 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   useEffect(() => {
     fetchPlanes();
   }, []);
+
+  useEffect(() => {
+    setInputEmail('');
+    setInputDni('');
+    setInputStudentName('');
+    setInputEstado(initialUrlFilters.estado);
+    setInputMesDate(initialUrlFilters.mesDate);
+    setInputPlan('');
+    setFilterEmail('');
+    setFilterDni('');
+    setFilterStudentName('');
+    setFilterEstado(initialUrlFilters.estado);
+    setFilterMesDate(initialUrlFilters.mesDate);
+    setFilterPlan('');
+    setPage(1);
+    if (searchParamsString) setShowFilters(true);
+  }, [initialUrlFilters, searchParamsString]);
 
   useEffect(() => {
     const term = userSearch.trim();
