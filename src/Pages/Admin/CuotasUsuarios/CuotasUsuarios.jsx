@@ -11,7 +11,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
@@ -60,6 +60,8 @@ const usuarioToOption = (usuario) => ({
 // Tamaño de lote para la generación masiva: cada request crea las cuotas+turnos de N alumnos.
 // 25 mantiene cada request corta (sin riesgo de timeout en Vercel) y da progreso fluido.
 const BULK_CHUNK_SIZE = 25;
+const SINGLE_TURNO_CHUNK_SIZE = 50;
+const BULK_DELETE_CHUNK_SIZE = 50;
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -86,7 +88,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
-  const [actionType, setActionType] = useState(''); // 'pay' | 'delete'
+  const [actionType, setActionType] = useState(''); // 'pay' | 'delete' | 'bulk-delete'
   const [selectedCuota, setSelectedCuota] = useState(null);
 
   // — Estados del formulario “Nueva cuota” —
@@ -97,19 +99,28 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [mesDate, setMesDate] = useState(null);
   const [importe, setImporte] = useState('');
   const [venceDate, setVenceDate] = useState(null);
+  const [manualPreview, setManualPreview] = useState(null);
+  const [manualPreviewLoading, setManualPreviewLoading] = useState(false);
 
   // — Estados para carga masiva —
   const [bulkMesDate, setBulkMesDate] = useState(null);
   const [bulkVenceDate, setBulkVenceDate] = useState(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeleteMesDate, setBulkDeleteMesDate] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
 
   // — Estado de la barra de progreso real de la generación masiva por lotes —
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ total: 0, procesados: 0, cuotas: 0, turnos: 0 });
+  const [singleRunning, setSingleRunning] = useState(false);
+  const [singleProgress, setSingleProgress] = useState({ total: 0, procesados: 0, cuotas: 0, turnos: 0 });
+  const [deleteRunning, setDeleteRunning] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState({ total: 0, procesados: 0, cuotas: 0, turnos: 0 });
 
   // — Estados de filtros (inputs) —
   const [inputEmail, setInputEmail] = useState('');
   const [inputDni, setInputDni] = useState('');
+  const [inputStudentName, setInputStudentName] = useState('');
   const [inputEstado, setInputEstado] = useState(''); // '' | 'true' | 'false' | 'vencida'
   const [inputMesDate, setInputMesDate] = useState(null);
   const [inputPlan, setInputPlan] = useState('');
@@ -117,6 +128,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   // — Filtros aplicados + paginación —
   const [filterEmail, setFilterEmail] = useState('');
   const [filterDni, setFilterDni] = useState('');
+  const [filterStudentName, setFilterStudentName] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterMesDate, setFilterMesDate] = useState(null);
   const [filterPlan, setFilterPlan] = useState('');
@@ -171,6 +183,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
       const params = {};
       if (filterEmail) params.email = filterEmail;
       if (filterDni) params.dni = filterDni;
+      if (filterStudentName) params.studentName = filterStudentName;
 
       if (filterEstado === 'vencida') {
         params.vencida = true;
@@ -200,6 +213,22 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetManualForm = () => {
+    setSelectedUserOpt(null);
+    setUserSearch('');
+    setUserOptions([]);
+    setMesDate(null);
+    setVenceDate(null);
+    setImporte('');
+    setManualPreview(null);
+    setManualPreviewLoading(false);
+  };
+
+  const closeManualModal = () => {
+    setShowModal(false);
+    resetManualForm();
   };
 
   useEffect(() => {
@@ -252,7 +281,48 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   useEffect(() => {
     fetchCuotas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filterEmail, filterDni, filterEstado, filterMesDate, filterPlan]);
+  }, [page, filterEmail, filterDni, filterStudentName, filterEstado, filterMesDate, filterPlan]);
+
+  useEffect(() => {
+    let isCurrentRequest = true;
+    const mes = buildMesString(mesDate);
+
+    if (!showModal || !selectedUserOpt?.value || !mes) {
+      setManualPreview(null);
+      setManualPreviewLoading(false);
+      setImporte('');
+      return () => { isCurrentRequest = false; };
+    }
+
+    setManualPreviewLoading(true);
+    setManualPreview(null);
+    const loadPreview = async () => {
+      try {
+        const preview = await apiService.getCuotaManualPreview(selectedUserOpt.value, mes);
+        if (!isCurrentRequest) return;
+        setManualPreview(preview);
+        setImporte(
+          preview?.importeSugerido !== null && preview?.importeSugerido !== undefined
+            ? String(preview.importeSugerido)
+            : ''
+        );
+      } catch (err) {
+        if (!isCurrentRequest) return;
+        setManualPreview(null);
+        setImporte('');
+        const msg = err?.response?.data?.message || 'No se pudo obtener el plan del usuario.';
+        toast.error(msg);
+      } finally {
+        if (isCurrentRequest) setManualPreviewLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [showModal, selectedUserOpt?.value, mesDate]);
 
   const openConfirmation = (type, cuota) => {
     setActionType(type);
@@ -267,7 +337,124 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setSelectedCuota(null);
   };
 
+  const openBulkDeleteConfirmation = () => {
+    if (!bulkDeleteMesDate) {
+      toast.error('Seleccioná un mes válido.');
+      return;
+    }
+
+    setActionType('bulk-delete');
+    setSelectedCuota(null);
+    setShowBulkDeleteModal(false);
+    setPopupOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    const mes = buildMesString(bulkDeleteMesDate);
+    if (!mes) {
+      toast.error('Seleccioná un mes válido.');
+      return;
+    }
+
+    let prep;
+    try {
+      setLoading(true);
+      prep = await apiService.prepararEliminacionCuotasByMes({ mes });
+    } catch (err) {
+      console.error('Error preparando eliminación de cuotas por mes:', err);
+      const msg = err?.response?.data?.message || 'No se pudo preparar la eliminación de cuotas del mes.';
+      toast.error(msg);
+      return;
+    } finally {
+      setLoading(false);
+    }
+
+    const ids = Array.isArray(prep?.ids) ? prep.ids : [];
+    const total = Number(prep?.total || ids.length || 0);
+    const cuotasPagadasOmitidas = Number(prep?.cuotasPagadasOmitidas || 0);
+
+    if (!total || ids.length === 0) {
+      toast.info(prep?.message || `No habia cuotas no pagadas para eliminar en ${formatMonth(mes)}.`);
+      if (cuotasPagadasOmitidas > 0) {
+        toast.warning(
+          `Se conservaron ${cuotasPagadasOmitidas} cuota(s) pagada(s) de ${formatMonth(mes)}.`,
+          { autoClose: 8000 }
+        );
+      }
+      setBulkDeleteMesDate(null);
+      closeConfirmation();
+      setPage(1);
+      fetchCuotas();
+      return;
+    }
+
+    closeConfirmation();
+    setDeleteProgress({ total, procesados: 0, cuotas: 0, turnos: 0 });
+    setDeleteRunning(true);
+
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += BULK_DELETE_CHUNK_SIZE) {
+      chunks.push(ids.slice(i, i + BULK_DELETE_CHUNK_SIZE));
+    }
+
+    let procesados = 0;
+    let cuotasEliminadas = 0;
+    let turnosEliminados = 0;
+
+    for (const chunk of chunks) {
+      let ok = false;
+      let lastErr = null;
+
+      for (let intento = 0; intento < 2 && !ok; intento++) {
+        try {
+          const result = await apiService.eliminarCuotasByMesLote({ mes, ids: chunk });
+          cuotasEliminadas += Number(result?.cuotasEliminadas || 0);
+          turnosEliminados += Number(result?.turnosEliminados || 0);
+          ok = true;
+        } catch (err) {
+          lastErr = err;
+          if (intento === 0) await sleep(800);
+        }
+      }
+
+      if (!ok) {
+        setDeleteRunning(false);
+        const msg = lastErr?.response?.data?.message || 'No se pudo eliminar un lote de cuotas.';
+        toast.error(
+          `${msg} Se procesaron ${procesados} de ${total} cuota(s). Podés volver a ejecutar el borrado para completar las restantes.`,
+          { autoClose: 9000 }
+        );
+        setPage(1);
+        fetchCuotas();
+        return;
+      }
+
+      procesados += chunk.length;
+      setDeleteProgress({ total, procesados, cuotas: cuotasEliminadas, turnos: turnosEliminados });
+    }
+
+    setDeleteRunning(false);
+    setBulkDeleteMesDate(null);
+    setPage(1);
+    await fetchCuotas();
+
+    toast.success(
+      `Se eliminaron ${cuotasEliminadas} cuota(s) y ${turnosEliminados} turno(s) de ${formatMonth(mes)}.`
+    );
+    if (cuotasPagadasOmitidas > 0) {
+      toast.warning(
+        `Se conservaron ${cuotasPagadasOmitidas} cuota(s) pagada(s) de ${formatMonth(mes)}.`,
+        { autoClose: 8000 }
+      );
+    }
+  };
+
   const handleConfirm = async () => {
+    if (actionType === 'bulk-delete') {
+      await handleBulkDeleteConfirm();
+      return;
+    }
+
     if (!selectedCuota) return;
     setLoading(true);
     try {
@@ -305,55 +492,116 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
     if (!selectedUserOpt?.value) {
       alert('Seleccioná un usuario válido.');
-      setLoading(false);
       return;
     }
     if (!mesDate) {
       alert('Seleccioná un mes válido.');
-      setLoading(false);
       return;
     }
     if (!venceDate) {
       alert('Seleccioná una fecha de vencimiento.');
-      setLoading(false);
+      return;
+    }
+    const importeText = String(importe).trim();
+    const importeNumber = Number(importeText);
+    if (!importeText || !Number.isFinite(importeNumber)) {
+      toast.error('Completá un importe válido para crear la cuota.');
       return;
     }
     const cuotaStartDate = buildCuotaStartDate(mesDate);
     if (getLocalDayTime(venceDate) <= getLocalDayTime(cuotaStartDate)) {
       toast.error('La fecha de vencimiento debe ser posterior a la fecha de inicio de la cuota.');
-      setLoading(false);
       return;
     }
 
     const mesString = buildMesString(mesDate);
     const venceIso = toIsoUtcEndOfDay(venceDate);
 
-    const payload = { mes: mesString, importe: Number(importe), vence: venceIso };
+    const payload = { mes: mesString, importe: importeNumber, vence: venceIso };
+    let prep;
+
     try {
-      const resp = await apiClient.post(`/cuotas/usuario/${selectedUserOpt.value}`, payload);
-      setSelectedUserOpt(null);
-      setMesDate(null);
-      setVenceDate(null);
-      setImporte('');
-      setPage(1);
-      setShowModal(false);
-      await fetchCuotas();
-      const advertencias = resp?.data?.advertencias;
-      if (advertencias) {
-        toast.warning(advertencias.mensaje, { autoClose: 8000 });
-      } else {
-        toast.success('Cuota creada correctamente.');
-      }
+      setLoading(true);
+      prep = await apiService.prepararCuotaUsuarioLotes(selectedUserOpt.value, payload);
     } catch (err) {
-      console.error('Error al crear cuota:', err);
-      toast.error(err?.response?.data?.message || 'No se pudo crear la cuota.');
+      console.error('Error al preparar cuota:', err);
+      const data = err?.response?.data;
+      if (err?.response?.status === 409 && Array.isArray(data?.conflictosCupo)) {
+        setValidationResult(data);
+      } else {
+        toast.error(data?.message || 'No se pudo crear la cuota.');
+      }
+      return;
     } finally {
       setLoading(false);
     }
+
+    const totalTurnos = Number(prep?.totalTurnosEstimados || 0);
+    const cuotaId = prep?.cuotaId;
+
+    setPage(1);
+    setShowModal(false);
+
+    if (!cuotaId || totalTurnos === 0) {
+      resetManualForm();
+      await fetchCuotas();
+      toast.success(prep?.message || 'Cuota creada correctamente.');
+      return;
+    }
+
+    setSingleProgress({ total: totalTurnos, procesados: 0, cuotas: 1, turnos: 0 });
+    setSingleRunning(true);
+
+    let procesados = 0;
+    let turnosGenerados = 0;
+
+    while (procesados < totalTurnos) {
+      const limit = Math.min(SINGLE_TURNO_CHUNK_SIZE, totalTurnos - procesados);
+      let ok = false;
+      let lastErr = null;
+
+      for (let intento = 0; intento < 2 && !ok; intento++) {
+        try {
+          const r = await apiService.generarTurnosCuotaUsuarioLote(selectedUserOpt.value, {
+            cuotaId,
+            offset: procesados,
+            limit
+          });
+          turnosGenerados += r?.turnosGenerados || 0;
+          ok = true;
+        } catch (err) {
+          lastErr = err;
+          if (err?.response?.status === 409) break;
+          if (intento === 0) await sleep(800);
+        }
+      }
+
+      if (!ok) {
+        setSingleRunning(false);
+        const data = lastErr?.response?.data;
+        if (lastErr?.response?.status === 409 && Array.isArray(data?.conflictosCupo)) {
+          setValidationResult(data);
+        } else {
+          toast.error(
+            `La cuota quedó creada, pero se generaron ${turnosGenerados} turno(s) de ${totalTurnos}. Volvé a crear la cuota para completar los faltantes (no se duplican).`,
+            { autoClose: 9000 }
+          );
+        }
+        fetchCuotas();
+        return;
+      }
+
+      procesados += limit;
+      setSingleProgress({ total: totalTurnos, procesados, cuotas: 1, turnos: turnosGenerados });
+    }
+
+    setSingleRunning(false);
+    resetManualForm();
+    await fetchCuotas();
+    toast.success(`Listo: cuota creada y ${turnosGenerados} turno(s) generados.`);
   };
 
   // Generación masiva orquestada por lotes con progreso REAL.
@@ -456,6 +704,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setPage(1);
     setFilterEmail(inputEmail.trim());
     setFilterDni(inputDni.trim());
+    setFilterStudentName(inputStudentName.trim());
     setFilterEstado(inputEstado);
     setFilterPlan(inputPlan);
     setFilterMesDate(inputMesDate);
@@ -464,6 +713,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const clearFilters = () => {
     setInputEmail('');
     setInputDni('');
+    setInputStudentName('');
     setInputEstado('');
     setInputPlan('');
     setInputMesDate(null);
@@ -471,6 +721,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setPage(1);
     setFilterEmail('');
     setFilterDni('');
+    setFilterStudentName('');
     setFilterEstado('');
     setFilterPlan('');
     setFilterMesDate(null);
@@ -498,26 +749,47 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     return Array.from(optionsById.values());
   }, [selectedUserOpt, userOptions]);
 
+  const runningProgress = deleteRunning
+    ? {
+      title: 'Borrando cuotas y turnos…',
+      text: `No cierres esta pantalla. Procesando ${deleteProgress.procesados} de ${deleteProgress.total} cuota(s).`,
+      progress: deleteProgress,
+    }
+    : singleRunning
+    ? {
+      title: 'Generando cuota y turnos…',
+      text: `No cierres esta pantalla. Procesando ${singleProgress.procesados} de ${singleProgress.total} turno(s).`,
+      progress: singleProgress,
+    }
+    : {
+      title: 'Generando cuotas y turnos…',
+      text: `No cierres esta pantalla. Procesando ${bulkProgress.procesados} de ${bulkProgress.total} alumno(s).`,
+      progress: bulkProgress,
+    };
+  const progressPct = runningProgress.progress.total
+    ? Math.round((runningProgress.progress.procesados / runningProgress.progress.total) * 100)
+    : 0;
+
   return (
     <div className="page-layout">
       {loading && <LoaderFullScreen />}
 
-      {bulkRunning && (
+      {(bulkRunning || singleRunning || deleteRunning) && (
         <div className="cuotas-bulk-progress-overlay" role="alert" aria-busy="true">
           <div className="cuotas-bulk-progress-card">
-            <h3>Generando cuotas y turnos…</h3>
+            <h3>{runningProgress.title}</h3>
             <p className="cuotas-bulk-progress-text">
-              No cierres esta pantalla. Procesando {bulkProgress.procesados} de {bulkProgress.total} alumno(s).
+              {runningProgress.text}
             </p>
             <div className="cuotas-bulk-progress-track">
               <div
                 className="cuotas-bulk-progress-fill"
-                style={{ width: `${bulkProgress.total ? Math.round((bulkProgress.procesados / bulkProgress.total) * 100) : 0}%` }}
+                style={{ width: `${progressPct}%` }}
               />
             </div>
             <span className="cuotas-bulk-progress-pct">
-              {bulkProgress.total ? Math.round((bulkProgress.procesados / bulkProgress.total) * 100) : 0}%
-              {' · '}{bulkProgress.cuotas} cuota(s) · {bulkProgress.turnos} turno(s)
+              {progressPct}%
+              {' · '}{runningProgress.progress.cuotas} cuota(s) · {runningProgress.progress.turnos} turno(s)
             </span>
           </div>
         </div>
@@ -529,8 +801,16 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
         <div className="header-actions cuotas-usuarios" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Cuotas de Usuarios</h2>
           <div className='generate-cuotas-btns'>
+            <SecondaryButton text="Cuota manual" onClick={() => setShowModal(true)} />
             <PrimaryButton text="Generar cuotas de este mes" onClick={() => setShowBulkModal(true)} />
-            <SecondaryButton text="Nueva cuota" onClick={() => setShowModal(true)} />
+            <button
+              type="button"
+              className="cuotas-danger-outline-button"
+              onClick={() => setShowBulkDeleteModal(true)}
+            >
+              <Trash2 size={18} />
+              Borrar cuotas por mes
+            </button>
           </div>
         </div>
 
@@ -570,6 +850,17 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                 placeholder="Ej: 38444555"
                 value={inputDni}
                 onChange={e => setInputDni(e.target.value)}
+              />
+            </div>
+
+            <div className="cuotas-filtros-form-inputs-ctn">
+              <label htmlFor="inputStudentName">Alumno:</label>
+              <CustomInput
+                id="inputStudentName"
+                type="text"
+                placeholder="Buscar por nombre o apellido"
+                value={inputStudentName}
+                onChange={e => setInputStudentName(e.target.value)}
               />
             </div>
 
@@ -704,7 +995,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
           className="cuotas-modal-overlay"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setShowModal(false);
+            if (event.target === event.currentTarget) closeManualModal();
           }}
         >
           <div className="cuotas-modal" role="dialog" aria-modal="true" aria-labelledby="cuotas-modal-title">
@@ -714,7 +1005,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                   <h3 id="cuotas-modal-title">Nueva cuota</h3>
                   <span>Cargá una cuota individual para un usuario activo.</span>
                 </div>
-                <button type="button" className="cuotas-modal-close" onClick={() => setShowModal(false)} aria-label="Cerrar modal">
+                <button type="button" className="cuotas-modal-close" onClick={closeManualModal} aria-label="Cerrar modal">
                   <X size={18} />
                 </button>
               </div>
@@ -769,8 +1060,37 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                   />
                 </div>
 
+                <div className="cuotas-modal-note cuotas-modal-field-wide">
+                  El proporcional se calcula por el mes de la cuota seleccionado. La fecha de vencimiento solo indica hasta cuándo puede pagarse.
+                </div>
+
                 <div className="cuotas-modal-field cuotas-modal-field-wide">
-                  <label>Importe</label>
+                  <label>Plan</label>
+                  <div className="cuotas-plan-preview">
+                    {manualPreviewLoading ? (
+                      <span>Consultando plan...</span>
+                    ) : !selectedUserOpt?.value ? (
+                      <span>Seleccioná un usuario para ver el plan vigente.</span>
+                    ) : !mesDate ? (
+                      <span>Seleccioná el mes de la cuota para calcular el proporcional.</span>
+                    ) : manualPreview?.plan ? (
+                      <>
+                        <strong>{manualPreview.plan.nombre}</strong>
+                        <span>
+                          {formatCurrency(manualPreview.plan.precio)}
+                          {manualPreview.diasCubiertos && manualPreview.diasDelMes
+                            ? ` · ${manualPreview.diasCubiertos} de ${manualPreview.diasDelMes} día(s)`
+                            : ''}
+                        </span>
+                      </>
+                    ) : (
+                      <span>El usuario no tiene plan asignado.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Importe proporcional (editable)</label>
                   <CustomInput
                     type="number"
                     placeholder="50000"
@@ -783,7 +1103,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
               </div>
 
               <div className="cuotas-modal-actions">
-                <button type="button" className="cuotas-modal-secondary-button" onClick={() => setShowModal(false)}>
+                <button type="button" className="cuotas-modal-secondary-button" onClick={closeManualModal}>
                   Cancelar
                 </button>
                 <button type="submit" className="cuotas-modal-primary-button">
@@ -854,13 +1174,67 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
         </div>
       )}
 
+      {/* — Modal Borrar cuotas por mes — */}
+      {showBulkDeleteModal && (
+        <div
+          className="cuotas-modal-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowBulkDeleteModal(false);
+          }}
+        >
+          <div className="cuotas-modal cuotas-modal-small" role="dialog" aria-modal="true" aria-labelledby="cuotas-bulk-delete-modal-title">
+            <div className="modal-form">
+              <div className="cuotas-modal-header">
+                <div>
+                  <h3 id="cuotas-bulk-delete-modal-title">Borrar cuotas por mes</h3>
+                  <span>Eliminá cuotas no pagadas y sus turnos asociados para volver atrás una generación masiva.</span>
+                </div>
+                <button type="button" className="cuotas-modal-close" onClick={() => setShowBulkDeleteModal(false)} aria-label="Cerrar modal">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="cuotas-modal-grid">
+                <div className="cuotas-modal-field cuotas-modal-field-wide">
+                  <label>Mes</label>
+                  <ReactDatePicker
+                    selected={bulkDeleteMesDate}
+                    onChange={date => setBulkDeleteMesDate(date)}
+                    dateFormat="MM/yyyy"
+                    showMonthYearPicker
+                    placeholderText="MM/AAAA"
+                    className={datePickerClass}
+                    popperClassName="notranslate"
+                  />
+                </div>
+                <div className="cuotas-modal-note cuotas-modal-field-wide">
+                  Esta acción borra las cuotas no pagadas del mes seleccionado. Las cuotas pagadas se conservan.
+                </div>
+              </div>
+
+              <div className="cuotas-modal-actions">
+                <button type="button" className="cuotas-modal-secondary-button" onClick={() => setShowBulkDeleteModal(false)}>
+                  Cancelar
+                </button>
+                <button type="button" className="cuotas-modal-danger-button" onClick={openBulkDeleteConfirmation}>
+                  Continuar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* — Popup confirmar — */}
       <ConfirmationPopup
         isOpen={popupOpen}
         onClose={closeConfirmation}
         onConfirm={handleConfirm}
         message={
-          actionType === 'pay'
+          actionType === 'bulk-delete'
+            ? `¿Confirmás borrar las cuotas no pagadas de ${formatMonth(buildMesString(bulkDeleteMesDate))}? También se eliminarán los turnos asociados a esas cuotas.`
+            : actionType === 'pay'
             ? `¿Confirmar pago de la cuota ${selectedCuota?.ID_Cuota}?`
             : `¿Estas seguro de eliminar la cuota? Si la cuota tiene turnos fijos asociados se eliminaran también.`
         }

@@ -329,6 +329,15 @@ const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombr
     }
 };
 
+const getUsuariosStats = async () => {
+    try {
+        const response = await apiClient.get('/usuarios/stats');
+        return response.data;
+    } catch (error) {
+        throw new Error('Error al obtener KPIs de usuarios');
+    }
+};
+
 
 const getUserById = async (id) => {
     try {
@@ -559,6 +568,33 @@ const prepararCuotasMasivas = async (body) => {
 // Generación masiva por lotes (paso 2: procesa un chunk de IDs en una transacción corta).
 const generarCuotasLote = async (body) => {
     const response = await apiClient.post("cuotas/generate-cuotas/lote", body);
+    return response.data;
+}
+
+const prepararEliminacionCuotasByMes = async (body) => {
+    const response = await apiClient.post("cuotas/delete-cuotas/preparar", body);
+    return response.data;
+}
+
+const eliminarCuotasByMesLote = async (body) => {
+    const response = await apiClient.post("cuotas/delete-cuotas/lote", body);
+    return response.data;
+}
+
+const getCuotaManualPreview = async (idUsuario, mes) => {
+    const response = await apiClient.get(`cuotas/usuario/${idUsuario}/preview`, {
+        params: { mes },
+    });
+    return response.data;
+}
+
+const prepararCuotaUsuarioLotes = async (idUsuario, body) => {
+    const response = await apiClient.post(`cuotas/usuario/${idUsuario}/preparar-lotes`, body);
+    return response.data;
+}
+
+const generarTurnosCuotaUsuarioLote = async (idUsuario, body) => {
+    const response = await apiClient.post(`cuotas/usuario/${idUsuario}/turnos-fijos/lote`, body);
     return response.data;
 }
 
@@ -818,6 +854,7 @@ export default {
     removeEntrenadorFromClase,
     // Usuario
     getAllUsuarios,
+    getUsuariosStats,
     getUserById,
     updateUserById,
     updateUserHealthById,
@@ -848,6 +885,11 @@ export default {
     postCuotasMasivas,
     prepararCuotasMasivas,
     generarCuotasLote,
+    prepararEliminacionCuotasByMes,
+    eliminarCuotasByMesLote,
+    getCuotaManualPreview,
+    prepararCuotaUsuarioLotes,
+    generarTurnosCuotaUsuarioLote,
     postValidarTurnosFijos,
     regenerateTurnosFijosUsuario,
     getCuotasReminder,
