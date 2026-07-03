@@ -29,7 +29,9 @@ import {
   ScanLine,
   AlertTriangle,
   TrendingDown,
-  UserPlus
+  UserPlus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 
@@ -44,6 +46,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
   const location = useLocation();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true');
 
   // Theme state
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -85,6 +88,14 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
 
   const changePasswordPath = isAdmin ? "/admin/cambiar-contrasena" : (isEntrenador ? "/entrenador/cambiar-contrasena" : "/alumno/cambiar-contrasena");
 
+  const toggleCollapsed = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebarCollapsed', String(next));
+      return next;
+    });
+  };
+
   return (
     <>
       {/* Botón “Abrir” en mobile */}
@@ -124,7 +135,16 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
         />
       )}
 
-      <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
+      <aside className={`sidebar ${isSidebarOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-button"
+          onClick={toggleCollapsed}
+          aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+        >
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
         {/* Botón “Cerrar” en mobile */}
         {/* <button
           className="close-btn"
@@ -158,7 +178,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       : ""
                       }`}
                   >
-                    <li className="menu-item">
+                    <li className="menu-item" title="Inicio">
                       <Home className="icon" />{" "}
                       Inicio
                     </li>
@@ -171,7 +191,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       : ""
                       }`}
                   >
-                    <li className="menu-item">
+                    <li className="menu-item" title="Turnos">
                       <Calendar className="icon" />{" "}
                       Turnos
                     </li>
@@ -184,7 +204,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       : ""
                       }`}
                   >
-                    <li className="menu-item">
+                    <li className="menu-item" title="Clases y Actividades">
                       <Activity className="icon" />{" "}
                       Clases y Actividades
                     </li>
@@ -196,7 +216,7 @@ const SidebarMenu = ({ isAdmin, isEntrenador }) => {
                       : ""
                       }`}
                   >
-                    <li className="menu-item">
+                    <li className="menu-item" title="Usuarios">
                       <Users className="icon" />{" "}
                       Usuarios
                     </li>

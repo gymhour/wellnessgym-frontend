@@ -56,6 +56,7 @@ const normalizeTextFilters = (filters) => ({
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
+  const [usuariosStats, setUsuariosStats] = useState({ activos: 0, inactivos: 0, sinPlanAsignado: 0 });
   const [loading, setLoading] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -146,6 +147,21 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
 
   useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
 
+  const fetchUsuariosStats = useCallback(async () => {
+    try {
+      const stats = await apiService.getUsuariosStats();
+      setUsuariosStats({
+        activos: Number(stats?.alumnos?.activos || 0),
+        inactivos: Number(stats?.alumnos?.inactivos || 0),
+        sinPlanAsignado: Number(stats?.alumnos?.sinPlanAsignado || 0),
+      });
+    } catch (err) {
+      console.error('Error al obtener KPIs de usuarios:', err);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsuariosStats(); }, [fetchUsuariosStats]);
+
   useEffect(() => {
     apiService.getPlanes().then(res => {
       if (Array.isArray(res)) setPlanesList(res);
@@ -180,6 +196,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
           u.ID_Usuario === id ? { ...u, estado: nuevoEstado } : u
         )
       );
+      fetchUsuariosStats();
       toast.success(`Usuario ${nuevoEstado ? 'activado' : 'desactivado'} correctamente`);
     } catch {
       toast.error('Error al actualizar estado');
@@ -505,6 +522,22 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
               onClick={() => setShowImportModal(true)}
               icon={Upload}
             />
+          </div>
+        </div>
+
+        <div className="usuarios-kpi-grid">
+          <div className="usuarios-kpi-item">
+            <span className="usuarios-kpi-label">Alumnos activos</span>
+            <strong>{usuariosStats.activos}</strong>
+          </div>
+          <div className="usuarios-kpi-item">
+            <span className="usuarios-kpi-label">Alumnos inactivos</span>
+            <strong>{usuariosStats.inactivos}</strong>
+          </div>
+          <div className="usuarios-kpi-item warning">
+            <span className="usuarios-kpi-label">Sin plan asignado</span>
+            <strong>{usuariosStats.sinPlanAsignado}</strong>
+            <p>Sin plan no se les generan cuotas.</p>
           </div>
         </div>
 
@@ -1053,7 +1086,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         {showImportModal && (
           <ImportUsuariosModal
             onClose={() => setShowImportModal(false)}
-            onSuccess={() => { setShowImportModal(false); fetchUsuarios(); }}
+            onSuccess={() => { setShowImportModal(false); fetchUsuarios(); fetchUsuariosStats(); }}
           />
         )}
 
