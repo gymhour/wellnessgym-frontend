@@ -3,17 +3,11 @@ import '../../../App.css';
 import './agendarTurno.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import { useLocation } from 'react-router-dom';
-import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
 import apiService from '../../../services/apiService';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from 'react-toastify';
-import { registerLocale } from 'react-datepicker';
-import es from 'date-fns/locale/es';
-import 'react-datepicker/dist/react-datepicker.css';
-registerLocale('es', es);
+import { CalendarDays, CheckCircle2, Clock3, Dumbbell, Rows3, UsersRound } from 'lucide-react';
 
 // ————————————————————————————————————————————————
 // Día → índice (tolerante a tildes y mayúsculas)
@@ -77,12 +71,62 @@ const getNextDateForHorario = (horario) => {
   return selected;
 };
 
+const formatHorarioTime = (value) => {
+  const { hours, minutes } = getHorarioDateParts(value);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const getDateWithHorarioTime = (date, horario, field = 'horaIni') => {
+  const next = new Date(date);
+  const { hours, minutes } = getHorarioDateParts(horario?.[field]);
+  next.setHours(hours, minutes, 0, 0);
+  return next;
+};
+
+const formatDayLabel = (date) => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate()).getTime();
+
+  if (dateOnly === todayOnly) return 'Hoy';
+  if (dateOnly === tomorrowOnly) return 'Mañana';
+
+  return date.toLocaleDateString('es-AR', { weekday: 'long' });
+};
+
+const formatDateLabel = (date) => (
+  date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }).replace('.', '')
+);
+
+const getCuposInfo = (horario) => {
+  const total = Number(horario?.cupos ?? horario?.capacidad ?? 0);
+  const usedSource = [
+    horario?.cuposUsados,
+    horario?.turnosTomados,
+    horario?.turnosActivos,
+    horario?.reservasActivas,
+    Array.isArray(horario?.activeUsers) ? horario.activeUsers.length : undefined,
+  ].find((value) => Number.isFinite(Number(value)));
+
+  const used = Number.isFinite(Number(usedSource)) ? Number(usedSource) : null;
+  const available = total > 0 && used !== null ? Math.max(total - used, 0) : null;
+  const percent = total > 0 && used !== null ? Math.min(Math.round((used / total) * 100), 100) : 0;
+  const isFull = total > 0 && used !== null && used >= total;
+
+  return { total, used, available, percent, isFull };
+};
+
 const AgendarTurno = () => {
   const location = useLocation();
   const [clases, setClases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedClase, setSelectedClase] = useState('');
   const [selectedDateTime, setSelectedDateTime] = useState(null);
+  const [selectedDayDate, setSelectedDayDate] = useState(null);
   const [isAgendando, setIsAgendando] = useState(false);
   const [preselectionApplied, setPreselectionApplied] = useState(false);
 
@@ -124,13 +168,15 @@ const AgendarTurno = () => {
     );
 
     if (horarioPreseleccionado) {
-      setSelectedDateTime(getNextDateForHorario(horarioPreseleccionado));
+      const preselectedDate = getNextDateForHorario(horarioPreseleccionado);
+      setSelectedDateTime(preselectedDate);
+      setSelectedDayDate(preselectedDate);
     }
 
     setPreselectionApplied(true);
   }, [clases, location.state, preselectionApplied]);
 
-  const clasesOptions = clases.map((clase) => clase.nombre);
+  const selectedClaseData = clases.find((clase) => clase.nombre === selectedClase);
 
   // Filtra fechas: hoy a +7 días y días permitidos según horarios ACTIVOS
   const filterDate = (date) => {
@@ -167,14 +213,10 @@ const AgendarTurno = () => {
       // Si es hoy, asegurar que haya al menos un horario futuro
       if (dateOnly.getTime() === todayOnly.getTime()) {
         const hasFutureSlot = activos.some(h => {
-          const utcInicio = new Date(h.horaIni);
+          const { hours, minutes } = getHorarioDateParts(h.horaIni);
           const localStart = new Date(dateOnly);
           // Usamos las horas/min de UTCHours como "hora de pared"
-          localStart.setHours(
-            utcInicio.getUTCHours(),
-            utcInicio.getUTCMinutes(),
-            0, 0
-          );
+          localStart.setHours(hours, minutes, 0, 0);
           return localStart > now;
         });
         return hasFutureSlot;
@@ -185,8 +227,8 @@ const AgendarTurno = () => {
     return true;
   };
 
-  // Genera todos los horarios de inicio permitidos para el día seleccionado (uno por cada horario ACTIVO)
-  const getAllowedTimes = (date) => {
+  // Genera todos los horarios permitidos para el día seleccionado (uno por cada horario ACTIVO)
+  const getAllowedHorarioSlots = (date) => {
     if (!date || !selectedClase) return [];
     const dia = date.getDay();
     const clase = clases.find(c => c.nombre === selectedClase);
@@ -201,18 +243,16 @@ const AgendarTurno = () => {
     const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const isToday = dateOnly.getTime() === new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const allowedStarts = horariosDia
+    const allowedSlots = horariosDia
       .map(h => {
-        const utcInicio = new Date(h.horaIni);
-        const localStart = new Date(date);
-        // Copiamos la hora/min de UTC como "hora local" visible (no tocamos tu lógica)
-        localStart.setHours(utcInicio.getUTCHours(), utcInicio.getUTCMinutes(), 0, 0);
-        return localStart;
+        const start = getDateWithHorarioTime(date, h, 'horaIni');
+        const end = getDateWithHorarioTime(date, h, 'horaFin');
+        return { horario: h, start, end };
       })
-      .filter(t => !isToday || t > now) // si es hoy, solo futuros
-      .sort((a, b) => a - b);
+      .filter(slot => !isToday || slot.start > now) // si es hoy, solo futuros
+      .sort((a, b) => a.start - b.start);
 
-    return allowedStarts;
+    return allowedSlots;
   };
 
   // Helper para formatear fecha local como ISO sin zona (mantiene tu comportamiento)
@@ -229,10 +269,40 @@ const AgendarTurno = () => {
   };
 
   const manejarSeleccionClase = (e) => {
-    const nombreClaseSeleccionada = e.target.value;
+    const nombreClaseSeleccionada = e?.target?.value ?? e;
     setSelectedClase(nombreClaseSeleccionada);
     setSelectedDateTime(null); // reiniciamos al cambiar de clase
+    setSelectedDayDate(null);
   };
+
+  const getAvailableDays = () => {
+    if (!selectedClase) return [];
+
+    return Array.from({ length: 8 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() + index);
+      date.setHours(0, 0, 0, 0);
+      const slots = filterDate(date) ? getAllowedHorarioSlots(date) : [];
+      return { date, slots };
+    }).filter((day) => day.slots.length > 0);
+  };
+
+  const availableDays = getAvailableDays();
+  const selectedDay = selectedDateTime
+    ? availableDays.find(({ date }) => date.toDateString() === selectedDateTime.toDateString())
+    : selectedDayDate
+      ? availableDays.find(({ date }) => date.toDateString() === selectedDayDate.toDateString())
+    : null;
+  const selectedSlots = selectedDay?.slots ?? [];
+  const selectedSlot = selectedDateTime
+    ? selectedSlots.find(({ start }) => start.getTime() === selectedDateTime.getTime())
+    : null;
+  const selectedCupos = selectedSlot ? getCuposInfo(selectedSlot.horario) : null;
+  const resumenSeleccion = selectedClase && selectedDateTime
+    ? `${selectedClase} · ${selectedDateTime.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })} ${selectedDateTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
+    : selectedClase && selectedDay
+      ? `${selectedClase} · ${selectedDay.date.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })}`
+      : 'Elegí clase y horario';
 
   const manejarAgendarTurno = async () => {
     // Validaciones sin activar loader para no “pegar” la UI en errores tempranos
@@ -266,9 +336,7 @@ const AgendarTurno = () => {
     // Encontrar el horario cuyo "inicio" coincide con la hora elegida en el picker
     // (misma lógica de hora local = UTCHours/UTCMinutes)
     const horarioElegido = horariosMismoDia.find(h => {
-      const utcInicio = new Date(h.horaIni);
-      const hh = utcInicio.getUTCHours();
-      const mm = utcInicio.getUTCMinutes();
+      const { hours: hh, minutes: mm } = getHorarioDateParts(h.horaIni);
       return (hh === selectedDateTime.getHours() && mm === selectedDateTime.getMinutes());
     });
 
@@ -290,6 +358,7 @@ const AgendarTurno = () => {
       await apiService.postTurno(body);
       setSelectedClase('');
       setSelectedDateTime(null);
+      setSelectedDayDate(null);
       toast.success("Turno agendado exitosamente.");
     } catch (err) {
       console.log(err);
@@ -307,38 +376,159 @@ const AgendarTurno = () => {
       <div className='content-layout'>
         <h2 className='agendar-turno-title'>Agendar turno</h2>
         <div className="agendar-turno-ctn">
-          {!loading && (
-            <CustomDropdown
-              options={clasesOptions}
-              value={selectedClase}
-              onChange={manejarSeleccionClase}
-              placeholderOption='Clase'
-            />
-          )}
+          <section className="agendar-step agendar-step-clases">
+            <div className="agendar-step-header">
+              <div>
+                <span className="agendar-step-kicker">Paso 1</span>
+                <h3>Elegí una clase</h3>
+              </div>
+              <Rows3 size={22} aria-hidden="true" />
+            </div>
 
-          <div className="datepicker-container">
-            <DatePicker
-              selected={selectedDateTime}
-              onChange={(date) => setSelectedDateTime(date)}
-              showTimeSelect
-              dateFormat="dd/MM/yyyy h:mm aa"
-              timeFormat="h:mm aa"
-              locale="es"
-              timeCaption="Hora"
-              placeholderText="Selecciona fecha y hora"
-              filterDate={filterDate}
-              includeTimes={selectedDateTime ? getAllowedTimes(selectedDateTime) : []}
-              minDate={new Date()}
-              maxDate={(() => { const d = new Date(); d.setDate(d.getDate() + 7); return d; })()}
-              className="custom-date-picker-input"
-              disabled={!selectedClase}
-            />
-          </div>
+            {!loading && (
+              <div className="agendar-clases-grid">
+                {clases.map((clase) => {
+                  const horariosActivos = (clase.HorariosClase ?? []).filter(h => h.activo !== false);
+                  const isSelected = selectedClase === clase.nombre;
 
-          <PrimaryButton
-            onClick={manejarAgendarTurno}
-            text={isAgendando ? 'Agendando...' : 'Agendar turno'}
-          />
+                  return (
+                    <button
+                      key={clase.ID_Clase ?? clase.nombre}
+                      type="button"
+                      className={`agendar-clase-card ${isSelected ? 'is-selected' : ''}`}
+                      onClick={() => manejarSeleccionClase(clase.nombre)}
+                    >
+                      <span className="agendar-clase-icon">
+                        {isSelected ? <CheckCircle2 size={18} /> : <Dumbbell size={18} />}
+                      </span>
+                      <strong>{clase.nombre}</strong>
+                      <small>{horariosActivos.length} {horariosActivos.length === 1 ? 'horario activo' : 'horarios activos'}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className={`agendar-step agendar-step-turnos ${!selectedClase ? 'is-disabled' : ''}`}>
+            <div className="agendar-step-header">
+              <div>
+                <span className="agendar-step-kicker">Paso 2</span>
+                <h3>Seleccioná día y horario</h3>
+              </div>
+              <CalendarDays size={22} aria-hidden="true" />
+            </div>
+
+            {!selectedClase ? (
+              <div className="agendar-empty-state">
+                <Clock3 size={22} aria-hidden="true" />
+                <p>Primero seleccioná una clase para ver los próximos turnos disponibles.</p>
+              </div>
+            ) : availableDays.length === 0 ? (
+              <div className="agendar-empty-state">
+                <Clock3 size={22} aria-hidden="true" />
+                <p>No hay turnos disponibles para {selectedClase} en los próximos 7 días.</p>
+              </div>
+            ) : (
+              <>
+                <div className="agendar-days-strip" role="list" aria-label="Días disponibles">
+                  {availableDays.map(({ date, slots }) => {
+                    const isSelected = selectedDay?.date.toDateString() === date.toDateString();
+
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        type="button"
+                        className={`agendar-day-card ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedDayDate(isSelected ? null : date);
+                          setSelectedDateTime(null);
+                        }}
+                      >
+                        <span>{formatDayLabel(date)}</span>
+                        <strong>{formatDateLabel(date)}</strong>
+                        <small>{slots.length} {slots.length === 1 ? 'horario' : 'horarios'}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedDay ? (
+                  <div className="agendar-slots-panel">
+                    <div className="agendar-slots-heading">
+                      <div>
+                        <span>{selectedClaseData?.nombre}</span>
+                        <strong>{`${formatDayLabel(selectedDay.date)}, ${formatDateLabel(selectedDay.date)}`}</strong>
+                      </div>
+                      <UsersRound size={20} aria-hidden="true" />
+                    </div>
+
+                    <div className="agendar-slots-grid">
+                      {selectedSlots.map(({ horario, start, end }) => {
+                        const cuposInfo = getCuposInfo(horario);
+                        const isSelected = selectedDateTime?.getTime() === start.getTime();
+                        const availabilityLabel = cuposInfo.total > 0 && cuposInfo.used !== null
+                          ? `${cuposInfo.available} libres de ${cuposInfo.total}`
+                          : `${cuposInfo.total || 'Cupos'} a confirmar`;
+
+                        return (
+                          <button
+                            key={`${horario.ID_HorarioClase}-${start.toISOString()}`}
+                            type="button"
+                            className={`agendar-slot-card ${isSelected ? 'is-selected' : ''} ${cuposInfo.isFull ? 'is-full' : ''}`}
+                            onClick={() => {
+                              if (cuposInfo.isFull) return;
+                              setSelectedDayDate(selectedDay.date);
+                              setSelectedDateTime(isSelected ? null : start);
+                            }}
+                            disabled={cuposInfo.isFull}
+                          >
+                            <div className="agendar-slot-time">
+                              <Clock3 size={18} aria-hidden="true" />
+                              <strong>{formatHorarioTime(horario.horaIni)}</strong>
+                              <span>{formatHorarioTime(horario.horaFin) !== '00:00' ? `hasta ${formatHorarioTime(horario.horaFin)}` : end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className="agendar-slot-occupancy">
+                              <div className="agendar-slot-occupancy-top">
+                                <span>{cuposInfo.isFull ? 'Completo' : availabilityLabel}</span>
+                                {cuposInfo.total > 0 && cuposInfo.used !== null && (
+                                  <small>{cuposInfo.percent}% ocupado</small>
+                                )}
+                              </div>
+                              <span className="agendar-slot-bar" aria-hidden="true">
+                                <span style={{ width: `${cuposInfo.percent}%` }} />
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="agendar-slots-panel">
+                    <div className="agendar-empty-state agendar-empty-state-compact">
+                      <CalendarDays size={22} aria-hidden="true" />
+                      <p>Seleccioná un día disponible para ver sus horarios.</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          <aside className="agendar-resumen">
+            <div>
+              <span>Tu selección</span>
+              <strong>{resumenSeleccion}</strong>
+              {selectedCupos?.total > 0 && selectedCupos.used !== null && (
+                <small>{selectedCupos.available} cupos libres</small>
+              )}
+            </div>
+            <PrimaryButton
+              onClick={manejarAgendarTurno}
+              text={isAgendando ? 'Agendando...' : 'Agendar turno'}
+            />
+          </aside>
         </div>
       </div>
     </div>
