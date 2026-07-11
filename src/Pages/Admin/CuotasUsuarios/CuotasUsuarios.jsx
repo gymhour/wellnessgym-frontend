@@ -1448,6 +1448,9 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
                   <strong>{c.clase || 'Clase'} · {c.diaSemana} {formatConflictFecha(c.fecha)}</strong>
                   <span>
                     Cupo {c.cupos} · ocupados {c.turnosExistentes} · solicitados {c.turnosSolicitados}
+                    {Number(c.reservasFijasPendientes || 0) > 0 && (
+                      <> · reservados fijos {c.reservasFijasPendientes}</>
+                    )}
                     {' · '}exceso {c.exceso}
                   </span>
                   {Array.isArray(c.usuariosAfectados) && c.usuariosAfectados.length > 0 && (
