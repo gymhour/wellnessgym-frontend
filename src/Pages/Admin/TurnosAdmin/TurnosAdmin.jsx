@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { RotateCcw, X } from 'lucide-react'
+import { CalendarPlus, RotateCcw, Trash2, X } from 'lucide-react'
 import ReprogramarTurnoModal from '../../../Components/utils/ReprogramarTurnoModal/ReprogramarTurnoModal'
+import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp'
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu'
 import { Calendar, momentLocalizer } from 'react-big-calendar'
 import moment from 'moment'
@@ -67,6 +68,9 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
 
   // Eliminar y reprogramar (solo admin): { user: {id,nombre}, turno: {id,label} }
   const [reprogramarData, setReprogramarData] = useState(null)
+  const [showCreateTurnoModal, setShowCreateTurnoModal] = useState(false)
+  const [cancelTurnoData, setCancelTurnoData] = useState(null)
+  const [cancelTurnoLoading, setCancelTurnoLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // calendario
@@ -195,6 +199,43 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     })
   }
 
+  const openCancelTurno = (user) => {
+    if (!selectedEvent || !user.turnoId) return
+    setCancelTurnoData({
+      user,
+      label: `${moment(selectedEvent.start).format('dddd DD/MM HH:mm')} · ${selectedEvent.title}`,
+    })
+  }
+
+  const handleCancelTurno = async () => {
+    const turnoId = cancelTurnoData?.user?.turnoId
+    if (!turnoId || cancelTurnoLoading) return
+
+    setCancelTurnoLoading(true)
+    try {
+      await apiService.deleteTurno(turnoId)
+      setRawTurnos(prev => prev.map(turno =>
+        (turno.id_turno || turno.ID_Turno) === turnoId
+          ? { ...turno, estado: CANCELLED_STATUS }
+          : turno
+      ))
+      setSelectedEvent(prev => prev ? {
+        ...prev,
+        activeUsers: prev.activeUsers.filter(u => u.turnoId !== turnoId),
+        cancelledUsers: [
+          ...prev.cancelledUsers,
+          { ...cancelTurnoData.user, status: CANCELLED_STATUS }
+        ],
+      } : prev)
+      toast.success('Turno cancelado correctamente.')
+      setCancelTurnoData(null)
+    } catch (error) {
+      toast.error(error?.message || 'No se pudo cancelar el turno.')
+    } finally {
+      setCancelTurnoLoading(false)
+    }
+  }
+
   // Post-borrado físico: sacar el turno del popup abierto y refrescar la semana
   const handleTurnoEliminado = () => {
     const turnoId = reprogramarData?.turno?.id
@@ -256,6 +297,16 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           <div>
             <h2>Turnos</h2>
           </div>
+          {fromAdmin && (
+            <button
+              type="button"
+              className="ta-create-turno-button"
+              onClick={() => setShowCreateTurnoModal(true)}
+            >
+              <CalendarPlus size={17} />
+              Crear turno
+            </button>
+          )}
         </div>
 
         <div className='turnos-filters'>
@@ -350,6 +401,17 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
                           <RotateCcw size={14} />
                         </button>
                       )}
+                      {fromAdmin && user.turnoId && user.status !== CANCELLED_STATUS && (
+                        <button
+                          type="button"
+                          className="ta-modal-cancel-turno"
+                          title="Cancelar turno"
+                          aria-label={`Cancelar turno de ${user.name}`}
+                          onClick={() => openCancelTurno(user)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -402,6 +464,29 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
         onClose={() => { setReprogramarData(null); setRefreshKey(k => k + 1) }}
         onDeleted={handleTurnoEliminado}
       />
+
+      <ReprogramarTurnoModal
+        isOpen={showCreateTurnoModal}
+        createOnly
+        allowUserSelection
+        onClose={() => {
+          setShowCreateTurnoModal(false)
+          setRefreshKey(k => k + 1)
+        }}
+      />
+
+      <ConfirmationPopup
+        isOpen={!!cancelTurnoData}
+        onClose={() => {
+          if (!cancelTurnoLoading) setCancelTurnoData(null)
+        }}
+        onConfirm={handleCancelTurno}
+        message={`¿Confirmás cancelar el turno de ${cancelTurnoData?.user?.name || 'este usuario'}?`}
+      >
+        <p style={{ margin: '8px 0 0', color: 'var(--text-color-distinct)', fontSize: '14px' }}>
+          {cancelTurnoData?.label}
+        </p>
+      </ConfirmationPopup>
     </div>
   )
 }

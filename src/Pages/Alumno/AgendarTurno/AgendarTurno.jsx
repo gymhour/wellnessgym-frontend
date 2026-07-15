@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../../../App.css';
 import './agendarTurno.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
@@ -8,6 +8,8 @@ import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from 'react-toastify';
 import { CalendarDays, CheckCircle2, Clock3, Dumbbell, Rows3, UsersRound } from 'lucide-react';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ————————————————————————————————————————————————
 // Día → índice (tolerante a tildes y mayúsculas)
@@ -102,6 +104,64 @@ const formatDateLabel = (date) => (
   date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }).replace('.', '')
 );
 
+const formatFullDateLabel = (date) => (
+  date.toLocaleDateString('es-AR', { day: '2-digit', month: 'long' })
+);
+
+const parseApiDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getDateOnly = (date) => (
+  new Date(date.getFullYear(), date.getMonth(), date.getDate())
+);
+
+const getCuotaEndDate = (cuota) => (
+  parseApiDate(cuota?.fechaFin) || parseApiDate(cuota?.vence)
+);
+
+const getCuotaStartDate = (cuota) => (
+  parseApiDate(cuota?.fechaInicio)
+);
+
+const findCurrentCuota = (cuotas) => {
+  const todayOnly = getDateOnly(new Date());
+
+  return (cuotas || []).find((cuota) => {
+    const startDate = getCuotaStartDate(cuota);
+    const endDate = getCuotaEndDate(cuota);
+    if (!endDate) return false;
+
+    const startOnly = startDate ? getDateOnly(startDate) : null;
+    const endOnly = getDateOnly(endDate);
+    return (!startOnly || startOnly <= todayOnly) && endOnly >= todayOnly;
+  }) || null;
+};
+
+const getInclusiveDaysBetween = (fromDate, toDate) => {
+  if (!fromDate || !toDate) return 0;
+  const fromOnly = getDateOnly(fromDate);
+  const toOnly = getDateOnly(toDate);
+  return Math.max(0, Math.floor((toOnly.getTime() - fromOnly.getTime()) / DAY_MS) + 1);
+};
+
+const isDateWithinReservationWindow = (date, reservationEndDate) => {
+  if (!date || !reservationEndDate) return false;
+  const todayOnly = getDateOnly(new Date());
+  const dateOnly = getDateOnly(date);
+  const maxDateOnly = getDateOnly(reservationEndDate);
+  return dateOnly >= todayOnly && dateOnly <= maxDateOnly;
+};
+
+const normalizeCuotasResponse = (res) => (
+  Array.isArray(res) ? res
+    : Array.isArray(res?.data) ? res.data
+      : Array.isArray(res?.data?.data) ? res.data.data
+        : []
+);
+
 const getCuposInfo = (horario) => {
   const total = Number(horario?.cupos ?? horario?.capacidad ?? 0);
   const usedSource = [
@@ -129,22 +189,32 @@ const AgendarTurno = () => {
   const [selectedDayDate, setSelectedDayDate] = useState(null);
   const [isAgendando, setIsAgendando] = useState(false);
   const [preselectionApplied, setPreselectionApplied] = useState(false);
+  const [cuotas, setCuotas] = useState([]);
 
   useEffect(() => {
-    const fetchClases = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
       try {
-        const clasesApi = await apiService.getClases();
+        const usuarioId = localStorage.getItem("usuarioId");
+        const [clasesApi, cuotasRes] = await Promise.all([
+          apiService.getClases(),
+          usuarioId ? apiService.getCuotasUsuario(usuarioId) : Promise.resolve([]),
+        ]);
+
         setClases(clasesApi);
+        setCuotas(normalizeCuotasResponse(cuotasRes));
       } catch (err) {
-        toast.error("Error al cargar las clases. Intente nuevamente.");
+        toast.error("Error al cargar los datos de agenda. Intente nuevamente.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClases();
+    fetchInitialData();
   }, []);
+
+  const cuotaVigente = useMemo(() => findCurrentCuota(cuotas), [cuotas]);
+  const reservationEndDate = useMemo(() => getCuotaEndDate(cuotaVigente), [cuotaVigente]);
 
   useEffect(() => {
     if (preselectionApplied || clases.length === 0 || !location.state) return;
@@ -169,31 +239,28 @@ const AgendarTurno = () => {
 
     if (horarioPreseleccionado) {
       const preselectedDate = getNextDateForHorario(horarioPreseleccionado);
-      setSelectedDateTime(preselectedDate);
-      setSelectedDayDate(preselectedDate);
+      if (isDateWithinReservationWindow(preselectedDate, reservationEndDate)) {
+        setSelectedDateTime(preselectedDate);
+        setSelectedDayDate(preselectedDate);
+      }
     }
 
     setPreselectionApplied(true);
-  }, [clases, location.state, preselectionApplied]);
+  }, [clases, location.state, preselectionApplied, reservationEndDate]);
 
   const selectedClaseData = clases.find((clase) => clase.nombre === selectedClase);
 
-  // Filtra fechas: hoy a +7 días y días permitidos según horarios ACTIVOS
+  // Filtra fechas: hoy hasta el fin de la cuota vigente y días permitidos según horarios ACTIVOS
   const filterDate = (date) => {
+    if (!reservationEndDate) return false;
+
     const now = new Date();
 
     const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const maxDateRaw = new Date();
-    maxDateRaw.setDate(now.getDate() + 7);
-    const maxDateOnly = new Date(
-      maxDateRaw.getFullYear(),
-      maxDateRaw.getMonth(),
-      maxDateRaw.getDate()
-    );
 
     const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-    if (dateOnly < todayOnly || dateOnly > maxDateOnly) {
+    if (!isDateWithinReservationWindow(dateOnly, reservationEndDate)) {
       return false;
     }
 
@@ -276,9 +343,10 @@ const AgendarTurno = () => {
   };
 
   const getAvailableDays = () => {
-    if (!selectedClase) return [];
+    if (!selectedClase || !reservationEndDate) return [];
 
-    return Array.from({ length: 8 }, (_, index) => {
+    const daysToShow = getInclusiveDaysBetween(new Date(), reservationEndDate);
+    return Array.from({ length: daysToShow }, (_, index) => {
       const date = new Date();
       date.setDate(date.getDate() + index);
       date.setHours(0, 0, 0, 0);
@@ -308,6 +376,11 @@ const AgendarTurno = () => {
     // Validaciones sin activar loader para no “pegar” la UI en errores tempranos
     if (!selectedClase || !selectedDateTime) {
       toast.error("Por favor, selecciona una clase y un turno (fecha y hora) disponibles.");
+      return;
+    }
+
+    if (!reservationEndDate || !filterDate(selectedDateTime)) {
+      toast.error("La fecha seleccionada está fuera de la vigencia de tu cuota.");
       return;
     }
 
@@ -419,15 +492,20 @@ const AgendarTurno = () => {
               <CalendarDays size={22} aria-hidden="true" />
             </div>
 
-            {!selectedClase ? (
+            {!cuotaVigente ? (
               <div className="agendar-empty-state">
                 <Clock3 size={22} aria-hidden="true" />
-                <p>Primero seleccioná una clase para ver los próximos turnos disponibles.</p>
+                <p>No encontramos una cuota vigente para reservar turnos.</p>
+              </div>
+            ) : !selectedClase ? (
+              <div className="agendar-empty-state">
+                <Clock3 size={22} aria-hidden="true" />
+                <p>Primero seleccioná una clase para ver turnos disponibles hasta el {formatFullDateLabel(reservationEndDate)}.</p>
               </div>
             ) : availableDays.length === 0 ? (
               <div className="agendar-empty-state">
                 <Clock3 size={22} aria-hidden="true" />
-                <p>No hay turnos disponibles para {selectedClase} en los próximos 7 días.</p>
+                <p>No hay turnos disponibles para {selectedClase} hasta el {formatFullDateLabel(reservationEndDate)}.</p>
               </div>
             ) : (
               <>

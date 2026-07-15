@@ -11,7 +11,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import ReprogramarTurnoModal from '../../../Components/utils/ReprogramarTurnoModal/ReprogramarTurnoModal';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
@@ -101,6 +101,8 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const [motivoSeleccionado, setMotivoSeleccionado] = useState('');
   // Flujo "Eliminar y reprogramar" turno AUSENTE/CANCELADO: { user: {id,nombre}, turno: {id,label} }
   const [reprogramarData, setReprogramarData] = useState(null);
+  const [turnoCancelData, setTurnoCancelData] = useState(null);
+  const [turnoCancelLoading, setTurnoCancelLoading] = useState(false);
 
   // Refresca el historial del modal "Ver turnos" sin cerrarlo (post borrado/creación de turno)
   const refreshTurnosHistory = () => {
@@ -373,6 +375,35 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
     } finally {
       setCancelPendingLoading(false);
       setShowCancelPendingPopup(false);
+    }
+  };
+
+  const openCancelTurnoPopup = (turno) => {
+    const horario = turno.HorarioClase;
+    const clase = horario?.Clase?.nombre || '—';
+    setTurnoCancelData({
+      id: turno.id_turno,
+      label: `${getDiaSemana(turno.fecha)} ${formatFecha(turno.fecha)} ${formatHora(horario?.horaIni)} · ${clase}`,
+    });
+  };
+
+  const handleCancelSingleTurno = async () => {
+    if (!turnoCancelData?.id || turnoCancelLoading) return;
+
+    setTurnoCancelLoading(true);
+    try {
+      await apiService.deleteTurno(turnoCancelData.id);
+      setTurnosHistory(prev =>
+        prev.map(t =>
+          t.id_turno === turnoCancelData.id ? { ...t, estado: 'CANCELADO' } : t
+        )
+      );
+      toast.success('Turno cancelado correctamente.');
+      setTurnoCancelData(null);
+    } catch (error) {
+      toast.error(error?.message || 'No se pudo cancelar el turno.');
+    } finally {
+      setTurnoCancelLoading(false);
     }
   };
 
@@ -1009,27 +1040,27 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                   </div>
 
                   <div className="turnos-history-tabs" role="tablist" aria-label="Tipo de turnos">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={historyActiveTab === 'past'}
-                  className={`turnos-history-tab ${historyActiveTab === 'past' ? 'active' : ''}`}
-                  onClick={() => setHistoryActiveTab('past')}
-                >
-                  Turnos pasados
-                  <span>{historyTabCounts.past}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={historyActiveTab === 'pending'}
-                  className={`turnos-history-tab ${historyActiveTab === 'pending' ? 'active' : ''}`}
-                  onClick={() => setHistoryActiveTab('pending')}
-                >
-                  Turnos pendientes
-                  <span>{historyTabCounts.pending}</span>
-                </button>
-              </div>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={historyActiveTab === 'past'}
+                      className={`turnos-history-tab ${historyActiveTab === 'past' ? 'active' : ''}`}
+                      onClick={() => setHistoryActiveTab('past')}
+                    >
+                      Turnos pasados
+                      <span>{historyTabCounts.past}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={historyActiveTab === 'pending'}
+                      className={`turnos-history-tab ${historyActiveTab === 'pending' ? 'active' : ''}`}
+                      onClick={() => setHistoryActiveTab('pending')}
+                    >
+                      Turnos pendientes
+                      <span>{historyTabCounts.pending}</span>
+                    </button>
+                  </div>
 
                   {historyActiveTab === 'pending' && (
                     <div className="turnos-history-bulk-actions">
@@ -1121,6 +1152,21 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                                     }}
                                   >
                                     <RotateCcw size={14} />
+                                  </button>
+                                )}
+                                {fromAdmin && t.estado !== 'CANCELADO' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openCancelTurnoPopup(t)}
+                                    title="Cancelar turno"
+                                    aria-label="Cancelar turno"
+                                    style={{
+                                      marginLeft: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                      width: '28px', height: '28px', border: '1px solid var(--border-color)', borderRadius: '6px',
+                                      background: 'transparent', color: '#e5484d', cursor: 'pointer', verticalAlign: 'middle'
+                                    }}
+                                  >
+                                    <Trash2 size={14} />
                                   </button>
                                 )}
                               </span>
@@ -1250,6 +1296,19 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
         >
           <p style={{ margin: '8px 0 0', color: 'var(--text-color-distinct)', fontSize: '14px' }}>
             Se cancelarán {pendingTurnos.length} turno(s).
+          </p>
+        </ConfirmationPopup>
+
+        <ConfirmationPopup
+          isOpen={!!turnoCancelData}
+          onClose={() => {
+            if (!turnoCancelLoading) setTurnoCancelData(null);
+          }}
+          onConfirm={handleCancelSingleTurno}
+          message={`¿Confirmás cancelar este turno de ${historyUser?.nombre || 'este usuario'}?`}
+        >
+          <p style={{ margin: '8px 0 0', color: 'var(--text-color-distinct)', fontSize: '14px' }}>
+            {turnoCancelData?.label}
           </p>
         </ConfirmationPopup>
 

@@ -75,6 +75,29 @@
     text-transform: capitalize;
 }
 
+.ta-create-turno-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.ta-create-turno-button:hover {
+    background-color: var(--primary-color-hover, var(--primary-color));
+    border-color: var(--primary-color-hover, var(--primary-color));
+    transform: translateY(-1px);
+}
+
 .ta-modal-count {
     margin-top: 20px;
     padding-top: 16px;
@@ -612,7 +635,8 @@
 }
 
 /* Botón "Eliminar y reprogramar" en items del popup de reservas (solo admin) */
-.ta-modal-reprogram {
+.ta-modal-reprogram,
+.ta-modal-cancel-turno {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -632,4 +656,10 @@
     border-color: var(--primary-color);
     color: var(--primary-color);
     background-color: var(--background-hover-color);
+}
+
+.ta-modal-cancel-turno:hover {
+    border-color: #e5484d;
+    color: #e5484d;
+    background-color: rgba(229, 72, 77, 0.10);
 }
