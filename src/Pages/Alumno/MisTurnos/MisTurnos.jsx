@@ -8,14 +8,20 @@ import { ReactComponent as AddCircleIcon } from '../../../assets/icons/add-circl
 import apiService from '../../../services/apiService';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
+import { isTurnoInFuture } from '../../../utils/turnoDate';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 // ToastContainer
 import { toast } from 'react-toastify';
+
+const TURNOS_PREVIEW_LIMIT = 3;
 
 const MisTurnos = () => {
     const [turnos, setTurnos] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [turnoToCancel, setTurnoToCancel] = useState(null);
+    const [showAllProximos, setShowAllProximos] = useState(false);
+    const [showAllHistorial, setShowAllHistorial] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -34,20 +40,44 @@ const MisTurnos = () => {
         fetchData();
     }, []);
 
-    // Obtener la fecha actual
-    const today = new Date();
-
     // Filtrar los turnos para obtener los próximos turnos
-    const proximoTurnos = turnos.filter((turno) => {
-        const turnoFecha = new Date(turno.fecha);
-        return turnoFecha > today && turno.estado !== 'CANCELADO';
-    });
+    const proximoTurnos = turnos
+        .filter((turno) => isTurnoInFuture(turno.fecha) && turno.estado !== 'CANCELADO')
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
     // Obtener el historial de turnos (todos menos los próximos)
-    const historialTurnos = turnos.filter((turno) => {
-        const turnoFecha = new Date(turno.fecha);
-        return turnoFecha <= today;
-    });
+    const historialTurnos = turnos
+        .filter((turno) => !isTurnoInFuture(turno.fecha))
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    const visibleProximoTurnos = showAllProximos
+        ? proximoTurnos
+        : proximoTurnos.slice(0, TURNOS_PREVIEW_LIMIT);
+
+    const visibleHistorialTurnos = showAllHistorial
+        ? historialTurnos
+        : historialTurnos.slice(0, TURNOS_PREVIEW_LIMIT);
+
+    const hasMoreProximos = proximoTurnos.length > TURNOS_PREVIEW_LIMIT;
+    const hasMoreHistorial = historialTurnos.length > TURNOS_PREVIEW_LIMIT;
+
+    const renderTurnoCard = (turno) => (
+        <TurnosCard
+            key={turno.id_turno}
+            id={turno.id_turno}
+            nombreTurno={turno.HorarioClase.Clase.nombre}
+            fechaTurno={turno.fecha}
+            horaTurno={turno.hora}
+            onCancelTurno={() => handleOpenCancelPopup(turno.id_turno)}
+        />
+    );
+
+    const renderToggleButton = ({ isExpanded, onClick, total, label }) => (
+        <button type="button" className="turnos-toggle-button" onClick={onClick}>
+            <span>{isExpanded ? `Ver menos ${label}` : `Ver todos (${total})`}</span>
+            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </button>
+    );
 
     // Función que abre el popup y guarda el turno seleccionado
     const handleOpenCancelPopup = (id) => {
@@ -70,7 +100,7 @@ const MisTurnos = () => {
             setLoading(false);
         } catch (error) {
             console.error("Error al cancelar turno:", error);
-            toast.error("Error al cancelar turno. Intente nuevamente.");
+            toast.error(error?.message || "Error al cancelar turno. Intente nuevamente.");
             setTurnoToCancel(null);
             setLoading(false);
         }
@@ -89,46 +119,46 @@ const MisTurnos = () => {
             <div className='content-layout mis-turnos-ctn'>
                 <div className="proximos-turnos-ctn">
                     <div className="proximo-turno-title">
-                        <h2> Próximos turnos </h2>
+                        <div>
+                            <h2>Próximos turnos</h2>
+                            <span className="turnos-section-count">{proximoTurnos.length} en agenda</span>
+                        </div>
                         <SecondaryButton linkTo="/alumno/agendar-turno" text="Agendar nuevo" icon={AddCircleIcon} />
                     </div>
                     <div className="proximo-turno-turnos">
-                        {proximoTurnos.length > 0 ? (
-                            proximoTurnos.map((turno) => (
-                                <TurnosCard
-                                    key={turno.id_turno}
-                                    id={turno.id_turno}
-                                    nombreTurno={turno.HorarioClase.Clase.nombre}
-                                    fechaTurno={turno.fecha}
-                                    horaTurno={turno.hora}
-                                    onCancelTurno={() => handleOpenCancelPopup(turno.id_turno)}
-                                />
-                            ))
+                        {visibleProximoTurnos.length > 0 ? (
+                            visibleProximoTurnos.map(renderTurnoCard)
                         ) : (
                             <p>No tienes próximos turnos.</p>
                         )}
                     </div>
+                    {hasMoreProximos && renderToggleButton({
+                        isExpanded: showAllProximos,
+                        onClick: () => setShowAllProximos(prev => !prev),
+                        total: proximoTurnos.length,
+                        label: 'turnos',
+                    })}
                 </div>
                 <div className="historial-turnos-ctn">
                     <div className="historial-turno-title">
-                        <h2> Historial </h2>
+                        <div>
+                            <h2>Historial</h2>
+                            <span className="turnos-section-count">{historialTurnos.length} turnos registrados</span>
+                        </div>
                     </div>
                     <div className="proximo-turno-turnos">
-                        {historialTurnos.length > 0 ? (
-                            historialTurnos.slice(0, 10).map((turno) => (
-                                <TurnosCard
-                                    key={turno.id_turno}
-                                    id={turno.id_turno}
-                                    nombreTurno={turno.HorarioClase.Clase.nombre}
-                                    fechaTurno={turno.fecha}
-                                    horaTurno={turno.hora}
-                                    onCancelTurno={() => handleOpenCancelPopup(turno.id_turno)}
-                                />
-                            ))
+                        {visibleHistorialTurnos.length > 0 ? (
+                            visibleHistorialTurnos.map(renderTurnoCard)
                         ) : (
                             <p>No tienes historial de turnos.</p>
                         )}
                     </div>
+                    {hasMoreHistorial && renderToggleButton({
+                        isExpanded: showAllHistorial,
+                        onClick: () => setShowAllHistorial(prev => !prev),
+                        total: historialTurnos.length,
+                        label: 'historial',
+                    })}
                 </div>
             </div>
             <ConfirmationPopup
