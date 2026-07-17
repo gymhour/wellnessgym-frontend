@@ -3,20 +3,19 @@ import './turnosCard.css';
 // import { ReactComponent as TurnoIcon } from '../../assets/icons/turno-icon.svg';
 import { ReactComponent as TurnoCancelIcon } from '../../assets/icons/circle-x.svg';
 import { ReactComponent as TurnoDoneIcon } from '../../assets/icons/check.svg';
+import { toast } from 'react-toastify';
+import { canCancelTurno, formatTurnoDate, isTurnoInFuture } from '../../utils/turnoDate';
+
+const CANCELLATION_TIME_MESSAGE = "El turno solo puede cancelarse con al menos 1 hora de anticipación. Si necesitás resolverlo, hablá con el administrador.";
 
 const TurnosCard = ({ id, nombreTurno, fechaTurno, onCancelTurno }) => {
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    const day = date.getUTCDate().toString().padStart(2, '0');
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-    const year = date.getUTCFullYear();
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} - ${hours}:${minutes}`;
-  };
+  const formattedDate = formatTurnoDate(fechaTurno);
+  const isFutureTurno = isTurnoInFuture(fechaTurno);
+  const showCancelButton = canCancelTurno(fechaTurno);
 
-  const formattedDate = formatDate(fechaTurno);
-  const showCancelButton = new Date(fechaTurno) > new Date();
+  const handleUnavailableCancellation = () => {
+    toast.info(CANCELLATION_TIME_MESSAGE);
+  };
 
   return (
     <div className='turnos-card-ctn'>
@@ -34,6 +33,16 @@ const TurnosCard = ({ id, nombreTurno, fechaTurno, onCancelTurno }) => {
           <button 
             className="cancel-button" 
             onClick={() => onCancelTurno(id)}
+            aria-label="Cancelar turno"
+          >
+            <TurnoCancelIcon className='icon' />
+          </button>
+        ) : isFutureTurno ? (
+          <button
+            className="cancel-button cancel-button-unavailable"
+            onClick={handleUnavailableCancellation}
+            aria-label="No se puede cancelar el turno con menos de 1 hora de anticipación"
+            title="No se puede cancelar con menos de 1 hora de anticipación"
           >
             <TurnoCancelIcon className='icon' />
           </button>

@@ -49,6 +49,14 @@
     color: #bb4f4f;
 }
 
+.cancel-button-unavailable {
+    color: var(--text-muted, #8a8a8a);
+}
+
+.cancel-button-unavailable:hover {
+    color: var(--text-muted, #8a8a8a);
+}
+
 @media screen and (max-width: 500px) {
     .turnos-card-ctn {
         padding: 24px 12px;
