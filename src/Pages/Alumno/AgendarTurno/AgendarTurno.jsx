@@ -190,6 +190,10 @@ const AgendarTurno = () => {
   const [isAgendando, setIsAgendando] = useState(false);
   const [preselectionApplied, setPreselectionApplied] = useState(false);
   const [cuotas, setCuotas] = useState([]);
+  // Cupos calculados por fecha concreta (clave: `${ID_HorarioClase}__${fechaISO}`).
+  // Necesario porque el listado de clases solo trae los cupos de la próxima ocurrencia,
+  // y el alumno puede elegir fechas de semanas siguientes.
+  const [cuposByFecha, setCuposByFecha] = useState({});
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -335,12 +339,59 @@ const AgendarTurno = () => {
     ].join('');
   };
 
+  const slotCuposKey = (horario, start) => `${horario?.ID_HorarioClase}__${formatLocalISO(start)}`;
+
+  // Resuelve los cupos de un slot para su fecha concreta. Usa el valor traído por fecha
+  // si ya está disponible; si todavía no llegó, cae al valor de la próxima ocurrencia.
+  const getSlotCupos = (horario, start) => {
+    const fetched = cuposByFecha[slotCuposKey(horario, start)];
+    if (fetched && !fetched.error && fetched.cupos !== undefined) {
+      const total = Number(fetched.cupos ?? 0);
+      const used = Number(fetched.cuposUsados ?? 0);
+      const available = total > 0 ? Math.max(total - used, 0) : null;
+      const percent = total > 0 ? Math.min(Math.round((used / total) * 100), 100) : 0;
+      const isFull = total > 0 && used >= total;
+      return { total, used, available, percent, isFull };
+    }
+    return getCuposInfo(horario);
+  };
+
   const manejarSeleccionClase = (e) => {
     const nombreClaseSeleccionada = e?.target?.value ?? e;
     setSelectedClase(nombreClaseSeleccionada);
     setSelectedDateTime(null); // reiniciamos al cambiar de clase
     setSelectedDayDate(null);
   };
+
+  // Al elegir un día, pedimos la disponibilidad real de cada horario para esa fecha exacta.
+  useEffect(() => {
+    const day = selectedDayDate || selectedDateTime;
+    if (!day || !selectedClase) return;
+
+    const slots = getAllowedHorarioSlots(day);
+    if (slots.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(slots.map(async ({ horario, start }) => {
+      const fechaISO = formatLocalISO(start);
+      try {
+        const data = await apiService.getHorarioCupos(horario.ID_HorarioClase, fechaISO);
+        return { key: slotCuposKey(horario, start), data };
+      } catch {
+        return { key: slotCuposKey(horario, start), data: null };
+      }
+    })).then((results) => {
+      if (cancelled) return;
+      setCuposByFecha((prev) => {
+        const next = { ...prev };
+        results.forEach(({ key, data }) => { if (data) next[key] = data; });
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDayDate, selectedDateTime, selectedClase]);
 
   const getAvailableDays = () => {
     if (!selectedClase || !reservationEndDate) return [];
@@ -365,7 +416,7 @@ const AgendarTurno = () => {
   const selectedSlot = selectedDateTime
     ? selectedSlots.find(({ start }) => start.getTime() === selectedDateTime.getTime())
     : null;
-  const selectedCupos = selectedSlot ? getCuposInfo(selectedSlot.horario) : null;
+  const selectedCupos = selectedSlot ? getSlotCupos(selectedSlot.horario, selectedSlot.start) : null;
   const resumenSeleccion = selectedClase && selectedDateTime
     ? `${selectedClase} · ${selectedDateTime.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })} ${selectedDateTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
     : selectedClase && selectedDay
@@ -543,7 +594,7 @@ const AgendarTurno = () => {
 
                     <div className="agendar-slots-grid">
                       {selectedSlots.map(({ horario, start, end }) => {
-                        const cuposInfo = getCuposInfo(horario);
+                        const cuposInfo = getSlotCupos(horario, start);
                         const isSelected = selectedDateTime?.getTime() === start.getTime();
                         const availabilityLabel = cuposInfo.total > 0 && cuposInfo.used !== null
                           ? `${cuposInfo.available} libres de ${cuposInfo.total}`

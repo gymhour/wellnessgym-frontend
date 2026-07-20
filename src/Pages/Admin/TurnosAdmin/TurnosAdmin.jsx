@@ -43,11 +43,29 @@ const getTurnoUser = turno => {
   }
 }
 
-// Contenido de cada recuadro de turno: nombre de la clase + turnos sacados / cupos totales.
+const getTurnoCuposKey = turno => `${turno.ID_HorarioClase}__${turno.fecha}`
+
+const getEventAvailability = (event, availability) => {
+  const total = Number(availability?.cupos ?? event.cupos ?? 0)
+  const committedSource = availability?.cuposUsados
+  const committed = Number.isFinite(Number(committedSource))
+    ? Number(committedSource)
+    : event.activeUsers.length
+
+  return {
+    ...event,
+    cupos: total,
+    cuposUsados: committed,
+    cuposDisponibles: Math.max(total - committed, 0),
+    reservasFijasPendientes: Number(availability?.reservasFijasPendientes ?? 0)
+  }
+}
+
+// Contenido de cada recuadro de turno: nombre de la clase + disponibilidad real.
 const EventContent = ({ event }) => (
   <div className="ta-event">
     <span className="ta-event-title">{event.title}</span>
-    <span className="ta-event-count">{event.activeUsers.length}/{event.cupos}</span>
+    <span className="ta-event-count">{event.cuposDisponibles} libres de {event.cupos}</span>
   </div>
 )
 
@@ -55,6 +73,7 @@ const CALENDAR_COMPONENTS = { event: EventContent }
 
 const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
   const [rawTurnos, setRawTurnos] = useState([])
+  const [cuposByTurno, setCuposByTurno] = useState({})
   const [loading, setLoading] = useState(true)
   const [calendarDate, setCalendarDate] = useState(new Date())
 
@@ -95,8 +114,23 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
 
     setLoading(true)
     apiService.getTurnos({ fechaDesde: weekStart, fechaHasta: weekEnd })
-      .then(data => {
-        if (isCurrentRequest) setRawTurnos(data)
+      .then(async data => {
+        const turnosUnicos = Array.from(new Map(
+          data.map(turno => [getTurnoCuposKey(turno), turno])
+        ).values())
+        const disponibilidades = await Promise.all(turnosUnicos.map(async turno => {
+          try {
+            const dataCupos = await apiService.getHorarioCupos(turno.ID_HorarioClase, turno.fecha)
+            return [getTurnoCuposKey(turno), dataCupos]
+          } catch {
+            return [getTurnoCuposKey(turno), null]
+          }
+        }))
+
+        if (isCurrentRequest) {
+          setRawTurnos(data)
+          setCuposByTurno(Object.fromEntries(disponibilidades))
+        }
       })
       .catch(err => {
         console.log(err)
@@ -165,6 +199,9 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
           start,
           end,
           cupos: t.HorarioClase.cupos,
+          horarioId: t.ID_HorarioClase,
+          fecha: t.fecha,
+          cuposKey: getTurnoCuposKey(t),
           activeUsers: [],
           cancelledUsers: []
         }
@@ -180,8 +217,10 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
       return acc
     }, {})
 
-    return Object.values(grupos)
-  }, [rawTurnos, selectedClass])
+    return Object.values(grupos).map(event => (
+      getEventAvailability(event, cuposByTurno[event.cuposKey])
+    ))
+  }, [rawTurnos, selectedClass, cuposByTurno])
 
   const handleSelectEvent = ev => {
     setSelectedEvent(ev)
@@ -214,19 +253,39 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
     setCancelTurnoLoading(true)
     try {
       await apiService.deleteTurno(turnoId)
+      let disponibilidadActualizada = null
+      try {
+        disponibilidadActualizada = await apiService.getHorarioCupos(
+          selectedEvent.horarioId,
+          selectedEvent.fecha
+        )
+      } catch {
+        // El turno ya fue cancelado; el refresco semanal recuperará la disponibilidad.
+      }
+
       setRawTurnos(prev => prev.map(turno =>
         (turno.id_turno || turno.ID_Turno) === turnoId
           ? { ...turno, estado: CANCELLED_STATUS }
           : turno
       ))
-      setSelectedEvent(prev => prev ? {
-        ...prev,
-        activeUsers: prev.activeUsers.filter(u => u.turnoId !== turnoId),
-        cancelledUsers: [
-          ...prev.cancelledUsers,
-          { ...cancelTurnoData.user, status: CANCELLED_STATUS }
-        ],
-      } : prev)
+      if (disponibilidadActualizada) {
+        setCuposByTurno(prev => ({
+          ...prev,
+          [selectedEvent.cuposKey]: disponibilidadActualizada
+        }))
+      }
+      setSelectedEvent(prev => {
+        if (!prev) return prev
+        const nextEvent = {
+          ...prev,
+          activeUsers: prev.activeUsers.filter(u => u.turnoId !== turnoId),
+          cancelledUsers: [
+            ...prev.cancelledUsers,
+            { ...cancelTurnoData.user, status: CANCELLED_STATUS }
+          ],
+        }
+        return getEventAvailability(nextEvent, disponibilidadActualizada)
+      })
       toast.success('Turno cancelado correctamente.')
       setCancelTurnoData(null)
     } catch (error) {
@@ -374,11 +433,14 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
               </p>
             </div>
             <div className="ta-modal-count">
-              <strong className="ta-modal-count-ratio">{selectedEvent.activeUsers.length}/{selectedEvent.cupos}</strong> cupos ocupados
+              <div>
+                <strong className="ta-modal-count-ratio">{selectedEvent.cuposDisponibles}</strong> libres de {selectedEvent.cupos}
+              </div>
+              <span>{selectedEvent.cuposUsados}/{selectedEvent.cupos} cupos comprometidos</span>
             </div>
             <div className="ta-modal-reservation-section">
               <div className="ta-modal-section-title">
-                <span>Con cupo</span>
+                <span>Turnos activos</span>
                 <strong>{selectedEvent.activeUsers.length}</strong>
               </div>
               {selectedEvent.activeUsers.length > 0 ? (
@@ -419,6 +481,15 @@ const TurnosAdmin = ({ fromAdmin, fromEntrenador }) => {
                 <p className="ta-modal-empty">No hay reservas activas.</p>
               )}
             </div>
+
+            {selectedEvent.reservasFijasPendientes > 0 && (
+              <div className="ta-modal-reservation-section">
+                <div className="ta-modal-section-title">
+                  <span>Turnos fijos pendientes</span>
+                  <strong>{selectedEvent.reservasFijasPendientes}</strong>
+                </div>
+              </div>
+            )}
 
             <div className="ta-modal-reservation-section">
               <div className="ta-modal-section-title">

@@ -72,6 +72,18 @@ const getClases = async () => {
     }
 };
 
+// Disponibilidad de cupos de un horario para una fecha concreta (ISO sin zona, ej: "2026-07-27T11:00:00")
+const getHorarioCupos = async (idHorario, fechaISO) => {
+    try {
+        const response = await apiClient.get(`/clase/horario/${idHorario}/cupos`, {
+            params: { fecha: fechaISO },
+        });
+        return response.data;
+    } catch (err) {
+        throw new Error("Error al cargar la disponibilidad del horario.");
+    }
+};
+
 // Turnos
 const getTurnos = async (filters = {}) => {
     try {
@@ -826,6 +838,7 @@ export async function fetchAllClientsActive(apiService, { take = 100 } = {}) {
 export default {
     // Clases
     getClases,
+    getHorarioCupos,
     // Turnos
     getTurnos,
     getTurnosUsuario,
