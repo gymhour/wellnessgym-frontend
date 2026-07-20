@@ -105,6 +105,11 @@
     color: var(--text-color-distinct);
     font-size: 13px;
     font-weight: 500;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .ta-modal-count-ratio {
