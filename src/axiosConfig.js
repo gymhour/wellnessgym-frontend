@@ -3,8 +3,10 @@ import { jwtDecode } from 'jwt-decode';
 
 // API URL LOCAL
 // const BASE_URL = 'http://localhost:3000';
-// API URL PROD
-const BASE_URL = 'https://wellnessgym-backend.vercel.app';
+// API URL PROD VIEJA
+// const BASE_URL = 'https://wellnessgym-backend.vercel.app';
+// API URL PROD NUEVA
+const BASE_URL = 'https://wellnessgym-backend-production.up.railway.app';
 
 // Cliente para login / register / cambiar contraseña (sin interceptores)
 export const authClient = axios.create({
