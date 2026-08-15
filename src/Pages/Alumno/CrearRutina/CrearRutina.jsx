@@ -790,7 +790,7 @@ const CrearRutina = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
 
     } catch (err) {
       console.error(err);
-      toast.error('No se pudo cargar la rutina para editar');
+      toast.error(err?.message || 'No se pudo cargar la rutina para editar');
     } finally {
       setLoading(false);
     }

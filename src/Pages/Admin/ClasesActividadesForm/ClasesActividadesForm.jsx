@@ -257,7 +257,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
       setInitialEntrenadores(init);
     } catch (error) {
       console.error("Error al obtener los detalles de la clase:", error);
-      toast.error("Error al obtener información de la clase. Intenta nuevamente.");
+      toast.error(error?.message || "Error al obtener información de la clase. Intenta nuevamente.");
     } finally {
       setIsLoading(false);
     }
@@ -450,7 +450,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
       await fetchClaseDetalle();
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo actualizar el horario.");
+      toast.error(error?.message || "No se pudo actualizar el horario.");
     } finally {
       setIsLoading(false);
     }
@@ -560,7 +560,7 @@ const ClasesActividadesForm = ({ isEditing, classId: classIdProp, fromAdmin, fro
       return true;
     } catch (error) {
       console.error(error);
-      toast.error("No se pudieron guardar los cambios de horarios.");
+      toast.error(error?.message || "No se pudieron guardar los cambios de horarios.");
       return false;
     } finally {
       if (manageLoading) setIsLoading(false);

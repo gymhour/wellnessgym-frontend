@@ -65,7 +65,7 @@ const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
         setPlanOptions(data.map(p => ({ label: p.nombre, value: p.ID_Plan, sesionesPorSemana: p.sesionesPorSemana || 0 })))
       } catch (error) {
         console.error('Error al cargar planes:', error);
-        toast.error('No se pudieron cargar los planes disponibles');
+        toast.error(error?.message || 'No se pudieron cargar los planes disponibles');
       }
     };
     fetchPlanes();
@@ -208,7 +208,7 @@ const EditarUsuario = ({fromAdmin, fromEntrenador}) => {
 
       } catch (err) {
         console.error(err);
-        toast.error('No se pudo cargar los datos del usuario');
+        toast.error(err?.message || 'No se pudo cargar los datos del usuario');
       } finally {
         setIsLoading(false);
       }

@@ -73,7 +73,7 @@ const ResetPassword = () => {
 
     } catch (error) {
       setIsLoading(false);
-      toast.error('Error al crear nueva contraseña');
+      toast.error(error?.message || 'Error al crear nueva contraseña');
     }
   };
 

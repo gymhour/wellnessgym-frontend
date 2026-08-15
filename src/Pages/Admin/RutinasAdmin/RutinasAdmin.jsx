@@ -146,7 +146,7 @@ const RutinasAdmin = () => {
       setOpenState(init);
     } catch (error) {
       console.error('Error al obtener rutinas:', error);
-      toast.error('No se pudieron cargar las rutinas.');
+      toast.error(error?.message || 'No se pudieron cargar las rutinas.');
     } finally {
       setLoading(false);
     }
@@ -168,7 +168,7 @@ const RutinasAdmin = () => {
       await fetchRutinas();
     } catch (error) {
       console.error('Error al eliminar rutina', error);
-      toast.error('No se pudo eliminar la rutina.');
+      toast.error(error?.message || 'No se pudo eliminar la rutina.');
       setLoading(false);
     } finally {
       closePopup();
@@ -263,7 +263,7 @@ const RutinasAdmin = () => {
       await fetchRutinas();
     } catch (error) {
       console.error('Error al duplicar rutina:', error);
-      toast.error('No se pudo duplicar la rutina.');
+      toast.error(error?.message || 'No se pudo duplicar la rutina.');
       setLoading(false);
     }
   };

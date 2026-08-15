@@ -31,7 +31,7 @@ const InicioEntrenador = () => {
       } catch (err) {
         console.error(err);
         setError('Error al cargar los datos. Intente nuevamente.');
-        toast.error('Error al cargar los datos. Intente nuevamente.');
+        toast.error(err?.message || 'Error al cargar los datos. Intente nuevamente.');
       } finally {
         setLoading(false);
       }

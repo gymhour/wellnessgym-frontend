@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Monitor } from 'lucide-react';
+import { Copy, Monitor, X } from 'lucide-react';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import DNICheckInSection from '../../../Components/Attendances/DNICheckInSection';
 import QRCheckInSection from '../../../Components/Attendances/QRCheckInSection';
@@ -11,6 +11,11 @@ const CHECKIN_TABS = {
   DNI: 'dni',
   QR: 'qr',
 };
+
+// El ingreso confirmado se cierra rápido para no demorar la fila. El rechazo se queda
+// mucho más: hay que alcanzar a leer el motivo y explicárselo al alumno.
+const RESULT_TIMEOUT_MS = 2000;
+const REJECTED_RESULT_TIMEOUT_MS = 10000;
 
 const AdminCheckInPage = () => {
   const [activeTab, setActiveTab] = useState(CHECKIN_TABS.DNI);
@@ -39,7 +44,7 @@ const AdminCheckInPage = () => {
 
     const timeoutId = setTimeout(() => {
       setResult(null);
-    }, 2000);
+    }, result.allowed ? RESULT_TIMEOUT_MS : REJECTED_RESULT_TIMEOUT_MS);
 
     return () => clearTimeout(timeoutId);
   }, [result]);
@@ -94,6 +99,7 @@ const AdminCheckInPage = () => {
               <>
                 <DNICheckInSection
                   loading={loading}
+                  enableNameSearch
                   onCheckIn={dni => runCheckIn(() => apiService.registerAttendance({ dni, method: 'DNI' }))}
                 />
 
@@ -133,6 +139,17 @@ const AdminCheckInPage = () => {
         {result && (
           <div className="checkin-result-modal-overlay" role="status" aria-live="polite">
             <div className="checkin-result-modal">
+              {/* El rechazo queda 12s en pantalla: si el admin ya lo leyó, puede cerrarlo
+                  antes y seguir con el próximo ingreso sin esperar. */}
+              <button
+                type="button"
+                className="checkin-result-modal-close"
+                onClick={() => setResult(null)}
+                aria-label="Cerrar"
+                title="Cerrar"
+              >
+                <X size={20} />
+              </button>
               <h3 className="checkin-result-modal-title">
                 {result.allowed ? 'Turno confirmado' : 'Turno negado'}
               </h3>

@@ -253,7 +253,12 @@ const AgendarTurno = () => {
         setClases(clasesApi);
         setCuotas(normalizeCuotasResponse(cuotasRes));
       } catch (err) {
-        toast.error("Error al cargar los datos de agenda. Intente nuevamente.");
+        console.error(err);
+        toast.error(
+          err?.message || "No pudimos cargar las clases y tu cuota, así que todavía no se pueden ver los turnos disponibles. "
+          + "Revisá tu conexión y actualizá la página.",
+          { autoClose: 12000, closeOnClick: true }
+        );
       } finally {
         setLoading(false);
       }
@@ -489,27 +494,54 @@ const AgendarTurno = () => {
       ? `${selectedClase} · ${selectedDay.date.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })}`
       : 'Elegí clase y horario';
 
+  // El ToastContainer global cierra a los 1.5s: alcanza para "Turno agendado", pero no para
+  // leer por qué no se pudo reservar. Los errores de reserva quedan mucho más tiempo y se
+  // cierran con un click cuando el alumno terminó de leerlos.
+  const mostrarErrorTurno = (mensaje) => {
+    toast.error(mensaje, { autoClose: 4000, closeOnClick: true });
+  };
+
+  // Por qué la fecha elegida quedó fuera de la ventana de reserva: sin cuota, cuota que
+  // todavía no arrancó, o fecha posterior al fin del período.
+  const buildFueraDeVigenciaMensaje = () => {
+    if (!cuotaVigente || !reservationEndDate) {
+      return "No tenés una cuota vigente para reservar turnos. Hablá con el administrador para renovar tu plan.";
+    }
+
+    if (cuotaAunNoEmpezada && reservationStartDate) {
+      return `Tu cuota arranca el ${formatFullDateLabel(reservationStartDate)}. `
+        + `Vas a poder reservar turnos desde esa fecha y hasta el ${formatFullDateLabel(reservationEndDate)}.`;
+    }
+
+    return `Esa fecha está fuera del período que cubre tu cuota, que vence el ${formatFullDateLabel(reservationEndDate)}. `
+      + `Elegí un día entre hoy y esa fecha, o renová tu cuota con el administrador para reservar más adelante.`;
+  };
+
   const manejarAgendarTurno = async () => {
     // Validaciones sin activar loader para no “pegar” la UI en errores tempranos
     if (!selectedClase || !selectedDateTime) {
-      toast.error("Por favor, selecciona una clase y un turno (fecha y hora) disponibles.");
+      mostrarErrorTurno(
+        !selectedClase
+          ? "Todavía no elegiste la clase. Seleccioná una clase y después el día y la hora del turno."
+          : "Te falta elegir el día y la hora del turno. Seleccioná uno de los horarios disponibles de la clase."
+      );
       return;
     }
 
     if (!reservationEndDate || !filterDate(selectedDateTime)) {
-      toast.error("La fecha seleccionada está fuera de la vigencia de tu cuota.");
+      mostrarErrorTurno(buildFueraDeVigenciaMensaje());
       return;
     }
 
     const usuarioId = localStorage.getItem("usuarioId");
     if (!usuarioId) {
-      toast.error("Usuario no autenticado.");
+      mostrarErrorTurno("Se cerró tu sesión. Iniciá sesión de nuevo para poder reservar el turno.");
       return;
     }
 
     const claseSeleccionada = clases.find((clase) => clase.nombre === selectedClase);
     if (!claseSeleccionada) {
-      toast.error("Clase seleccionada no válida.");
+      mostrarErrorTurno("La clase que elegiste ya no está disponible. Actualizá la página y volvé a elegirla.");
       return;
     }
 
@@ -519,7 +551,9 @@ const AgendarTurno = () => {
       .filter(h => h.activo !== false && diaIndex(h.diaSemana) === day);
 
     if (horariosMismoDia.length === 0) {
-      toast.error("No hay horario disponible para ese día.");
+      mostrarErrorTurno(
+        `${selectedClase} no tiene horarios el ${formatFullDateLabel(selectedDateTime)}. Elegí otro día de la lista de turnos disponibles.`
+      );
       return;
     }
 
@@ -531,7 +565,9 @@ const AgendarTurno = () => {
     });
 
     if (!horarioElegido) {
-      toast.error("No pudimos identificar el horario seleccionado. Probá elegir nuevamente la hora.");
+      mostrarErrorTurno(
+        "El horario que elegiste ya no coincide con los de la clase (puede que lo hayan cambiado recién). Volvé a elegir la hora."
+      );
       return;
     }
 
@@ -551,8 +587,13 @@ const AgendarTurno = () => {
       setSelectedDayDate(null);
       toast.success("Turno agendado exitosamente.");
     } catch (err) {
-      console.log(err);
-      toast.error(err?.message || "No se pudo agendar el turno.");
+      console.error(err);
+      // El backend explica el motivo (sin sesiones, turno repetido en el día, sin cupo…).
+      // Sólo caemos al texto genérico si no llegó ningún mensaje.
+      mostrarErrorTurno(
+        err?.message
+          || "No pudimos agendar el turno. Revisá tu conexión y probá de nuevo; si sigue fallando, avisale al administrador."
+      );
     } finally {
       setIsAgendando(false);
       setLoading(false);

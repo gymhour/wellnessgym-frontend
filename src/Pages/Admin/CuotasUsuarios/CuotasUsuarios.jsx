@@ -174,7 +174,8 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [filterMesDate, setFilterMesDate] = useState(initialUrlFilters.mesDate);
   const [filterPlan, setFilterPlan] = useState('');
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const [showFilters, setShowFilters] = useState(Boolean(searchParamsString));
 
   // Pagar
@@ -268,19 +269,28 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
 
       const response = await apiClient.get('/cuotas', { params });
       const lista = response.data.data || [];
+      const meta = response.data.meta || {};
+      const paginasTotales = Number(meta.totalPages) || (lista.length > 0 ? page : 0);
 
-      lista.sort((a, b) =>
-        new Date(b.mes + '-01') - new Date(a.mes + '-01')
-      );
-
+      // El orden lo define el backend sobre el total de cuotas (mes y vencimiento
+      // descendentes). Reordenar acá sólo la página visible rompería ese orden global:
+      // la página 2 puede arrancar con un mes más nuevo que el final de la página 1.
       setCuotas(lista);
-      setHasMore(lista.length > 0);
+      setTotalPages(paginasTotales);
+      setTotalItems(Number(meta.totalItems) || 0);
       setError(null);
+
+      // Si la página quedó fuera de rango (por ejemplo, al borrar la última cuota de la
+      // última página) volvemos a la última página válida en lugar de mostrar el vacío.
+      if (lista.length === 0 && page > 1 && page > paginasTotales) {
+        setPage(Math.max(1, paginasTotales));
+      }
     } catch (err) {
       console.error('Error al obtener cuotas:', err);
       setError(err);
       setCuotas([]);
-      setHasMore(false);
+      setTotalPages(0);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -353,7 +363,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
         if (isCurrentRequest) {
           setUserOptions([]);
           console.error('Error buscando usuarios:', err);
-          toast.error('No se pudieron buscar usuarios');
+          toast.error(err?.message || 'No se pudieron buscar usuarios');
         }
       } finally {
         if (isCurrentRequest) setUsersLoading(false);
@@ -872,6 +882,7 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setFilterMesDate(null);
   };
 
+  const hasMore = totalPages > 0 && page < totalPages;
   const goPrevPage = () => { if (page > 1) setPage(prev => prev - 1); };
   const goNextPage = () => { if (hasMore) setPage(prev => prev + 1); };
 
@@ -1184,7 +1195,10 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
           <button onClick={goPrevPage} disabled={page === 1} className="btn-page" aria-label="Página anterior" title="Página anterior">
             <ChevronLeft />
           </button>
-          <span>Página {page}</span>
+          <span>
+            Página {page}{totalPages > 0 ? ` de ${totalPages}` : ''}
+            {totalItems > 0 && ` · ${totalItems} cuota${totalItems === 1 ? '' : 's'}`}
+          </span>
           <button onClick={goNextPage} disabled={!hasMore} className="btn-page" aria-label="Página siguiente" title="Página siguiente">
             <ChevronRight />
           </button>

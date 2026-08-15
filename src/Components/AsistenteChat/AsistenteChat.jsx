@@ -80,7 +80,10 @@ const AsistenteChat = () => {
         copy.pop();
         return [...copy, {
           sender: 'bot',
-          text: 'Ups, hubo un error de conexión. Por favor, intentá de nuevo.'
+          // El backend explica si el asistente está caído; el texto fijo queda para
+          // cuando directamente no hubo respuesta (sin conexión).
+          text: err?.response?.data?.message
+            || 'No pude responderte. Revisá tu conexión y probá de nuevo.'
         }];
       });
       console.error(err);

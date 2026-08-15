@@ -42,7 +42,7 @@ const GruposUsuarios = () => {
       const gruposResp = await apiService.getGruposUsuarios();
       setGrupos(Array.isArray(gruposResp?.grupos) ? gruposResp.grupos : []);
     } catch (error) {
-      toast.error('No se pudieron cargar los grupos de usuarios');
+      toast.error(error?.message || 'No se pudieron cargar los grupos de usuarios');
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ const GruposUsuarios = () => {
       } catch (error) {
         if (isCurrentRequest) {
           setUsuarioOptions([]);
-          toast.error('No se pudieron buscar usuarios');
+          toast.error(error?.message || 'No se pudieron buscar usuarios');
         }
       } finally {
         if (isCurrentRequest) setUsuariosLoading(false);

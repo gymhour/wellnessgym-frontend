@@ -111,10 +111,12 @@ const Login = () => {
       }
 
     } catch (error) {
+      // El backend responde en `message`; `error` queda como respaldo por si algún
+      // endpoint viejo todavía usa esa clave.
+      const data = error?.response?.data;
       toast.error(
-        error?.response?.data?.error
-          ? error.response.data.error
-          : "Error al iniciar sesión. Comprueba tus credenciales"
+        data?.message || data?.error || "No pudimos iniciar sesión. Revisá tu conexión e intentá de nuevo.",
+        { autoClose: 8000 }
       );
     } finally {
       setIsLoading(false);
