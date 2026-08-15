@@ -130,7 +130,7 @@ const ReprogramarTurnoModal = ({ isOpen, user, turno, createOnly = false, allowU
       } catch (error) {
         if (isCurrentRequest) {
           setUserOptions([]);
-          toast.error('No se pudieron buscar usuarios.');
+          toast.error(error?.message || 'No se pudieron buscar usuarios.');
         }
       } finally {
         if (isCurrentRequest) setUsersLoading(false);

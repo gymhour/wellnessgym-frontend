@@ -452,7 +452,7 @@ const RutinasAsignadas = () => {
       } catch (error) {
         if (isCurrentRequest) {
           setUserOptions([]);
-          toast.error('No se pudieron buscar usuarios');
+          toast.error(error?.message || 'No se pudieron buscar usuarios');
         }
       } finally {
         if (isCurrentRequest) setUsersLoading(false);
@@ -479,7 +479,7 @@ const RutinasAsignadas = () => {
       setGrupos(Array.isArray(data) ? data : (data?.grupos || data?.data || []));
     } catch (error) {
       console.error('Error cargando grupos:', error);
-      toast.error('No se pudieron cargar los grupos para el filtro.');
+      toast.error(error?.message || 'No se pudieron cargar los grupos para el filtro.');
     }
   };
 
@@ -525,7 +525,7 @@ const RutinasAsignadas = () => {
       setTotalPages(meta?.totalPages || 1);
     } catch (error) {
       console.error('Error cargando rutinas:', error);
-      toast.error('Error al cargar las rutinas. Intenta nuevamente.');
+      toast.error(error?.message || 'Error al cargar las rutinas. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -562,7 +562,7 @@ const RutinasAsignadas = () => {
       closePopup();
       await fetchRutinas(page);
     } catch (error) {
-      toast.error('Error al eliminar la rutina');
+      toast.error(error?.message || 'Error al eliminar la rutina');
       console.error('Error al eliminar rutina', error);
       setLoading(false);
       closePopup();
@@ -674,7 +674,7 @@ const RutinasAsignadas = () => {
       await fetchRutinas(page);
     } catch (error) {
       console.error('Error al duplicar rutina:', error);
-      toast.error('No se pudo duplicar la rutina. Intente nuevamente.');
+      toast.error(error?.message || 'No se pudo duplicar la rutina. Intente nuevamente.');
       setLoading(false);
     }
   };

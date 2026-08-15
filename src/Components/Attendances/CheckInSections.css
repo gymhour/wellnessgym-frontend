@@ -32,6 +32,110 @@
   align-items: center;
 }
 
+.dni-checkin-field {
+  position: relative;
+  min-width: 0;
+}
+
+/* Sugerencias de alumnos al buscar por nombre (sólo panel admin). */
+.dni-checkin-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  list-style: none;
+}
+
+.dni-checkin-suggestion {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 15px;
+  text-align: left;
+}
+
+.dni-checkin-suggestion.is-active:not(.is-disabled) {
+  background: var(--background-hover-color);
+}
+
+.dni-checkin-suggestion.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dni-checkin-suggestion-name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dni-checkin-suggestion-dni {
+  flex-shrink: 0;
+  color: var(--text-color-distinct);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dni-checkin-suggestion-empty {
+  padding: 12px;
+  color: var(--text-color-distinct);
+  font-size: 14px;
+}
+
+.dni-checkin-selected {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--background-hover-color);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.dni-checkin-selected span {
+  flex: 1;
+  min-width: 0;
+}
+
+.dni-checkin-selected button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  padding: 4px;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.dni-checkin-hint {
+  margin: 10px 0 0;
+  color: var(--text-color-distinct);
+  font-size: 14px;
+}
+
 .qr-checkin-controls {
   display: flex;
   flex-wrap: wrap;

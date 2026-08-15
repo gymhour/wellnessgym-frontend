@@ -85,7 +85,7 @@ const AdminInicio = () => {
       setAltasMotivo(response?.altasPorMotivo || []);
     } catch (error) {
       console.error('Error al obtener los KPIs:', error);
-      toast.error('Error al cargar KPIs');
+      toast.error(error?.message || 'Error al cargar KPIs');
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ const AdminInicio = () => {
       setNombreUsuario(response.tipo === "admin" ? "Administrador" : (response.nombre || ""));
     } catch (error) {
       console.error('Error al obtener el usuario:', error);
-      toast.error("Error al obtener el usuario");
+      toast.error(error?.message || "Error al obtener el usuario");
     } finally {
       setLoading(false);
     }

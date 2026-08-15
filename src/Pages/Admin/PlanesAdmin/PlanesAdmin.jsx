@@ -31,7 +31,7 @@ const PlanesAdmin = () => {
       setPlanes(data)
     } catch (error) {
       console.error('Error al obtener planes:', error)
-      toast.error('No se pudieron cargar los planes.')
+      toast.error(error?.message || 'No se pudieron cargar los planes.')
     } finally {
       setLoading(false)
     }
@@ -105,7 +105,7 @@ const PlanesAdmin = () => {
       await fetchPlanes()
     } catch (error) {
       console.error('Error al guardar plan:', error)
-      toast.error('Error al guardar plan. Intente nuevamente.')
+      toast.error(error?.message || 'Error al guardar plan. Intente nuevamente.')
     } finally {
       setLoading(false)
     }
@@ -125,7 +125,7 @@ const PlanesAdmin = () => {
       await fetchPlanes()
     } catch (error) {
       console.error('Error al eliminar plan:', error)
-      toast.error('Error al eliminar plan. Intente nuevamente.')
+      toast.error(error?.message || 'Error al eliminar plan. Intente nuevamente.')
     } finally {
       setLoading(false)
       closeDeletePopup()

@@ -185,7 +185,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       setHasMore(lista.length > 0);
     } catch (err) {
       console.error('Error al obtener los usuarios:', err);
-      toast.error('No se pudieron cargar los usuarios');
+      toast.error(err?.message || 'No se pudieron cargar los usuarios');
     } finally {
       setLoading(false);
     }

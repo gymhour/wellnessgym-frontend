@@ -83,12 +83,34 @@
 }
 
 .checkin-result-modal {
+  position: relative;
   width: min(620px, 100%);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   background: var(--background-color);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
+}
+
+.checkin-result-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  padding: 6px;
+  background: transparent;
+  color: var(--text-color-distinct);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.checkin-result-modal-close:hover {
+  background: var(--background-color-distinct);
+  color: var(--text-color);
 }
 
 .checkin-result-modal-title {

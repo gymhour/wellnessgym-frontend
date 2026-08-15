@@ -40,7 +40,7 @@ const Ejercicios = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       setEjercicios(sorted);
     } catch (err) {
       console.error(err);
-      toast.error('No se pudieron cargar los ejercicios.');
+      toast.error(err?.message || 'No se pudieron cargar los ejercicios.');
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ const Ejercicios = ({ fromAdmin, fromEntrenador, fromAlumno }) => {
       await fetchEjercicios();
     } catch (err) {
       console.error(err);
-      toast.error('Error al eliminar ejercicio.');
+      toast.error(err?.message || 'Error al eliminar ejercicio.');
     } finally {
       setLoading(false);
       closeDeletePopup();

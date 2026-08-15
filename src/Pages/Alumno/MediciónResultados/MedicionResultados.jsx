@@ -75,7 +75,7 @@ const MedicionResultados = () => {
       );
       setLoading(false);
     } catch (err) {
-      toast.error("No se pudo eliminar el ejercicio. Inténtalo nuevamente.");
+      toast.error(err?.message || "No se pudo eliminar el ejercicio. Inténtalo nuevamente.");
       console.error("Error al eliminar ejercicio:", err);
       setLoading(false);
     } finally {

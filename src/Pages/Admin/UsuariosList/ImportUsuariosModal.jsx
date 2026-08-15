@@ -134,7 +134,7 @@ const ImportUsuariosModal = ({ onClose, onSuccess, planes = [] }) => {
       const errData = err.response?.data;
       if (errData?.errors) {
         setErrors(errData.errors);
-        toast.error('Error en algunos usuarios. Revise los detalles.');
+        toast.error(err?.message || 'Error en algunos usuarios. Revise los detalles.');
       } else {
         toast.error(errData?.message || 'Error al importar usuarios');
       }

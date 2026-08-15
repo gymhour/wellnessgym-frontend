@@ -4,6 +4,65 @@
   margin-bottom: 20px;
 }
 
+/* Acceso directo a "Agendar turno": es la acción más frecuente del alumno, así que va
+   arriba de todo y con el color primario para que se vea apenas entra. */
+.agendar-turno-cta {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 550px;
+  max-width: 550px;
+  margin-bottom: 24px;
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: var(--primary-color);
+  color: #fafafa;
+  text-decoration: none;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agendar-turno-cta:hover,
+.agendar-turno-cta:focus-visible {
+  background: var(--primary-color-hover);
+  box-shadow: 0 14px 30px var(--background-hover-color);
+  transform: translateY(-2px);
+}
+
+.agendar-turno-cta__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.agendar-turno-cta__copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.agendar-turno-cta__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.agendar-turno-cta__subtitle {
+  font-size: 0.9rem;
+  line-height: 1.35;
+  opacity: 0.9;
+}
+
+.agendar-turno-cta__arrow {
+  flex-shrink: 0;
+}
+
 .turnos-ctn {
   width: 550px;
   max-width: 550px;
@@ -45,6 +104,10 @@
 
 @media screen and (max-width: 550px) {
   .turnos-ctn {
+    width: auto;
+  }
+
+  .agendar-turno-cta {
     width: auto;
   }
 

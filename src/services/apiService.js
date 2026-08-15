@@ -62,13 +62,20 @@ const getApiErrorData = error => {
     return null;
 };
 
+// El backend explica el motivo del error en `message`. El texto que se pasa como respaldo
+// sólo se usa cuando no hubo respuesta del servidor (sin conexión, timeout): si lo
+// devolviéramos siempre, el usuario nunca vería el motivo real.
+const getApiErrorMessage = (error, fallback) => (
+    error?.response?.data?.message || error?.response?.data?.error || fallback
+);
+
 // Clases
 const getClases = async () => {
     try {
         const response = await apiClient.get(`/clase/horario`);
         return response.data;
     } catch (err) {
-        throw new Error("Error al cargar las clases. Intente nuevamente.");
+        throw new Error(getApiErrorMessage(err, "No pudimos cargar las clases. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -80,7 +87,7 @@ const getHorarioCupos = async (idHorario, fechaISO) => {
         });
         return response.data;
     } catch (err) {
-        throw new Error("Error al cargar la disponibilidad del horario.");
+        throw new Error(getApiErrorMessage(err, "No pudimos cargar los lugares disponibles. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -94,7 +101,7 @@ const getTurnos = async (filters = {}) => {
         const response = await apiClient.get(`/turnos`, { params });
         return response.data;
     } catch (error) {
-        throw new Error("Error en el service de getTurnos")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los turnos. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -103,7 +110,7 @@ const getTurnosUsuario = async (usuarioId) => {
         const response = await apiClient.get(`/turnos/usuario/${usuarioId}`)
         return response.data.turnos;
     } catch (error) {
-        throw new Error("Error en el service de getTurnosUsuario");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar tus turnos. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -112,7 +119,7 @@ const getTurnoById = async (id) => {
         const response = await apiClient.get(`/turnos/${id}`);
         return response.data;
     } catch (error) {
-        throw new Error("Error en el service de getTurnosByUsuario")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar el turno. Revisá tu conexión e intentá de nuevo."));
     }
 }
 // services/apiService.js
@@ -122,7 +129,7 @@ const postTurno = async (body) => {
         return response.data;
     } catch (error) {
         const apiMsg = error.response?.data?.message;
-        throw new Error(apiMsg || error.message);
+        throw new Error(apiMsg || "No pudimos agendar el turno. Revisá tu conexión e intentá de nuevo.");
     }
 };
 
@@ -144,7 +151,7 @@ const deleteTurno = async (id) => {
         return response.data
     } catch (error) {
         const apiMsg = error.response?.data?.message;
-        throw new Error(apiMsg || "Error en el service de deleteTurno")
+        throw new Error(apiMsg || "No pudimos cancelar el turno. Revisá tu conexión e intentá de nuevo.")
     }
 }
 
@@ -154,7 +161,7 @@ const getRutinas = async () => {
         const response = await apiClient.get("/rutinas");
         return response.data
     } catch (error) {
-        throw new Error("Error en el service de getRutinas");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las rutinas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -163,7 +170,7 @@ const getRutinaById = async (rutinaId) => {
         const response = await apiClient.get(`/rutinas/${rutinaId}`);
         return response.data.rutina;
     } catch (error) {
-        throw new Error("Error en el service de getRutinas");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar la rutina. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -172,7 +179,7 @@ const getUserRutinas = async (id) => {
         const response = await apiClient.get(`/rutinas/usuario/${id}`);
         return response.data
     } catch (error) {
-        throw new Error("Error en el service de getRutinas");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar tus rutinas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -181,7 +188,7 @@ const createRutina = async (data) => {
         const response = await apiClient.post("/rutinas", data);
         return response.data;
     } catch (error) {
-        throw new Error("Error al crear la rutina");
+        throw new Error(getApiErrorMessage(error, "No pudimos crear la rutina. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -190,7 +197,7 @@ const createRutinaSimple = async (data) => {
         const response = await apiClient.post("/rutinas/simple", data);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || "Error al crear la rutina simplificada");
+        throw new Error(error.response?.data?.message || "No pudimos crear la rutina. Revisá tu conexión e intentá de nuevo.");
     }
 };
 
@@ -199,7 +206,7 @@ const editRutina = async (idRutina, data) => {
         const response = await apiClient.put(`/rutinas/${idRutina}`, data);
         return response.data
     } catch (error) {
-        throw new Error("Error en el service de getRutinas");
+        throw new Error(getApiErrorMessage(error, "No pudimos guardar la rutina. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -208,7 +215,7 @@ const deleteRutina = async (id) => {
         const response = await apiClient.delete(`/rutinas/${id}`);
         return response.data;
     } catch (error) {
-        throw new Error("Error al eliminar la rutina");
+        throw new Error(getApiErrorMessage(error, "No pudimos eliminar la rutina. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -220,8 +227,8 @@ const getRutinasAsignadas = async ({ page = 1, take = 6, grupoId, usuarioId, asi
         if (asignadasPorMi) params.asignadasPorMi = true;
         const response = await apiClient.get("/rutinas/asignadas", { params });
         return response.data;
-    } catch {
-        throw new Error("Error al traer las rutinas asignadas");
+    } catch (error) {
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las rutinas asignadas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -230,7 +237,7 @@ const getRutinasEntrenadores = async (idEntrenador) => {
         const response = await apiClient.get(`/rutinas/entrenador/${idEntrenador}`)
         return response.data;
     } catch (error) {
-        throw new Error("Error al traer las rutinas asignadas por el entrenador");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las rutinas del entrenador. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -244,7 +251,7 @@ const getRutinasAdmins = async () => {
             return { rutinas: [] };
         }
 
-        throw new Error("Error al traer las rutinas del admin");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las rutinas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -254,7 +261,7 @@ const getGruposUsuarios = async () => {
         const response = await apiClient.get('/grupos-usuarios');
         return response.data;
     } catch (error) {
-        throw new Error('Error al obtener grupos de usuarios');
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los grupos. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -263,7 +270,7 @@ const getGrupoUsuarioById = async (id) => {
         const response = await apiClient.get(`/grupos-usuarios/${id}`);
         return response.data;
     } catch (error) {
-        throw new Error('Error al obtener el grupo de usuarios');
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar el grupo. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -272,7 +279,7 @@ const createGrupoUsuario = async (body) => {
         const response = await apiClient.post('/grupos-usuarios', body);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Error al crear grupo de usuarios');
+        throw new Error(error.response?.data?.message || "No pudimos crear el grupo. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -281,7 +288,7 @@ const updateGrupoUsuario = async (id, body) => {
         const response = await apiClient.put(`/grupos-usuarios/${id}`, body);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Error al actualizar grupo de usuarios');
+        throw new Error(error.response?.data?.message || "No pudimos guardar el grupo. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -290,7 +297,7 @@ const deleteGrupoUsuario = async (id) => {
         const response = await apiClient.delete(`/grupos-usuarios/${id}`);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Error al eliminar grupo de usuarios');
+        throw new Error(error.response?.data?.message || "No pudimos eliminar el grupo. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -300,7 +307,7 @@ const getEntrenadores = async () => {
         const response = await apiClient.get('/usuarios/entrenadores');
         return response.data;
     } catch (error) {
-        throw new Error("Error al obtener entrenadores");
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los entrenadores. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -308,7 +315,7 @@ const addEntrenadorToClase = async (idClase, idEntrenador) => {
     try {
         const response = await apiClient.post(`/clase/${idClase}/entrenador/${idEntrenador}`)
     } catch (error) {
-        throw new Error("Error al asignar entrenador a una clase");
+        throw new Error(getApiErrorMessage(error, "No pudimos asignar el entrenador a la clase. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -316,7 +323,7 @@ const removeEntrenadorFromClase = async (idClase, idEntrenador) => {
     try {
         const response = await apiClient.delete(`/clase/${idClase}/entrenador/${idEntrenador}`)
     } catch (error) {
-        throw new Error("Error al asignar entrenador a una clase");
+        throw new Error(getApiErrorMessage(error, "No pudimos quitar el entrenador de la clase. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -338,7 +345,7 @@ const getAllUsuarios = async ({ page = 1, take = 15, tipo, estado, search, nombr
         });
         return response.data;
     } catch (error) {
-        throw new Error(`Error al obtener los usuarios`);
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los usuarios. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -347,7 +354,7 @@ const getUsuariosStats = async () => {
         const response = await apiClient.get('/usuarios/stats');
         return response.data;
     } catch (error) {
-        throw new Error('Error al obtener KPIs de usuarios');
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las estadísticas de usuarios. Revisá tu conexión e intentá de nuevo."));
     }
 };
 
@@ -357,7 +364,7 @@ const getUserById = async (id) => {
         const response = await apiClient.get(`/usuarios/${id}`);
         return response.data
     } catch (error) {
-        throw new Error(`Error al obtener el usuario con ID ${id}`);
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar el usuario. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -366,7 +373,7 @@ const updateUserById = async (id, body) => {
         const response = await apiClient.put(`/usuarios/${id}`, body);
         return response.data
     } catch (error) {
-        throw new Error(`Error al editar el usuario con ID ${id}`);
+        throw new Error(getApiErrorMessage(error, "No pudimos guardar los cambios del usuario. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -375,7 +382,7 @@ const updateUserHealthById = async (id, body) => {
         const response = await apiClient.put(`/usuarios/${id}/salud`, body);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || `Error al editar salud del usuario con ID ${id}`);
+        throw new Error(error.response?.data?.message || "No pudimos guardar la ficha médica. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -384,7 +391,7 @@ const getUsuariosAdmins = async () => {
         const response = await apiClient.get(`/usuarios/admins`);
         return response.data;
     } catch (error) {
-        throw new Error(`Error al traer los usuarios administradores`);
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los administradores. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -394,7 +401,7 @@ const forgotPassword = async (body) => {
         const response = await apiClient.post('/auth/forgot-password', body);
         return response.data;
     } catch (error) {
-        throw new Error(`Error al enviar mail para recuperar contraseña`);
+        throw new Error(getApiErrorMessage(error, "No pudimos enviar el mail de recuperación. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -403,7 +410,7 @@ const resetPassword = async (body) => {
         const response = await apiClient.post('/auth/reset-password', body);
         return response.data;
     } catch (error) {
-        throw new Error('Error al crear nueva contraseña');
+        throw new Error(getApiErrorMessage(error, "No pudimos cambiar la contraseña. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -422,7 +429,7 @@ const getEjerciciosResultados = async () => {
         const response = await apiClient.get('/ejercicios-resultados');
         return response.data;
     } catch (err) {
-        throw new Error("Error al traer ejercicios y resultados");
+        throw new Error(getApiErrorMessage(err, "No pudimos cargar los ejercicios y resultados. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -431,7 +438,7 @@ const getEjerciciosResultadosUsuario = async (usuarioId) => {
         const response = await apiClient.get(`/ejercicios-resultados/usuario/${usuarioId}`);
         return response.data.ejercicios;
     } catch (err) {
-        throw new Error("Error en el servicio getEjerciciosResultadosUsuario");
+        throw new Error(getApiErrorMessage(err, "No pudimos cargar tus ejercicios y resultados. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -440,7 +447,7 @@ const deleteEjerciciosResultados = async (id) => {
         const response = await apiClient.delete(`/historicoEjercicio/${id}`);
         return response.data;
     } catch (err) {
-        throw new Error("Error al traer ejercicios y resultados");
+        throw new Error(getApiErrorMessage(err, "No pudimos eliminar el resultado. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -449,7 +456,7 @@ const putEjercicioResultado = async (id, body) => {
         const response = await apiClient.put(`/historicoEjercicio/${id}`, body);
         return response.data;
     } catch (err) {
-        throw new Error("Error al traer ejercicios y resultados");
+        throw new Error(getApiErrorMessage(err, "No pudimos guardar el resultado. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -459,7 +466,7 @@ const postEjercicio = async (body) => {
         const response = await apiClient.post(`/ejercicios-resultados`, body);
         return response;
     } catch (err) {
-        throw new Error("Error en el servicio postEjercicio");
+        throw new Error(getApiErrorMessage(err, "No pudimos guardar el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -468,7 +475,7 @@ const postEjercicioResultado = async (body) => {
         const response = await apiClient.post("/historicoEjercicio", body);
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio postEjercicioResultado");
+        throw new Error(getApiErrorMessage(error, "No pudimos guardar el resultado. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -477,7 +484,7 @@ const deleteEjercicio = async (ejercicioId) => {
         const response = await apiClient.delete(`/ejercicios-resultados/${ejercicioId}`);
         return response.data;
     } catch (err) {
-        throw new Error("Error en el servicio postEjercicio");
+        throw new Error(getApiErrorMessage(err, "No pudimos eliminar el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -487,7 +494,7 @@ const getKPIs = async () => {
         const response = await apiClient.get("/admin/dashboard");
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio de getKPIs")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar las estadísticas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -501,7 +508,7 @@ const getChurnRisk = async ({ page = 1, take = 20, riskLevel = '', search = '' }
         return response.data;
     } catch (error) {
         const apiMsg = error.response?.data?.message;
-        throw new Error(apiMsg || "Error en el servicio de getChurnRisk");
+        throw new Error(apiMsg || "No pudimos cargar el predictor de bajas. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -521,7 +528,7 @@ const getPlanes = async () => {
         const response = await apiClient.get("/planes");
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio de getPlanes")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los planes. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -530,7 +537,7 @@ const postPlanes = async (body) => {
         const response = await apiClient.post("/planes", body);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de postPlanes")
+        throw new Error(getApiErrorMessage(error, "No pudimos crear el plan. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -539,7 +546,7 @@ const deletePlanes = async (id) => {
         const response = await apiClient.delete(`/planes/${id}`);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de deletePlanes")
+        throw new Error(getApiErrorMessage(error, "No pudimos eliminar el plan. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -548,7 +555,7 @@ const putPlanes = async (id, body) => {
         const response = await apiClient.put(`/planes/${id}`, body)
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio de putPlanes")
+        throw new Error(getApiErrorMessage(error, "No pudimos guardar el plan. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -558,7 +565,7 @@ const postCuotasMasivas = async (body) => {
         const response = await apiClient.post("cuotas/generate-cuotas", body);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de postCuotasMasivas")
+        throw new Error(getApiErrorMessage(error, "No pudimos generar las cuotas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -567,7 +574,7 @@ const postValidarTurnosFijos = async (body) => {
         const response = await apiClient.post("cuotas/validate-turnos-fijos", body);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de postValidarTurnosFijos")
+        throw new Error(getApiErrorMessage(error, "No pudimos validar los turnos fijos. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -617,7 +624,7 @@ const regenerateTurnosFijosUsuario = async (idUsuario) => {
         return response.data;
     } catch (error) {
         const apiMsg = error?.response?.data?.message;
-        throw new Error(apiMsg || "Error en el servicio de regenerateTurnosFijosUsuario");
+        throw new Error(apiMsg || "No pudimos regenerar los turnos fijos. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -626,7 +633,7 @@ const getCuotasUsuario = async (id) => {
         const response = await apiClient.get(`cuotas/usuario/${id}/cuotas`);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de getCuotasUsuario")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar tus cuotas. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -636,7 +643,7 @@ const getCuotasReminder = async (idUsuario) => {
         return response.data;
     } catch (error) {
         const apiMsg = error?.response?.data?.message;
-        throw new Error(apiMsg || "Error en el servicio de getCuotasReminder");
+        throw new Error(apiMsg || "No pudimos cargar tus recordatorios de cuotas. Revisá tu conexión e intentá de nuevo.");
     }
 }
 
@@ -767,7 +774,7 @@ const getEjercicios = async () => {
         const response = await apiClient.get("/ejercicios");
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio de getEjercicios")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar los ejercicios. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -777,7 +784,7 @@ const getEjercicioById = async (id) => {
         const response = await apiClient.get(`/ejercicios/${id}`);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de getEjercicios")
+        throw new Error(getApiErrorMessage(error, "No pudimos cargar el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -786,7 +793,7 @@ const postEjercicios = async (body) => {
         const response = await apiClient.post("/ejercicios", body);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de postEjercicios")
+        throw new Error(getApiErrorMessage(error, "No pudimos crear el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -795,7 +802,7 @@ const deleteEjercicios = async (id) => {
         const response = await apiClient.delete(`/ejercicios/${id}`);
         return response;
     } catch (error) {
-        throw new Error("Error en el servicio de deleteEjercicios")
+        throw new Error(getApiErrorMessage(error, "No pudimos eliminar el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 
@@ -804,7 +811,7 @@ const putEjercicios = async (id, body) => {
         const response = await apiClient.put(`/ejercicios/${id}`, body)
         return response.data;
     } catch (error) {
-        throw new Error("Error en el servicio de putEjercicios")
+        throw new Error(getApiErrorMessage(error, "No pudimos guardar el ejercicio. Revisá tu conexión e intentá de nuevo."));
     }
 }
 

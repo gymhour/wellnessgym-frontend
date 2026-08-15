@@ -76,7 +76,7 @@ const CrearUsuario = ({fromAdmin, fromEntrenador}) => {
         setPlanOptions(data.map(p => ({ label: p.nombre, value: p.ID_Plan, sesionesPorSemana: p.sesionesPorSemana || 0 })));
       } catch (error) {
         console.error('Error al cargar planes:', error);
-        toast.error('No se pudieron cargar los planes disponibles');
+        toast.error(error?.message || 'No se pudieron cargar los planes disponibles');
       }
     };
     fetchPlanes();

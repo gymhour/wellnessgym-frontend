@@ -40,7 +40,7 @@ const ClasesActividadesAdminDetalle = ({ fromAdmin, fromEntrenador }) => {
       setLoading(false);
     } catch (error) {
       setLoading(false)
-      toast.error("Hubo un error al eliminar la clase.");
+      toast.error(error?.message || "Hubo un error al eliminar la clase.");
       console.error('Error al eliminar la clase - ClasesActividadesAdminDetalle.jsx', error);
     }
   };

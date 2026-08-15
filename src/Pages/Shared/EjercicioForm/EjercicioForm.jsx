@@ -68,7 +68,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
         setImagePreview(data.mediaUrl || null);
       } catch (err) {
         console.error(err);
-        toast.error('No se pudo cargar el ejercicio.');
+        toast.error(err?.message || 'No se pudo cargar el ejercicio.');
       } finally {
         setLoading(false);
       }
@@ -144,7 +144,7 @@ const EjercicioForm = ({ fromAdmin, fromEntrenador }) => {
       navigate(basePath);
     } catch (err) {
       console.error(err);
-      toast.error('Error al guardar ejercicio. Intente nuevamente.');
+      toast.error(err?.message || 'Error al guardar ejercicio. Intente nuevamente.');
     } finally {
       setLoading(false);
     }

@@ -33,7 +33,7 @@ const MisTurnos = () => {
                 setTurnos(turnosData);
                 setLoading(false);
             } catch (err) {
-                toast.error("Error al cargar los turnos. Intente nuevamente.");
+                toast.error(err?.message || "Error al cargar los turnos. Intente nuevamente.");
                 setLoading(false);
             }
         };

@@ -6,7 +6,7 @@ import SecondaryButton from '../../../Components/utils/SecondaryButton/Secondary
 import { ReactComponent as AddIconCircle } from '../../../assets/icons/add-circle.svg';
 import { ReactComponent as ArrowRightIcon } from '../../../assets/icons/arrow-right.svg';
 
-import { X } from 'lucide-react';
+import { ArrowRight, CalendarPlus, X } from 'lucide-react';
 import TurnosCard from '../../../Components/TurnosCard/TurnosCard';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import apiService from '../../../services/apiService';
@@ -14,7 +14,7 @@ import ClasesActividadesCard from '../ClasesActividadesCard/ClasesActividadesCar
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const AlumnoInicio = () => {
   const [clases, setClases] = useState([]);
@@ -73,7 +73,7 @@ const AlumnoInicio = () => {
       } catch (err) {
         console.error(err);
         setError('Error al cargar los datos. Intente nuevamente.');
-        toast.error('Error al cargar los datos. Intente nuevamente.');
+        toast.error(err?.message || 'Error al cargar los datos. Intente nuevamente.');
       } finally {
         setLoading(false);
       }
@@ -98,7 +98,7 @@ const AlumnoInicio = () => {
     } catch (err) {
       console.error(err);
       setError('Error al cancelar el turno. Por favor, inténtalo nuevamente.');
-      toast.error('Error al cancelar el turno. Por favor, inténtalo nuevamente.');
+      toast.error(err?.message || 'Error al cancelar el turno. Por favor, inténtalo nuevamente.');
     } finally {
       setLoading(false);
       setTurnoToCancel(null);
@@ -180,6 +180,18 @@ const AlumnoInicio = () => {
           <h2> ¡Hola, {nombreUsuario || 'alumno'}! </h2>
         </div>
 
+        {/* ===== Acceso principal: agendar turno (la acción más usada por los alumnos) ===== */}
+        <Link to="/alumno/agendar-turno" className="agendar-turno-cta">
+          <span className="agendar-turno-cta__icon" aria-hidden="true">
+            <CalendarPlus size={26} />
+          </span>
+          <span className="agendar-turno-cta__copy">
+            <span className="agendar-turno-cta__title">Agendar turno</span>
+            <span className="agendar-turno-cta__subtitle">Reservá tu lugar en la clase que quieras.</span>
+          </span>
+          <ArrowRight className="agendar-turno-cta__arrow" size={22} aria-hidden="true" />
+        </Link>
+
         {/* ===== Recordatorio de cuotas (nueva response) ===== */}
         {debeMostrarReminder && (
           <div className="cuota-reminder" style={reminderContainerStyle}>
@@ -257,9 +269,9 @@ const AlumnoInicio = () => {
             )}
           </div>
 
-          <div className="turnos-ctn-btn-agendar-nuevo">
-            <PrimaryButton linkTo="/alumno/agendar-turno" text="Agendar nuevo" icon={AddIconCircle} />
-          </div>
+          {/* <div className="turnos-ctn-btn-agendar-nuevo">
+            <PrimaryButton linkTo="/alumno/agendar-turno" text="Agendar turno" icon={AddIconCircle} />
+          </div> */}
         </div>
 
         {/* ===== Clases y actividades ===== */}
