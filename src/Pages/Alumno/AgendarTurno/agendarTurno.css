@@ -10,6 +10,11 @@
     text-align: left;
 }
 
+.agendar-turno-disponibilidad {
+    width: min(100%, 1120px);
+    margin: -18px auto 24px;
+}
+
 .agendar-turno-ctn {
     width: min(100%, 1120px);
     margin-left: auto;

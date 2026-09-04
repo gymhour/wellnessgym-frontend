@@ -280,8 +280,8 @@ const AdminInicio = () => {
           <button
             type="button"
             className='admin-kpi-card admin-kpi-card-action'
-            onClick={() => navigateToCuotas({ estado: 'pendiente', mes: currentMonthKey })}
-            aria-label="Ver cuotas pendientes del mes"
+            onClick={() => navigateToCuotas({ estado: 'false', mes: currentMonthKey })}
+            aria-label="Ver cuotas pendientes y vencidas del mes"
           >
             <div className="admin-kpi-card-header">
               <Clock size={20} className="icon-soft-grey" />

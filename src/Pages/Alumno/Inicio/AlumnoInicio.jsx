@@ -3,7 +3,6 @@ import '../../../App.css';
 import './alumnoInicio.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ReactComponent as AddIconCircle } from '../../../assets/icons/add-circle.svg';
 import { ReactComponent as ArrowRightIcon } from '../../../assets/icons/arrow-right.svg';
 
 import { ArrowRight, CalendarPlus, X } from 'lucide-react';
@@ -14,11 +13,15 @@ import ClasesActividadesCard from '../ClasesActividadesCard/ClasesActividadesCar
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/ConfirmationPopUp';
 import { toast } from 'react-toastify';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import TurnosDisponibilidad from '../../../Components/TurnosDisponibilidad/TurnosDisponibilidad';
+import { calculateTurnosDisponibilidad } from '../../../utils/turnosDisponibilidad';
+import { showTurnoConfirmationToast } from '../../../utils/turnoConfirmationToast';
 
 const AlumnoInicio = () => {
   const [clases, setClases] = useState([]);
   const [turnos, setTurnos] = useState([]);
+  const [cuotas, setCuotas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [nombreUsuario, setNombreUsuario] = useState('');
@@ -29,22 +32,25 @@ const AlumnoInicio = () => {
   const [cuotaReminder, setCuotaReminder] = useState(null); // response cruda del endpoint nuevo
   const [showReminder, setShowReminder] = useState(true);
 
-  const navigate = useNavigate();
-
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
       try {
         const usuarioId = localStorage.getItem('usuarioId');
 
-        const [clasesData, turnosData, usuarioData] = await Promise.all([
+        const [clasesData, turnosData, usuarioData, cuotasResponse] = await Promise.all([
           apiService.getClases(),
           apiService.getTurnosUsuario(usuarioId),
           apiService.getUserById(usuarioId),
+          apiService.getCuotasUsuario(usuarioId).catch((err) => {
+            console.error('Error al cargar la disponibilidad de turnos:', err);
+            return null;
+          }),
         ]);
 
         setClases(clasesData || []);
         setTurnos(turnosData || []);
+        setCuotas(Array.isArray(cuotasResponse?.data) ? cuotasResponse.data : []);
         setNombreUsuario(`${usuarioData?.nombre || ''} ${usuarioData?.apellido || ''}`.trim());
         setError('');
 
@@ -93,7 +99,7 @@ const AlumnoInicio = () => {
     try {
       await apiService.deleteTurno(turnoToCancel);
       setTurnos((prev) => prev.filter((t) => t.id_turno !== turnoToCancel));
-      toast.success('Turno cancelado exitosamente.');
+      showTurnoConfirmationToast('Turno cancelado exitosamente.');
       setError('');
     } catch (err) {
       console.error(err);
@@ -116,6 +122,10 @@ const AlumnoInicio = () => {
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
       .slice(0, 3);
   }, [turnos]);
+
+  const turnosDisponibles = useMemo(() => {
+    return calculateTurnosDisponibilidad({ clases, cuotas, turnos });
+  }, [clases, cuotas, turnos]);
 
   // Helpers de formato
   const formatCurrency = (n) => {
@@ -250,6 +260,8 @@ const AlumnoInicio = () => {
             />
           </div>
 
+          <TurnosDisponibilidad disponibilidad={turnosDisponibles} />
+
           <div className="turnos-ctn-turnos">
             {error ? (
               <p className="error-message">{error}</p>
@@ -261,6 +273,7 @@ const AlumnoInicio = () => {
                   nombreTurno={turno?.HorarioClase?.Clase?.nombre || 'Clase'}
                   fechaTurno={turno.fecha}
                   horaTurno={turno.hora}
+                  estado={turno.estado}
                   onCancelTurno={() => handleOpenCancelPopup(turno.id_turno)}
                 />
               ))

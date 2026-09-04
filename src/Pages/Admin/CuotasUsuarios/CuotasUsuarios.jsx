@@ -12,7 +12,7 @@ import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderF
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import SecondaryButton from '../../../Components/utils/SecondaryButton/SecondaryButton';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import apiService from '../../../services/apiService';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
@@ -61,6 +61,7 @@ const usuarioToOption = (usuario) => ({
 const normalizeCuotaEstadoParam = (value) => {
   const normalized = String(value || '').toLowerCase();
   if (normalized === 'pagada' || normalized === 'true') return 'true';
+  if (normalized === 'false') return 'false';
   if (normalized === 'pendiente' || normalized === 'pending') return 'pendiente';
   if (normalized === 'vencida') return 'vencida';
   return '';
@@ -87,6 +88,13 @@ const getCuotasFiltersFromSearch = (searchParams) => ({
 const BULK_CHUNK_SIZE = 25;
 const SINGLE_TURNO_CHUNK_SIZE = 50;
 const BULK_DELETE_CHUNK_SIZE = 50;
+const MIN_NAME_SEARCH_LENGTH = 2;
+const NAME_SEARCH_DEBOUNCE_MS = 300;
+const MAX_NAME_SUGGESTIONS = 8;
+
+const nombreCompleto = usuario => (
+  `${usuario?.nombre || ''} ${usuario?.apellido || ''}`.trim() || `ID ${usuario?.ID_Usuario}`
+);
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -162,7 +170,12 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   const [inputEmail, setInputEmail] = useState('');
   const [inputDni, setInputDni] = useState('');
   const [inputStudentName, setInputStudentName] = useState('');
-  const [inputEstado, setInputEstado] = useState(initialUrlFilters.estado); // '' | 'true' | 'false' | 'vencida'
+  const [nameSuggestions, setNameSuggestions] = useState([]);
+  const [nameSuggestionsOpen, setNameSuggestionsOpen] = useState(false);
+  const [nameSearchLoading, setNameSearchLoading] = useState(false);
+  const [activeNameSuggestion, setActiveNameSuggestion] = useState(-1);
+  const [selectedNameSearch, setSelectedNameSearch] = useState('');
+  const [inputEstado, setInputEstado] = useState(initialUrlFilters.estado); // '' | 'true' | 'false' | 'pendiente' | 'vencida'
   const [inputMesDate, setInputMesDate] = useState(initialUrlFilters.mesDate);
   const [inputPlan, setInputPlan] = useState('');
 
@@ -181,17 +194,19 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
   // Pagar
   const [formaPago, setFormaPago] = useState('Efectivo');
 
-  const opcionesFiltroEstado = ['Todos —', 'Pendiente', 'Pagada', 'Vencida'];
+  const opcionesFiltroEstado = ['Todos —', 'Pendiente', 'Pagada', 'Vencida', 'Vencida y pendiente'];
   const labelToEstado = label => {
     if (label === 'Pagada') return 'true';
     if (label === 'Pendiente') return 'pendiente';
     if (label === 'Vencida') return 'vencida';
+    if (label === 'Vencida y pendiente') return 'false';
     return '';
   };
   const estadoToLabel = estado => {
     if (estado === 'true') return 'Pagada';
     if (estado === 'pendiente') return 'Pendiente';
     if (estado === 'vencida') return 'Vencida';
+    if (estado === 'false') return 'Vencida y pendiente';
     return 'Todos —';
   };
 
@@ -375,6 +390,78 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
       clearTimeout(timeoutId);
     };
   }, [showModal, userSearch]);
+
+  useEffect(() => {
+    const term = inputStudentName.replace(/\s+/g, ' ').trim();
+    if (term.length < MIN_NAME_SEARCH_LENGTH || term === selectedNameSearch) {
+      setNameSuggestions([]);
+      setNameSuggestionsOpen(false);
+      setNameSearchLoading(false);
+      setActiveNameSuggestion(-1);
+      return undefined;
+    }
+
+    let active = true;
+    setNameSearchLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: MAX_NAME_SUGGESTIONS,
+          tipo: 'cliente',
+          search: term,
+        });
+        if (!active) return;
+        setNameSuggestions(Array.isArray(response?.data) ? response.data : []);
+        setNameSuggestionsOpen(true);
+        setActiveNameSuggestion(-1);
+      } catch (err) {
+        if (!active) return;
+        console.error('Error buscando usuarios por nombre:', err);
+        setNameSuggestions([]);
+        setNameSuggestionsOpen(true);
+      } finally {
+        if (active) setNameSearchLoading(false);
+      }
+    }, NAME_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [inputStudentName, selectedNameSearch]);
+
+  const handleNameSearchChange = event => {
+    setSelectedNameSearch('');
+    setInputStudentName(event.target.value);
+  };
+
+  const selectNameSuggestion = usuario => {
+    const fullName = nombreCompleto(usuario);
+    setSelectedNameSearch(fullName);
+    setInputStudentName(fullName);
+    setNameSuggestions([]);
+    setNameSuggestionsOpen(false);
+    setActiveNameSuggestion(-1);
+  };
+
+  const handleNameSearchKeyDown = event => {
+    if (!nameSuggestionsOpen || nameSuggestions.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveNameSuggestion(prev => (prev + 1) % nameSuggestions.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveNameSuggestion(prev => (prev <= 0 ? nameSuggestions.length - 1 : prev - 1));
+    } else if (event.key === 'Enter' && activeNameSuggestion >= 0) {
+      event.preventDefault();
+      selectNameSuggestion(nameSuggestions[activeNameSuggestion]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setNameSuggestionsOpen(false);
+      setActiveNameSuggestion(-1);
+    }
+  };
 
   useEffect(() => {
     fetchCuotas();
@@ -869,6 +956,9 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
     setInputEmail('');
     setInputDni('');
     setInputStudentName('');
+    setSelectedNameSearch('');
+    setNameSuggestions([]);
+    setNameSuggestionsOpen(false);
     setInputEstado('');
     setInputPlan('');
     setInputMesDate(null);
@@ -1038,15 +1128,54 @@ const CuotasUsuarios = ({fromAdmin, fromEntrenador}) => {
               />
             </div>
 
-            <div className="cuotas-filtros-form-inputs-ctn">
-              <label htmlFor="inputStudentName">Alumno:</label>
-              <CustomInput
-                id="inputStudentName"
-                type="text"
-                placeholder="Buscar por nombre o apellido"
-                value={inputStudentName}
-                onChange={e => setInputStudentName(e.target.value)}
-              />
+            <div className="cuotas-filtros-form-inputs-ctn cuotas-name-search">
+              <label htmlFor="inputStudentName">Nombre o apellido:</label>
+              <div className="cuotas-name-search-field">
+                <Search className="cuotas-name-search-icon" size={17} aria-hidden="true" />
+                <CustomInput
+                  id="inputStudentName"
+                  type="text"
+                  placeholder="Ej: Juan González"
+                  value={inputStudentName}
+                  onChange={handleNameSearchChange}
+                  onKeyDown={handleNameSearchKeyDown}
+                  onFocus={() => { if (nameSuggestions.length > 0) setNameSuggestionsOpen(true); }}
+                  onBlur={() => setNameSuggestionsOpen(false)}
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={nameSuggestionsOpen}
+                  aria-controls="cuotas-name-suggestions"
+                />
+
+                {nameSuggestionsOpen && (
+                  <ul id="cuotas-name-suggestions" className="cuotas-name-suggestions" role="listbox">
+                    {nameSearchLoading && nameSuggestions.length === 0 && (
+                      <li className="cuotas-name-suggestion-empty">Buscando usuarios…</li>
+                    )}
+                    {!nameSearchLoading && nameSuggestions.length === 0 && (
+                      <li className="cuotas-name-suggestion-empty">No se encontraron usuarios con ese nombre.</li>
+                    )}
+                    {nameSuggestions.map((usuario, index) => (
+                      <li key={usuario.ID_Usuario}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={index === activeNameSuggestion}
+                          className={`cuotas-name-suggestion${index === activeNameSuggestion ? ' is-active' : ''}`}
+                          onMouseDown={event => event.preventDefault()}
+                          onMouseEnter={() => setActiveNameSuggestion(index)}
+                          onClick={() => selectNameSuggestion(usuario)}
+                        >
+                          <span className="cuotas-name-suggestion-name">{nombreCompleto(usuario)}</span>
+                          <span className="cuotas-name-suggestion-dni">
+                            {usuario.dni ? `DNI ${usuario.dni}` : 'Sin DNI cargado'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             <div className="cuotas-filtros-form-inputs-ctn">

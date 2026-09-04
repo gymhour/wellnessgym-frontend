@@ -91,6 +91,61 @@
   white-space: nowrap;
 }
 
+.attendance-table .attendance-reason-cell {
+  overflow: visible;
+  white-space: normal;
+}
+
+.attendance-reason {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.attendance-reason-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attendance-reason-toggle {
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.attendance-reason-toggle:hover {
+  color: var(--primary-color-hover);
+  text-decoration: underline;
+}
+
+.attendance-reason-toggle:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.attendance-reason.is-expanded {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.attendance-reason.is-expanded .attendance-reason-text {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .attendance-empty-state,
 .attendance-error-state {
   border: 1px dashed var(--border-color);
@@ -161,5 +216,19 @@
     overflow: visible;
     text-overflow: initial;
     white-space: normal;
+  }
+
+  .attendance-reason {
+    flex: 1;
+    justify-content: flex-end;
+    max-width: 68%;
+  }
+
+  .attendance-reason.is-expanded {
+    align-items: flex-end;
+  }
+
+  .attendance-reason.is-expanded .attendance-reason-text {
+    text-align: right;
   }
 }

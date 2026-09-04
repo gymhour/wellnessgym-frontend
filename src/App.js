@@ -50,6 +50,7 @@ import Gastos from './Pages/Admin/Gastos/Gastos';
 import UserMyAttendancesPage from './Pages/Alumno/MisAsistencias/UserMyAttendancesPage';
 import PublicCheckInPage from './Pages/Public/CheckIn/PublicCheckInPage';
 import React, { useState, useEffect } from 'react';
+import { TURNO_CONFIRMATION_TOAST_ID } from './utils/turnoConfirmationToast';
 
 function App() {
 
@@ -86,6 +87,22 @@ function App() {
         pauseOnFocusLoss
         draggable
         pauseOnHover
+        theme={theme}
+      />
+      <ToastContainer
+        containerId={TURNO_CONFIRMATION_TOAST_ID}
+        className="turno-confirmation-toast-container"
+        position="top-center"
+        autoClose={7000}
+        hideProgressBar={false}
+        newestOnTop
+        closeButton
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        limit={1}
         theme={theme}
       />
       <Routes>

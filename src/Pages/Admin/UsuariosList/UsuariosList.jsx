@@ -11,7 +11,7 @@ import ConfirmationPopup from '../../../Components/utils/ConfirmationPopUp/Confi
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from "react-toastify";
 import CustomDropdown from '../../../Components/utils/CustomDropdown/CustomDropdown';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, UserPlus, Upload, ExternalLink, SlidersHorizontal, RotateCcw, Trash2, Search } from 'lucide-react';
 import ReprogramarTurnoModal from '../../../Components/utils/ReprogramarTurnoModal/ReprogramarTurnoModal';
 import CustomInput from '../../../Components/utils/CustomInput/CustomInput';
 import ImportUsuariosModal from './ImportUsuariosModal';
@@ -47,13 +47,19 @@ const MOTIVOS_ALTA = [
 const normalizeFilterValue = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 const normalizeTextFilters = (filters) => ({
   ...filters,
-  nombre: normalizeFilterValue(filters.nombre),
-  apellido: normalizeFilterValue(filters.apellido),
+  search: normalizeFilterValue(filters.search),
   email: normalizeFilterValue(filters.email),
   dni: normalizeFilterValue(filters.dni),
 });
 
-const emptyUsuariosFilters = { tipo: '', nombre: '', apellido: '', email: '', estado: '', dni: '', plan: '', movimiento: '', movimientoMes: '' };
+const emptyUsuariosFilters = { tipo: '', search: '', email: '', estado: '', dni: '', plan: '', movimiento: '', movimientoMes: '' };
+const MIN_NAME_SEARCH_LENGTH = 2;
+const NAME_SEARCH_DEBOUNCE_MS = 300;
+const MAX_NAME_SUGGESTIONS = 8;
+
+const nombreCompleto = usuario => (
+  `${usuario?.nombre || ''} ${usuario?.apellido || ''}`.trim() || `ID ${usuario?.ID_Usuario}`
+);
 
 const normalizeTipoParam = (value) => {
   const normalized = String(value || '').toLowerCase();
@@ -84,6 +90,7 @@ const getUsuariosFiltersFromSearch = (searchParams) => ({
   plan: normalizeFilterValue(searchParams.get('plan')),
   movimiento: normalizeMovimientoParam(searchParams.get('movimiento')),
   movimientoMes: normalizeFilterValue(searchParams.get('mes')),
+  search: normalizeFilterValue(searchParams.get('search')),
 });
 
 const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
@@ -134,6 +141,11 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   // ➜ agregamos estado en filtros
   const [filtros, setFiltros] = useState(initialFilters);
   const [draftFiltros, setDraftFiltros] = useState(filtros);
+  const [nameSuggestions, setNameSuggestions] = useState([]);
+  const [nameSuggestionsOpen, setNameSuggestionsOpen] = useState(false);
+  const [nameSearchLoading, setNameSearchLoading] = useState(false);
+  const [activeNameSuggestion, setActiveNameSuggestion] = useState(-1);
+  const [selectedNameSearch, setSelectedNameSearch] = useState('');
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -157,8 +169,7 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
       const params = {};
       const activeFilters = normalizeTextFilters(filtros);
       if (activeFilters.tipo) params.tipo = activeFilters.tipo.toLowerCase(); // normalizo
-      if (activeFilters.nombre) params.nombre = activeFilters.nombre;
-      if (activeFilters.apellido) params.apellido = activeFilters.apellido;
+      if (activeFilters.search) params.search = activeFilters.search;
       if (activeFilters.email) params.email = activeFilters.email;
       if (activeFilters.dni) params.dni = activeFilters.dni;
       if (activeFilters.plan === SIN_PLAN_FILTER_VALUE) {
@@ -224,6 +235,79 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const handleChangeDraft = (e) =>
     setDraftFiltros(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
+  useEffect(() => {
+    const term = normalizeFilterValue(draftFiltros.search);
+    if (term.length < MIN_NAME_SEARCH_LENGTH || term === selectedNameSearch) {
+      setNameSuggestions([]);
+      setNameSuggestionsOpen(false);
+      setNameSearchLoading(false);
+      setActiveNameSuggestion(-1);
+      return undefined;
+    }
+
+    let active = true;
+    setNameSearchLoading(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await apiService.getAllUsuarios({
+          page: 1,
+          take: MAX_NAME_SUGGESTIONS,
+          tipo: draftFiltros.tipo ? draftFiltros.tipo.toLowerCase() : undefined,
+          estado: estadoToBool(draftFiltros.estado),
+          search: term,
+        });
+        if (!active) return;
+        setNameSuggestions(Array.isArray(response?.data) ? response.data : []);
+        setNameSuggestionsOpen(true);
+        setActiveNameSuggestion(-1);
+      } catch (error) {
+        if (!active) return;
+        console.error('Error buscando usuarios por nombre:', error);
+        setNameSuggestions([]);
+        setNameSuggestionsOpen(true);
+      } finally {
+        if (active) setNameSearchLoading(false);
+      }
+    }, NAME_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [draftFiltros.search, draftFiltros.tipo, draftFiltros.estado, selectedNameSearch]);
+
+  const handleNameSearchChange = event => {
+    setSelectedNameSearch('');
+    handleChangeDraft(event);
+  };
+
+  const selectNameSuggestion = usuario => {
+    const fullName = nombreCompleto(usuario);
+    setSelectedNameSearch(fullName);
+    setDraftFiltros(prev => ({ ...prev, search: fullName }));
+    setNameSuggestions([]);
+    setNameSuggestionsOpen(false);
+    setActiveNameSuggestion(-1);
+  };
+
+  const handleNameSearchKeyDown = event => {
+    if (!nameSuggestionsOpen || nameSuggestions.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveNameSuggestion(prev => (prev + 1) % nameSuggestions.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveNameSuggestion(prev => (prev <= 0 ? nameSuggestions.length - 1 : prev - 1));
+    } else if (event.key === 'Enter' && activeNameSuggestion >= 0) {
+      event.preventDefault();
+      selectNameSuggestion(nameSuggestions[activeNameSuggestion]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setNameSuggestionsOpen(false);
+      setActiveNameSuggestion(-1);
+    }
+  };
+
   const aplicarFiltros = (e) => {
     e.preventDefault();
     setPage(1);
@@ -233,6 +317,9 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
   const limpiarFiltros = () => {
     setDraftFiltros(emptyUsuariosFilters);
     setFiltros(emptyUsuariosFilters);
+    setSelectedNameSearch('');
+    setNameSuggestions([]);
+    setNameSuggestionsOpen(false);
     setPage(1);
   };
 
@@ -661,16 +748,57 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
               />
             </div>
 
-            <div className='usuarios-filtros-form-inputs-ctn'>
-              <label htmlFor="nombre">Nombre:</label>
-              <CustomInput
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={draftFiltros.nombre}
-                onChange={handleChangeDraft}
-                placeholder="Ej: Juan"
-              />
+            <div className='usuarios-filtros-form-inputs-ctn usuarios-name-search'>
+              <label htmlFor="search">Nombre o apellido:</label>
+              <div className="usuarios-name-search-field">
+                <Search className="usuarios-name-search-icon" size={17} aria-hidden="true" />
+                <CustomInput
+                  type="text"
+                  id="search"
+                  name="search"
+                  value={draftFiltros.search}
+                  onChange={handleNameSearchChange}
+                  onKeyDown={handleNameSearchKeyDown}
+                  onFocus={() => { if (nameSuggestions.length > 0) setNameSuggestionsOpen(true); }}
+                  onBlur={() => setNameSuggestionsOpen(false)}
+                  placeholder="Ej: Juan González"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={nameSuggestionsOpen}
+                  aria-controls="usuarios-name-suggestions"
+                />
+
+                {nameSuggestionsOpen && (
+                  <ul id="usuarios-name-suggestions" className="usuarios-name-suggestions" role="listbox">
+                    {nameSearchLoading && nameSuggestions.length === 0 && (
+                      <li className="usuarios-name-suggestion-empty">Buscando usuarios…</li>
+                    )}
+                    {!nameSearchLoading && nameSuggestions.length === 0 && (
+                      <li className="usuarios-name-suggestion-empty">No se encontraron usuarios con ese nombre.</li>
+                    )}
+                    {nameSuggestions.map((usuario, index) => (
+                      <li key={usuario.ID_Usuario}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={index === activeNameSuggestion}
+                          className={`usuarios-name-suggestion${index === activeNameSuggestion ? ' is-active' : ''}`}
+                          onMouseDown={event => event.preventDefault()}
+                          onMouseEnter={() => setActiveNameSuggestion(index)}
+                          onClick={() => selectNameSuggestion(usuario)}
+                        >
+                          <span className="usuarios-name-suggestion-main">
+                            <span className="usuarios-name-suggestion-name">{nombreCompleto(usuario)}</span>
+                            <span className="usuarios-name-suggestion-dni">
+                              {usuario.dni ? `DNI ${usuario.dni}` : 'Sin DNI cargado'}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             <div className='usuarios-filtros-form-inputs-ctn'>
@@ -682,18 +810,6 @@ const UsuariosList = ({ fromAdmin, fromEntrenador }) => {
                 value={draftFiltros.dni}
                 onChange={handleChangeDraft}
                 placeholder="Ej: 38444555"
-              />
-            </div>
-
-            <div className='usuarios-filtros-form-inputs-ctn'>
-              <label htmlFor="apellido">Apellido:</label>
-              <CustomInput
-                type="text"
-                id="apellido"
-                name="apellido"
-                value={draftFiltros.apellido}
-                onChange={handleChangeDraft}
-                placeholder="Ej: Gonzalez"
               />
             </div>
 

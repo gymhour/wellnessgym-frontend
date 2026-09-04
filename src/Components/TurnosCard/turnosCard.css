@@ -57,6 +57,32 @@
     color: var(--text-muted, #8a8a8a);
 }
 
+.turno-estado {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.turno-estado--asistido {
+    color: var(--success-text-color, #059669);
+}
+
+.turno-estado--cancelado {
+    color: #dc2626;
+}
+
+.turno-estado--ausente {
+    color: #e76f2e;
+}
+
+.turno-estado--pendiente {
+    color: var(--text-color-distinct);
+}
+
 @media screen and (max-width: 500px) {
     .turnos-card-ctn {
         padding: 24px 12px;
