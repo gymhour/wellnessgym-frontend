@@ -7,7 +7,10 @@ import apiService from '../../../services/apiService';
 import PrimaryButton from '../../../Components/utils/PrimaryButton/PrimaryButton';
 import LoaderFullScreen from '../../../Components/utils/LoaderFullScreen/LoaderFullScreen';
 import { toast } from 'react-toastify';
+import { showTurnoConfirmationToast } from '../../../utils/turnoConfirmationToast';
 import { CalendarDays, CheckCircle2, Clock3, Dumbbell, Rows3, UsersRound } from 'lucide-react';
+import TurnosDisponibilidad from '../../../Components/TurnosDisponibilidad/TurnosDisponibilidad';
+import { calculateTurnosDisponibilidad } from '../../../utils/turnosDisponibilidad';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -235,6 +238,7 @@ const AgendarTurno = () => {
   const [isAgendando, setIsAgendando] = useState(false);
   const [preselectionApplied, setPreselectionApplied] = useState(false);
   const [cuotas, setCuotas] = useState([]);
+  const [turnos, setTurnos] = useState([]);
   // Cupos calculados por fecha concreta (clave: `${ID_HorarioClase}__${fechaISO}`).
   // Necesario porque el listado de clases solo trae los cupos de la próxima ocurrencia,
   // y el alumno puede elegir fechas de semanas siguientes.
@@ -245,13 +249,15 @@ const AgendarTurno = () => {
       setLoading(true);
       try {
         const usuarioId = localStorage.getItem("usuarioId");
-        const [clasesApi, cuotasRes] = await Promise.all([
+        const [clasesApi, cuotasRes, turnosApi] = await Promise.all([
           apiService.getClases(),
           usuarioId ? apiService.getCuotasUsuario(usuarioId) : Promise.resolve([]),
+          usuarioId ? apiService.getTurnosUsuario(usuarioId).catch(() => []) : Promise.resolve([]),
         ]);
 
         setClases(clasesApi);
         setCuotas(normalizeCuotasResponse(cuotasRes));
+        setTurnos(turnosApi || []);
       } catch (err) {
         console.error(err);
         toast.error(
@@ -268,6 +274,10 @@ const AgendarTurno = () => {
   }, []);
 
   const cuotaVigente = useMemo(() => findBookableCuota(cuotas), [cuotas]);
+  const turnosDisponibles = useMemo(
+    () => calculateTurnosDisponibilidad({ clases, cuotas, turnos }),
+    [clases, cuotas, turnos]
+  );
   // Una deuda vencida bloquea la reserva, sea del período actual o de un mes anterior.
   // Es el mismo criterio que aplica el backend y el control de ingreso al gimnasio.
   const cuotaVencidaImpaga = useMemo(() => findOverdueUnpaidCuota(cuotas), [cuotas]);
@@ -581,11 +591,12 @@ const AgendarTurno = () => {
     setLoading(true);
     try {
       console.log("body que envio", body);
-      await apiService.postTurno(body);
+      const result = await apiService.postTurno(body);
+      if (result?.turno) setTurnos((current) => [...current, result.turno]);
       setSelectedClase('');
       setSelectedDateTime(null);
       setSelectedDayDate(null);
-      toast.success("Turno agendado exitosamente.");
+      showTurnoConfirmationToast("Turno agendado exitosamente.");
     } catch (err) {
       console.error(err);
       // El backend explica el motivo (sin sesiones, turno repetido en el día, sin cupo…).
@@ -606,6 +617,9 @@ const AgendarTurno = () => {
       <SidebarMenu isAdmin={false} />
       <div className='content-layout'>
         <h2 className='agendar-turno-title'>Agendar turno</h2>
+        <div className="agendar-turno-disponibilidad">
+          <TurnosDisponibilidad disponibilidad={turnosDisponibles} />
+        </div>
         <div className="agendar-turno-ctn">
           <section className="agendar-step agendar-step-clases">
             <div className="agendar-step-header">

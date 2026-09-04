@@ -110,6 +110,7 @@ const AdminAttendancePage = () => {
             <AttendanceTable
               attendances={attendances}
               emptyMessage="No se encontraron asistencias con los filtros seleccionados."
+              expandableReasons
             />
 
             <div

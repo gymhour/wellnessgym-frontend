@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../../../App.css';
 import './misTurnos.css';
 import SidebarMenu from '../../../Components/SidebarMenu/SidebarMenu';
@@ -12,11 +12,16 @@ import { isTurnoInFuture } from '../../../utils/turnoDate';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 // ToastContainer
 import { toast } from 'react-toastify';
+import TurnosDisponibilidad from '../../../Components/TurnosDisponibilidad/TurnosDisponibilidad';
+import { calculateTurnosDisponibilidad } from '../../../utils/turnosDisponibilidad';
+import { showTurnoConfirmationToast } from '../../../utils/turnoConfirmationToast';
 
 const TURNOS_PREVIEW_LIMIT = 3;
 
 const MisTurnos = () => {
     const [turnos, setTurnos] = useState([]);
+    const [clases, setClases] = useState([]);
+    const [cuotas, setCuotas] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [turnoToCancel, setTurnoToCancel] = useState(null);
@@ -28,9 +33,14 @@ const MisTurnos = () => {
         const fetchData = async () => {
             const usuarioId = localStorage.getItem("usuarioId");
             try {
-                const turnosData = await apiService.getTurnosUsuario(usuarioId); 
-                // console.log("Turnos", turnosData);
+                const [turnosData, clasesData, cuotasResponse] = await Promise.all([
+                    apiService.getTurnosUsuario(usuarioId),
+                    apiService.getClases().catch(() => []),
+                    apiService.getCuotasUsuario(usuarioId).catch(() => null),
+                ]);
                 setTurnos(turnosData);
+                setClases(clasesData || []);
+                setCuotas(Array.isArray(cuotasResponse?.data) ? cuotasResponse.data : []);
                 setLoading(false);
             } catch (err) {
                 toast.error(err?.message || "Error al cargar los turnos. Intente nuevamente.");
@@ -39,6 +49,11 @@ const MisTurnos = () => {
         };
         fetchData();
     }, []);
+
+    const turnosDisponibles = useMemo(
+        () => calculateTurnosDisponibilidad({ clases, cuotas, turnos }),
+        [clases, cuotas, turnos]
+    );
 
     // Filtrar los turnos para obtener los próximos turnos
     const proximoTurnos = turnos
@@ -68,6 +83,7 @@ const MisTurnos = () => {
             nombreTurno={turno.HorarioClase.Clase.nombre}
             fechaTurno={turno.fecha}
             horaTurno={turno.hora}
+            estado={turno.estado}
             onCancelTurno={() => handleOpenCancelPopup(turno.id_turno)}
         />
     );
@@ -95,7 +111,7 @@ const MisTurnos = () => {
             setTurnos(prevTurnos =>
                 prevTurnos.filter(turno => turno.id_turno !== turnoToCancel)
             );
-            toast.success("Turno cancelado exitosamente.");
+            showTurnoConfirmationToast("Turno cancelado exitosamente.");
             setTurnoToCancel(null);
             setLoading(false);
         } catch (error) {
@@ -125,6 +141,7 @@ const MisTurnos = () => {
                         </div>
                         <SecondaryButton linkTo="/alumno/agendar-turno" text="Agendar nuevo" icon={AddCircleIcon} />
                     </div>
+                    <TurnosDisponibilidad disponibilidad={turnosDisponibles} />
                     <div className="proximo-turno-turnos">
                         {visibleProximoTurnos.length > 0 ? (
                             visibleProximoTurnos.map(renderTurnoCard)
